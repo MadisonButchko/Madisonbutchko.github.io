@@ -1,0 +1,121 @@
+/* General body styling */
+body {
+    font-family: Georgia, serif;
+    background-color: #e6f0ff; /* Light blue background */
+    margin: 0;
+    padding: 0;
+    color: #000000; /* Default font color is black */
+}
+
+/* Header styling */
+header {
+    background-color: #2744a7; /* Dark blue header */
+    padding: 25px;
+    text-align: center;
+    font-size: 2.5em;
+    color: #ffffff;
+}
+
+/* Navigation bar styling */
+nav {
+    background-color: #ffffff;
+    border-bottom: 1px solid #dcdcdc;
+    text-align: center;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+nav ul li {
+    margin: 0 20px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    font-size: 1.2em;
+    color: #333333; /* Default tab color */
+    padding: 10px 20px;
+    display: block;
+}
+
+nav ul li a:hover {
+    color: #2744a7; /* Dark blue on hover */
+}
+
+nav ul li a.active {
+    color: #d870ad; /* Highlighted color for active tab */
+    font-weight: bold;
+    border-bottom: 2px solid #d870ad; /* Underline active tab */
+}
+
+/* Content container */
+.content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Heading styles */
+h1 {
+    font-size: 2.6em;
+    color: #2744a7; /* Dark blue for h1 */
+}
+
+h2 {
+    font-size: 2.1em;
+    color: #2744a7; /* Dark blue for h2 */
+}
+
+h3 {
+    font-size: 1.5em;
+    color: #2744a7; /* Dark blue for h3 */
+}
+/* Paragraph and general text styles */
+p {
+    font-size: 1.3em;
+    line-height: 1.85;
+    color: #000000; /* Default paragraph text in black */
+}
+
+/* Special info block */
+.info {
+    font-size: 1.2em;
+    margin-top: 20px;
+    color: #000000;
+}
+
+/* Style for list items inside the content */
+.content ul li {
+    font-size: 1.1em; /* Adjust this value to make it larger */
+    line-height: 1.5; /* Optional: Adjusts spacing between lines */
+}
+
+/* Footer styling */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #e6f0ff;
+}
+
+/* Footer social icons */
+footer img {
+    width: 30px;
+    margin: 0 10px;
+}
+
+.social-icons {
+    margin-top: 10px;
+}
+
+.social-icons img {
+    width: 40px;
+    margin: 0 10px;
+}
+
+
+
