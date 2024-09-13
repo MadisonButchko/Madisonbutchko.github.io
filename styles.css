@@ -13,7 +13,7 @@ header {
             background-color: #e6f0ff; /* Light blue background */
             margin: 0;
             padding: 0;
-            color: #333;}
+            color: #f8f8f8;}
 
 /* Navigation bar styling */
 nav {
@@ -129,7 +129,7 @@ body {
 
 /* Standardize the navbar */
 .navbar {
-    background-color: #333;
+    background-color: #f8f8f8
     color: white;
 }
 
