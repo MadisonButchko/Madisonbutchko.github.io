@@ -18,7 +18,7 @@ header {
 
 /* Navigation bar styling */
 nav {
-    background-color: #ffffff;
+    background-color: #fffdf3;
     border-bottom: 1px solid #dcdcdc;
     text-align: center;
 }
@@ -117,5 +117,32 @@ footer img {
     margin: 0 10px;
 }
 
+.blue-text {
+    color: #2744a7; /* Dark blue */
+    font-weight: bold;
+}
 
 
+/* Set background to off-white */
+body {
+    background-color: #f8f8f8;
+}
+
+/* Standardize the navbar */
+.navbar {
+    background-color: #333;
+    color: white;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .navbar {
+        flex-direction: column;
+    }
+
+    /* Adjust image sizes */
+    img {
+        width: 100%;
+        height: auto;
+    }
+}
