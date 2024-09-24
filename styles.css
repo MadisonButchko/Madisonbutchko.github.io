@@ -16,42 +16,36 @@ header {
     color: #ffffff;
 }
 
-/* Navigation bar styling */
-nav {
-    background-color: #fffdf3;
-    border-bottom: 1px solid #dcdcdc;
-    text-align: center;
-}
+        /* Navigation bar styling */
+        nav {
+            background-color: #ffffff;
+            padding: 12px 0;
+            border-bottom: 1px solid #dcdcdc;
+            text-align: center;
+        }
 
-nav ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-}
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: inline-block;
+        }
 
-nav ul li {
-    margin: 0 20px;
-}
+        nav ul li {
+            display: inline;
+            margin-right: 20px;
+        }
 
-nav ul li a {
-    text-decoration: none;
-    font-size: 1.2em;
-    color: #333333; /* Default tab color */
-    padding: 10px 20px;
-    display: block;
-}
+        nav ul li a {
+            text-decoration: none;
+            font-size: 1.2em;
+            color: #2744a7;
+            padding: 10px 20px;
+        }
 
-nav ul li a:hover {
-    color: #2744a7; /* Dark blue on hover */
-}
-
-nav ul li a.active {
-    color: #d870ad; /* Highlighted color for active tab */
-    font-weight: bold;
-    border-bottom: 2px solid #d870ad; /* Underline active tab */
-}
+        nav ul li a:hover {
+            color: #d870ad; /* Hover color */
+        }
 
 /* Content container */
 .content {
@@ -122,3 +116,21 @@ footer img {
     font-weight: bold;
 }
 
+
+/* Image and caption styling */
+.image-container {
+     text-align: center;
+     margin-top: 20px;
+}
+
+.image-container img {
+    width: 300px; /* Adjust the image size */
+    height: auto;
+}
+
+.image-container p {
+    font-size: 0.6em; /* Caption size */
+    color: #333; /* Optional: Change the caption color */
+    margin-top: 5px;
+}
+        
