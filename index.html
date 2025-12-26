@@ -3,51 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Madison Butchko | Introduction</title>
-    <link rel="stylesheet" href="styles.css">
-    <meta name="google-site-verification" content="1MEnq0wwudWbvNN45FG79zZ8VtLsdlwC2-SKcfecAuY" />
+    <title>Madison Butchko</title>
+    <link rel="icon" type="image/png" href="images/kitty.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #060a10; --bg-section: #0a1018; --bg-card: #0d1520; --bg-hover: #111c2d;
+            --border: #1a2a40; --cyan: #00e5ff; --cyan-soft: #00b8d4; --teal: #00bcd4;
+            --sky: #4fc3f7; --ice: #e1f5fe; --white: #ffffff; --text-mid: #94a3b8; --text-dim: #64748b;
+            --font-display: 'Cormorant Garamond', Georgia, serif; --font-body: 'Outfit', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-body); background: var(--bg-dark); color: var(--text-mid); line-height: 1.6; overflow-x: hidden; }
+        .nav { position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 0.2rem; padding: 0.35rem; background: rgba(6, 10, 16, 0.92); backdrop-filter: blur(20px); border-radius: 50px; border: 1px solid var(--border); }
+        .nav a { padding: 0.5rem 1rem; font-size: 0.78rem; color: var(--text-dim); text-decoration: none; border-radius: 50px; transition: all 0.3s ease; }
+        .nav a:hover { color: var(--cyan); }
+        .nav a.active { background: var(--cyan); color: var(--bg-dark); font-weight: 500; }
+        .mobile-bar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px; background: rgba(6, 10, 16, 0.95); backdrop-filter: blur(20px); z-index: 100; align-items: center; justify-content: space-between; padding: 0 1.25rem; border-bottom: 1px solid var(--border); }
+        .mobile-logo { font-family: var(--font-display); font-size: 1.15rem; color: var(--white); }
+        .menu-btn { display: flex; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; padding: 8px; }
+        .menu-btn span { width: 20px; height: 2px; background: var(--cyan); }
+        .mobile-menu { display: none; position: fixed; inset: 0; top: 56px; background: var(--bg-dark); z-index: 99; padding: 1.5rem; flex-direction: column; }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a { padding: 1rem; font-size: 1rem; color: var(--text-mid); text-decoration: none; border-bottom: 1px solid var(--border); }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5rem 1.5rem 4rem; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%; background: radial-gradient(ellipse at 50% 30%, rgba(0, 229, 255, 0.06) 0%, transparent 50%); pointer-events: none; }
+        .hero-label { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.35em; text-transform: uppercase; color: var(--cyan); margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.2s; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hero h1 { font-family: var(--font-display); font-size: clamp(2.75rem, 9vw, 5.5rem); font-weight: 400; color: var(--white); line-height: 1.05; margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.35s; }
+        .hero h1 em { font-style: italic; background: linear-gradient(135deg, var(--cyan) 0%, var(--sky) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-intro { font-size: 1.1rem; font-weight: 300; color: var(--text-mid); max-width: 500px; line-height: 1.75; margin-bottom: 1.75rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.5s; }
+        .hero-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-bottom: 2rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.65s; }
+        .hero-tag { padding: 0.45rem 1rem; font-size: 0.75rem; color: var(--ice); background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 50px; }
+        .profile-photos { display: flex; justify-content: center; gap: 1.5rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.8s; }
+        .profile-photo { width: 180px; height: 180px; border-radius: 12px; overflow: hidden; border: 3px solid var(--cyan); box-shadow: 0 10px 40px rgba(0, 229, 255, 0.25); }
+        .profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-photo:first-child { animation: tilt1 5s ease-in-out infinite; transform: rotate(-4deg); }
+        .profile-photo:last-child { animation: tilt2 5s ease-in-out infinite 0.3s; transform: rotate(4deg); }
+        @keyframes tilt1 { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-2deg) translateY(-8px); } }
+        @keyframes tilt2 { 0%, 100% { transform: rotate(4deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-8px); } }
+        section { padding: 4rem 5%; max-width: 1200px; margin: 0 auto; }
+        .section-head { text-align: center; margin-bottom: 2.5rem; }
+        .section-title { font-family: var(--font-display); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 400; color: var(--white); }
+        .section-title em { font-style: italic; color: var(--cyan); }
+        .category-bubbles { display: flex; justify-content: center; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem; }
+        
+        /* ENHANCED BUBBLE STYLES - Clickable cues */
+        .cat-bubble { 
+            width: 110px; height: 110px; border-radius: 50%; 
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(0, 184, 212, 0.05) 100%); 
+            border: 2px solid rgba(0, 229, 255, 0.3); 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; transition: all 0.3s ease; text-align: center; 
+            position: relative;
+        }
+        /* Floating animation for all bubbles */
+        .cat-bubble { animation: floatBubble 4s ease-in-out infinite; }
+        .cat-bubble:nth-child(1) { animation-delay: 0s; }
+        .cat-bubble:nth-child(2) { animation-delay: 0.5s; }
+        .cat-bubble:nth-child(3) { animation-delay: 1s; }
+        .cat-bubble:nth-child(4) { animation-delay: 1.5s; }
+        .cat-bubble:nth-child(5) { animation-delay: 2s; }
+        @keyframes floatBubble { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        
+        /* PULSE animation for first bubble - attention grabber */
+        .cat-bubble.pulse-hint {
+            animation: floatBubble 4s ease-in-out infinite, pulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 229, 255, 0.6), 0 0 60px rgba(0, 229, 255, 0.3); }
+        }
+        
+        /* Hover effects - scale + glow */
+        .cat-bubble:hover { 
+            transform: scale(1.1) translateY(-4px); 
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.5);
+            border-color: var(--cyan);
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 184, 212, 0.1) 100%);
+            animation: none;
+        }
+        .cat-bubble:hover .cat-bubble-name { color: var(--white); }
+        
+        /* Active state */
+        .cat-bubble.active { 
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--teal) 100%); 
+            border-color: var(--cyan); 
+            transform: scale(1.1); 
+            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.4); 
+            animation: none; 
+        }
+        .cat-bubble.active .cat-bubble-name { color: var(--bg-dark) !important; }
+        
+        .cat-bubble-name { font-size: 0.85rem; font-weight: 500; color: var(--cyan); transition: color 0.3s; }
+        
+        /* Hint text below bubbles */
+        .bubble-hint { 
+            text-align: center; 
+            font-size: 0.8rem; 
+            color: var(--text-dim); 
+            margin-bottom: 1.5rem;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .bubble-hint.hidden { opacity: 0; }
+        .bubble-hint span { 
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 229, 255, 0.05);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 20px;
+        }
+        
+        .exp-panel { display: none; background: var(--bg-section); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; margin-top: 1rem; }
+        .exp-panel.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .exp-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .exp-panel-title { font-family: var(--font-display); font-size: 1.4rem; color: var(--white); }
+        .exp-panel-close { width: 36px; height: 36px; background: rgba(0, 229, 255, 0.1); border: none; border-radius: 50%; color: var(--cyan); font-size: 1.25rem; cursor: pointer; transition: all 0.3s; }
+        .exp-panel-close:hover { background: var(--cyan); color: var(--bg-dark); }
+        .flip-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+        .flip-card { height: 240px; perspective: 1000px; cursor: pointer; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border); }
+        .flip-card-front { background: var(--bg-card); display: flex; flex-direction: column; justify-content: center; }
+        .flip-card-back { background: var(--bg-hover); transform: rotateY(180deg); overflow-y: auto; }
+        .flip-role { font-family: var(--font-display); font-size: 1.1rem; color: var(--white); margin-bottom: 0.3rem; }
+        .flip-org { font-size: 0.85rem; color: var(--cyan); margin-bottom: 0.5rem; }
+        .flip-date { font-size: 0.7rem; color: var(--text-dim); }
+        .flip-hint { position: absolute; bottom: 0.75rem; right: 0.75rem; font-size: 0.65rem; color: var(--text-dim); }
+        .flip-card-back ul { list-style: none; }
+        .flip-card-back li { padding-left: 0.9rem; margin-bottom: 0.35rem; font-size: 0.7rem; position: relative; line-height: 1.35; }
+        .flip-card-back li::before { content: ''; position: absolute; left: 0; top: 0.45em; width: 4px; height: 4px; background: var(--cyan); border-radius: 50%; }
+        .writing-links-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .writing-link { display: block; padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 0 12px 12px 0; text-decoration: none; transition: all 0.3s; }
+        .writing-link:hover { background: var(--bg-hover); transform: translateX(5px); }
+        .writing-pub { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--cyan); margin-bottom: 0.3rem; }
+        .writing-role { font-family: var(--font-display); font-size: 1.05rem; color: var(--white); margin-bottom: 0.25rem; }
+        .writing-desc { font-size: 0.8rem; color: var(--text-dim); }
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .skill-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+        .skill-card h4 { font-family: var(--font-display); font-size: 0.95rem; color: var(--cyan); margin-bottom: 0.75rem; }
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .skill-tag { padding: 0.25rem 0.6rem; font-size: 0.72rem; color: var(--ice); background: rgba(0, 229, 255, 0.08); border-radius: 4px; }
+        .gallery-section { background: linear-gradient(180deg, transparent 0%, rgba(10, 16, 24, 0.5) 50%, transparent 100%); padding: 4rem 0; }
+        .gallery-container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+        
+        /* 5 columns gallery preview - NO GAPS */
+        .gallery-preview { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            grid-auto-rows: 110px;
+            gap: 4px; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            cursor: pointer; 
+            position: relative; 
+        }
+        .gallery-preview:hover { box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15); }
+        .preview-item { overflow: hidden; }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+        .preview-item:hover img { transform: scale(1.08); }
+        /* Make some items span for variety */
+        .preview-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+        .preview-item:nth-child(8) { grid-column: span 2; }
+        .preview-item:nth-child(13) { grid-column: span 2; grid-row: span 2; }
+        .preview-item:nth-child(20) { grid-column: span 2; }
+        
+        .preview-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 60%, rgba(0,0,0,0.7)); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 1.5rem; opacity: 1; }
+        .preview-overlay span { padding: 0.85rem 2rem; background: var(--cyan); color: var(--bg-dark); font-size: 0.9rem; font-weight: 600; border-radius: 50px; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4); transition: all 0.3s; }
+        .gallery-preview:hover .preview-overlay span { transform: scale(1.05); box-shadow: 0 6px 30px rgba(0, 229, 255, 0.6); }
+        
+        .gallery-modal { position: fixed; inset: 0; z-index: 200; background: rgba(6, 10, 16, 0.98); display: none; flex-direction: column; }
+        .gallery-modal.active { display: flex; }
+        .gallery-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+        .gallery-modal-title { font-family: var(--font-display); font-size: 1.5rem; color: var(--white); }
+        .gallery-modal-close { width: 44px; height: 44px; background: rgba(0, 229, 255, 0.1); border: none; border-radius: 50%; color: var(--cyan); font-size: 1.5rem; cursor: pointer; }
+        .gallery-modal-tabs { display: flex; gap: 0.4rem; padding: 1rem 1.5rem; flex-wrap: wrap; }
+        .gallery-modal-tab { padding: 0.4rem 1rem; font-size: 0.75rem; color: var(--text-dim); background: transparent; border: 1px solid var(--border); border-radius: 50px; cursor: pointer; }
+        .gallery-modal-tab:hover { border-color: var(--cyan); color: var(--cyan); }
+        .gallery-modal-tab.active { background: var(--cyan); border-color: var(--cyan); color: var(--bg-dark); }
+        .gallery-collage { flex: 1; overflow-y: auto; padding: 1rem 1.5rem 2rem; }
+        
+        /* 6 images per row in modal */
+        .collage-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+        .collage-item { aspect-ratio: 1; overflow: hidden; cursor: pointer; transition: all 0.3s; position: relative; }
+        .collage-item:hover { transform: scale(1.02); box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2); z-index: 10; }
+        .collage-item img { width: 100%; height: 100%; object-fit: cover; }
+        .collage-item-title { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem 0.5rem 0.5rem; background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-size: 0.7rem; color: var(--white); opacity: 0; transition: opacity 0.3s; }
+        .collage-item:hover .collage-item-title { opacity: 1; }
+        .lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0, 0, 0, 0.95); display: none; align-items: center; justify-content: center; padding: 2rem; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; }
+        .lightbox-close { position: absolute; top: 1rem; right: 1rem; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.2); border: none; border-radius: 50%; color: var(--cyan); font-size: 1.75rem; cursor: pointer; }
+        .lightbox-info { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); text-align: center; }
+        .lightbox-title { font-family: var(--font-display); font-size: 1.25rem; color: var(--white); }
+        .lightbox-cat { font-size: 0.75rem; color: var(--cyan); text-transform: uppercase; }
+        .gallery-deviant { text-align: center; margin-top: 1.25rem; }
+        .gallery-deviant a { display: inline-flex; padding: 0.5rem 1rem; font-size: 0.75rem; color: var(--text-dim); text-decoration: none; transition: color 0.3s; }
+        .gallery-deviant a:hover { color: var(--cyan); }
+        .contact-section { text-align: center; padding: 5rem 5%; }
+        .contact-title { font-family: var(--font-display); font-size: clamp(1.75rem, 4vw, 2.5rem); color: var(--white); margin-bottom: 0.75rem; }
+        .contact-title em { font-style: italic; color: var(--cyan); }
+        .contact-text { font-size: 0.95rem; color: var(--text-mid); max-width: 380px; margin: 0 auto 1.5rem; }
+        .social-links { display: flex; justify-content: center; gap: 0.6rem; }
+        .social-link { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.08); border: 1px solid var(--border); border-radius: 50%; color: var(--cyan); text-decoration: none; font-size: 0.8rem; font-weight: 500; }
+        .social-link:hover { background: var(--cyan); color: var(--bg-dark); }
+        footer { text-align: center; padding: 1.5rem; border-top: 1px solid var(--border); }
+        footer p { font-size: 0.75rem; color: var(--text-dim); }
+        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .nav { display: none; }
+            .mobile-bar { display: flex; }
+            .hero { padding-top: 70px; }
+            .profile-photos { gap: 1rem; }
+            .profile-photo { width: 140px; height: 140px; }
+            .cat-bubble { width: 85px; height: 85px; }
+            .cat-bubble-name { font-size: 0.7rem; }
+            .flip-cards { grid-template-columns: 1fr; }
+            .gallery-preview { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 80px; }
+            .preview-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+            .preview-item:nth-child(8) { grid-column: span 1; }
+            .preview-item:nth-child(13) { grid-column: span 2; grid-row: span 1; }
+            .preview-item:nth-child(20) { grid-column: span 1; }
+            .collage-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+            .writing-links-panel { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-
-<header>
-    Madison Butchko
-</header>
-
-<!-- Navigation bar -->
-<nav>
-    <ul>
-        <li><a href="index.html" class="active">About</a></li>
-        <li><a href="research.html">Research</a></li>
-        <li><a href="experience.html">Experience</a></li>
-        <li><a href="creativework.html">Creations</a></li>
-    </ul>
-</nav>
-
-<div class="content">
-    <h1>Hello, World! I'm Madison Butchko. </h1>
-    <p>
-        I'm a senior at Yale University, pursuing a B.S. in Physics and a B.A. in East Asian Studies. I value creating, connecting with others, and catalyzing positive change in the world. 
-    </p>
-
-    <!-- Image and caption section -->
-    <div class="image-container">
-        <img src="assets/MadisonButchko.png" alt="Madison Butchko">
-        <p><em>Madison Butchko</em></p>
+    <nav class="nav">
+        <a href="#about" class="active">About</a>
+        <a href="#experience">Experience</a>
+        <a href="#skills">Skills</a>
+        <a href="#gallery">Artwork</a>
+        <a href="#contact">Connect</a>
+    </nav>
+    <header class="mobile-bar">
+        <span class="mobile-logo">Madison Butchko</span>
+        <button class="menu-btn"><span></span><span></span><span></span></button>
+    </header>
+    <div class="mobile-menu">
+        <a href="#about">About</a>
+        <a href="#experience">Experience</a>
+        <a href="#skills">Skills</a>
+        <a href="#gallery">Artwork</a>
+        <a href="#contact">Connect</a>
     </div>
-
-    <center><p style="font-size: small;">Current as of 9/12/2024</p></center>
-    
-</div>
-
-<!-- Footer section -->
-<footer>
-    <div class="social-icons">
-        <a href="https://github.com/madisonbutchko"><img src="assets/github.png" alt="GitHub"></a>
-        <a href="https://www.linkedin.com/in/madisonbutchko"><img src="assets/linkedin.png" alt="LinkedIn"></a>
-        <a href="mailto:madison.d.butchko@gmail.com"><img src="assets/email.png" alt="Email"></a>
-        <a href="https://www.instagram.com/yourinstagram"><img src="assets/instagram.png" alt="Instagram"></a>
+    <main>
+        <section class="hero" id="about">
+            <p class="hero-label">Yale University - Physics & East Asian Studies</p>
+            <h1>Madison <em>Butchko</em></h1>
+            <p class="hero-intro">I value creating, connecting with others, and catalyzing positive change in the world.</p>
+            <div class="hero-tags">
+                <span class="hero-tag">Physics</span>
+                <span class="hero-tag">Writing</span>
+                <span class="hero-tag">Teaching</span>
+                <span class="hero-tag">Art</span>
+            </div>
+            <div class="profile-photos">
+                <div class="profile-photo"><img src="images/MadisonButchko_centered.png" alt="Madison"></div>
+                <div class="profile-photo"><img src="images/MadisonButchko_bear.png" alt="Madison"></div>
+            </div>
+        </section>
+        <section id="experience">
+            <div class="section-head reveal"><h2 class="section-title"><em>Experience</em></h2></div>
+            <div class="category-bubbles reveal">
+                <div class="cat-bubble pulse-hint" data-cat="research"><span class="cat-bubble-name">Research</span></div>
+                <div class="cat-bubble" data-cat="teaching"><span class="cat-bubble-name">Teaching</span></div>
+                <div class="cat-bubble" data-cat="writing-exp"><span class="cat-bubble-name">Writing</span></div>
+                <div class="cat-bubble" data-cat="leadership"><span class="cat-bubble-name">Leadership</span></div>
+                <div class="cat-bubble" data-cat="additional"><span class="cat-bubble-name">Additional</span></div>
+            </div>
+            <!-- Hint text -->
+            <div class="bubble-hint reveal" id="bubbleHint"><span>Click a category to explore</span></div>
+            
+            <div class="exp-panel" data-panel="research">
+                <div class="exp-panel-header"><h3 class="exp-panel-title">Research Experience</h3><button class="exp-panel-close">×</button></div>
+                <div class="flip-cards">
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Mechanical Engineering Researcher</h4><p class="flip-org">Oakland University - Prof. Sarah Beetham</p><p class="flip-date">Aug-Dec 2024</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Developing PINN in Python to model pendulum forcing problem, integrating physical constraints and differential equations</li><li>Utilizing PyTorch to build and train models, applying ML techniques to test complex physics problems</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Energy Science Institute Researcher</h4><p class="flip-org">Yale University - Prof. Steve Konenzy</p><p class="flip-date">2022-Aug 2024</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Modeled charge transport in nanostructured materials to enhance solar cell efficiency</li><li>Fabricated copper thiocyanate (CuScn) samples using spin coating</li><li>Executed humidity-controlled tests in cryostat to evaluate cell performance</li><li>Analyzed conductivity, humidity response, and structural integrity for Perovskite solar cells</li><li>Utilized LabVIEW and Python scripts for data analysis</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Biophysics Researcher</h4><p class="flip-org">Yale QBI - Prof. Allison Sweeney</p><p class="flip-date">Spring 2024</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Researched hyperuniformity in black spruce forests and giant clams, examining spatial properties</li><li>Analyzed images using Origin software to compare patterns of hyperuniformity</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">NSF REU Fellow - Optical Tweezers</h4><p class="flip-org">Yale - Prof. Simon Mochrie</p><p class="flip-date">Summer 2022</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>$8,500 REU fellowship for single molecule optical tweezers measurements of nucleosomes</li><li>Utilized fluorescence microscopy and optical tweezers to track real-time protein movement</li><li>Studied Brownian diffusion to track protein motion, providing insights into protein-DNA interactions</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">NSF REU Fellow - Mesophyll</h4><p class="flip-org">Yale - Prof. Corey O'Hern</p><p class="flip-date">Summer 2021</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>$8,500 NSF fellowship for research on mesophyll tissue in flowering plants</li><li>Analyzed high-resolution plant tissue images with Fiji imaging software</li><li>Developed MATLAB simulations to model cell wall expansion, creating visualizations of deformable polygonal structures</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Materials Science Researcher</h4><p class="flip-org">Yale - Prof. Amit Dayte</p><p class="flip-date">Spring 2021</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Operated gas pycnometer, prepared samples</li><li>Conducted nano-indentation studies, generated stress-strain curves</li></ul></div></div></div>
+                </div>
+            </div>
+            <div class="exp-panel" data-panel="teaching">
+                <div class="exp-panel-header"><h3 class="exp-panel-title">Teaching Experience</h3><button class="exp-panel-close">×</button></div>
+                <div class="flip-cards">
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">AP Physics Teaching Assistant</h4><p class="flip-org">Global Teaching Project</p><p class="flip-date">2024-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Supported classes of 20+ students, creating lesson plans & curriculum for AP readiness</li><li>Collaborated with educators to design AP Physics curriculum, breaking down complex concepts for easier understanding</li><li>Engaged students throughout 2-hour classes via problem-solving, worksheets, and interactive PowerPoints</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Splash and Sprout Instructor</h4><p class="flip-org">Yale University</p><p class="flip-date">2024-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Developed original course curriculum and delivered full lesson plans to classes of ~20 high school and middle school students</li><li><a href="https://yale.learningu.org/teach/teachers/madisonbutchko/bio.html" target="_blank" style="color:var(--cyan);">View bio</a></li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Robotics Instructor</h4><p class="flip-org">Snapology</p><p class="flip-date">Mar-Dec 2024</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Led robotics and pre-engineering classes for up to 35 elementary students</li><li>Teaching programming using Scratch and conducting interactive science workshops</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">President & CEO</h4><p class="flip-org">Your Admissions Mentor</p><p class="flip-date">2020-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>500+ students across 30+ states, 10 countries</li><li>2,000+ essays; clients at MIT, Stanford, Harvard, Yale</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">College Admissions Advisor</h4><p class="flip-org">Pivot / Matriculate / PASCHAR</p><p class="flip-date">2024-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li><strong>PIVOT:</strong> Mentored students on college plans, guiding through applications and Common App. Organized summer courses at Yale</li><li><strong>PASCHAR:</strong> Guided students through applications and essays; provided writing instruction and research-paper coaching</li><li>Designed writing lessons focused on structure, clarity, narrative development</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Math & Physics Tutor</h4><p class="flip-org">Parental Choice Tutoring</p><p class="flip-date">2024-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Prepared lessons and tutored students in English, Physics, Math, Writing, Essay Editing, and Standardized Testing</li></ul></div></div></div>
+                </div>
+            </div>
+            <div class="exp-panel" data-panel="writing-exp">
+                <div class="exp-panel-header"><h3 class="exp-panel-title">Writing Experience</h3><button class="exp-panel-close">×</button></div>
+                <div class="writing-links-panel">
+                    <a href="https://chinahandsmagazine.org/2024/03/06/the-inequality-lock-on-chinas-rural-population-the-hukou-system/" target="_blank" class="writing-link"><div class="writing-pub">China Hands Magazine</div><h4 class="writing-role">Editor in Chief</h4><p class="writing-desc">Chinese history, technology & social issues (2023-Present)</p></a>
+                    <a href="https://www.hercampus.com/author/maddie-butchko/" target="_blank" class="writing-link"><div class="writing-pub">Her Campus at Yale</div><h4 class="writing-role">Editor in Chief</h4><p class="writing-desc">Weekly lifestyle content (2021-Present)</p></a>
+                    <a href="https://yaledailynews.com/blog/author/maddiebutchko/" target="_blank" class="writing-link"><div class="writing-pub">Yale Daily News</div><h4 class="writing-role">Staff Writer & Columnist</h4><p class="writing-desc">Personal essays with illustrations (2023-Present)</p></a>
+                    <a href="https://yale-herald.com/2025/03/30/a-guide-to-achieving-perfect-skin/" target="_blank" class="writing-link"><div class="writing-pub">Yale Herald / Layer</div><h4 class="writing-role">Staff Writer</h4><p class="writing-desc">Lifestyle essays (2024-Present)</p></a>
+                </div>
+            </div>
+            <div class="exp-panel" data-panel="leadership">
+                <div class="exp-panel-header"><h3 class="exp-panel-title">Leadership</h3><button class="exp-panel-close">×</button></div>
+                <div class="flip-cards">
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">President & Prize Lecture Chair</h4><p class="flip-org">Yale Society of Physics Students</p><p class="flip-date">2020-Present</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Led chapter to nationwide recognition as Outstanding SPS Chapter</li><li>Managing funding, study halls, faculty dinners, and mentoring events</li><li>Designed chapter logo and merchandise</li><li>Coordinated Howard L. Schultz and Tinsley Lectures</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Cadet Officer</h4><p class="flip-org">Air Force ROTC</p><p class="flip-date">2020-2024</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Mission Support Commander, Public Affairs Officer</li><li>Trained 10+ hours/week in PT, leadership labs, military coursework</li><li>Completed field training in Mississippi and Alabama</li><li>Directed 60+ cadets, mentored underclassmen, planned events for 100+ people</li><li>Arnold Air Society Director of Operations</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Learn to Fly Scholarship</h4><p class="flip-org">$5,000 Award</p><p class="flip-date">2022-2023</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Awarded $5,000 towards flying lessons</li><li>Completed 30 hours of flight time</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Intramural Secretary</h4><p class="flip-org">Jonathan Edwards College</p><p class="flip-date">2021-2022</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Organized sports events for 500+ students</li><li>Coordinated weekly sports activities and managed college teams</li><li>Directed gameplay during matches</li><li>Managed social media promotions and college-wide emails</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Director of Finance</h4><p class="flip-org">Yale Aerospace Association</p><p class="flip-date">2022-2023</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>Managed financial operations for the association</li></ul></div></div></div>
+                    <div class="flip-card"><div class="flip-card-inner"><div class="flip-card-front"><h4 class="flip-role">Media Chair</h4><p class="flip-org">Yale SWE</p><p class="flip-date">2022-2023</p><span class="flip-hint">Click to flip</span></div><div class="flip-card-back"><ul><li>SWE 2024 Conference participant</li><li>Designed logos and merchandise</li></ul></div></div></div>
+                </div>
+            </div>
+            <div class="exp-panel" data-panel="additional">
+                <div class="exp-panel-header"><h3 class="exp-panel-title">Additional</h3><button class="exp-panel-close">×</button></div>
+                <div style="margin-bottom:1.5rem;padding:1.25rem;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);"><h4 style="font-family:var(--font-display);color:var(--white);margin-bottom:0.5rem;">CET Jordan - Arabic Study Abroad <span style="font-size:0.75rem;color:var(--cyan);background:rgba(0,229,255,0.1);padding:0.2rem 0.5rem;border-radius:4px;">Summer 2025</span></h4><p style="font-size:0.9rem;color:var(--text-mid);">MSA & Jordanian Dialect - Language Intensive</p></div>
+                <div style="padding:1.25rem;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);"><h4 style="font-family:var(--font-display);color:var(--white);margin-bottom:0.5rem;">Oakland Community College <span style="font-size:0.75rem;color:var(--cyan);background:rgba(0,229,255,0.1);padding:0.2rem 0.5rem;border-radius:4px;">26 Courses</span></h4><p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:0.75rem;">Summer & Fall 2024</p><div style="display:flex;flex-wrap:wrap;gap:0.35rem;"><span class="skill-tag">American Lit Since Civil War</span><span class="skill-tag">Arts & Lit Renaissance-Modern</span><span class="skill-tag">Arts/Lit Origins Western Tradition</span><span class="skill-tag">Children's Literature</span><span class="skill-tag">Composition I & II</span><span class="skill-tag">Creative Writing</span><span class="skill-tag">Intro to Literature</span><span class="skill-tag">Intro to Philosophy</span><span class="skill-tag">Cultural Anthropology</span><span class="skill-tag">Ethics</span><span class="skill-tag">Sociology</span><span class="skill-tag">Sociology of Aging</span><span class="skill-tag">Racial/Ethnic Group Relations</span><span class="skill-tag">Urban & State Politics</span><span class="skill-tag">Comparative World Politics</span><span class="skill-tag">World Geography</span><span class="skill-tag">U.S. History 1877-Present</span><span class="skill-tag">Intro to Psychology</span><span class="skill-tag">Spanish I & II</span><span class="skill-tag">HTML5</span><span class="skill-tag">JavaScript</span><span class="skill-tag">Java</span><span class="skill-tag">C++</span><span class="skill-tag">Python</span><span class="skill-tag">Software Engineering</span></div></div>
+            </div>
+        </section>
+        <section id="skills">
+            <div class="section-head reveal"><h2 class="section-title">Skills & <em>Expertise</em></h2></div>
+            <div class="skills-grid reveal">
+                <div class="skill-card"><h4>Programming</h4><div class="skill-tags"><span class="skill-tag">Python</span><span class="skill-tag">C++</span><span class="skill-tag">Java</span><span class="skill-tag">JavaScript</span><span class="skill-tag">HTML/CSS</span></div></div>
+                <div class="skill-card"><h4>Machine Learning</h4><div class="skill-tags"><span class="skill-tag">TensorFlow</span><span class="skill-tag">PyTorch</span></div></div>
+                <div class="skill-card"><h4>Data Analysis</h4><div class="skill-tags"><span class="skill-tag">Excel</span><span class="skill-tag">Origin</span><span class="skill-tag">Jupyter</span><span class="skill-tag">MATLAB</span><span class="skill-tag">Mathematica</span></div></div>
+                <div class="skill-card"><h4>CAD & Modeling</h4><div class="skill-tags"><span class="skill-tag">SolidWorks</span><span class="skill-tag">AutoCAD</span><span class="skill-tag">LabVIEW</span></div></div>
+                <div class="skill-card"><h4>Languages</h4><div class="skill-tags"><span class="skill-tag">Chinese (Fluent)</span><span class="skill-tag">Arabic (Learning)</span><span class="skill-tag">Spanish</span></div></div>
+                <div class="skill-card"><h4>Procreate Illustration</h4><div class="skill-tags"><span class="skill-tag">Digital Art</span><span class="skill-tag">Calligraphy</span><span class="skill-tag">Henna</span><span class="skill-tag">Mandala</span></div></div>
+                <div class="skill-card"><h4>Writing</h4><div class="skill-tags"><span class="skill-tag">Personal Essay</span><span class="skill-tag">Essay Editing</span><span class="skill-tag">Fiction</span><span class="skill-tag">Scientific Writing</span></div></div>
+                <div class="skill-card"><h4>Hobbies</h4><div class="skill-tags"><span class="skill-tag">Baking & Cooking</span><span class="skill-tag">Recipe Writing</span><span class="skill-tag">Long Distance Running</span><span class="skill-tag">Classical Pianist</span><span class="skill-tag">Jewelry Maker</span></div></div>
+            </div>
+        </section>
+        <section class="gallery-section" id="gallery">
+            <div class="gallery-container">
+                <div class="section-head reveal"><h2 class="section-title">Creative <em>Artwork</em></h2></div>
+                <!-- 5 columns preview - fills completely -->
+                <div class="gallery-preview reveal" id="galleryPreview">
+                    <div class="preview-item"><img src="images/mandala_passion.png" alt=""></div>
+                    <div class="preview-item"><img src="images/calligraphy3.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Tulips.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Reader.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Gelato_.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/calligraphy.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Corgi__2.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/sunflowers.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/calligraphy1.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/face_full_of_stars.png" alt=""></div>
+                    <div class="preview-item"><img src="images/Cake.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/peonies.png" alt=""></div>
+                    <div class="preview-item"><img src="images/purplemandala.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/madeinchina.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/eyeswithcolors.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Cat.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Little_prince_2.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/calligraphy2.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/mandala_blue.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/bday_card.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Flower_Book_Open.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/card_mandala.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/Roses.jpg" alt=""></div>
+                    <div class="preview-item"><img src="images/mandala_green.jpg" alt=""></div>
+                    <div class="preview-overlay"><span>Expand Gallery</span></div>
+                </div>
+                <div class="gallery-deviant reveal"><a href="https://www.deviantart.com/madisonbutchko" target="_blank">See more on DeviantArt →</a></div>
+            </div>
+        </section>
+        <section class="contact-section" id="contact">
+            <div class="reveal">
+                <h2 class="contact-title">Let's <em>Connect</em></h2>
+                <p class="contact-text">Open to research collaborations, creative projects, and interesting conversations.</p>
+                <div class="social-links">
+                    <a href="https://github.com/madisonbutchko" class="social-link" target="_blank">GH</a>
+                    <a href="https://www.linkedin.com/in/madisonbutchko" class="social-link" target="_blank">LI</a>
+                    <a href="https://www.deviantart.com/madisonbutchko" class="social-link" target="_blank">DA</a>
+                </div>
+            </div>
+        </section>
+        <footer><p>2025 Madison Butchko</p></footer>
+    </main>
+    <div class="gallery-modal" id="galleryModal">
+        <div class="gallery-modal-header"><h3 class="gallery-modal-title">Artwork Gallery</h3><button class="gallery-modal-close" id="galleryClose">×</button></div>
+        <div class="gallery-modal-tabs">
+            <button class="gallery-modal-tab active" data-filter="all">All</button>
+            <button class="gallery-modal-tab" data-filter="mandala">Mandalas</button>
+            <button class="gallery-modal-tab" data-filter="digital">Digital Art</button>
+            <button class="gallery-modal-tab" data-filter="calligraphy">Calligraphy</button>
+            <button class="gallery-modal-tab" data-filter="fineart">Fine Art</button>
+        </div>
+        <div class="gallery-collage" id="galleryCollage"></div>
     </div>
-</footer>
-
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" id="lightboxClose">×</button>
+        <img src="" alt="" id="lightboxImg">
+        <div class="lightbox-info"><div class="lightbox-title" id="lightboxTitle"></div><div class="lightbox-cat" id="lightboxCat"></div></div>
+    </div>
+    <script>
+        const artworks = [
+            {file:'mandala_passion.png',title:'Passion',category:'mandala'},{file:'mandala_multicolor.jpg',title:'Multicolor Mandala',category:'mandala'},{file:'mandala_bw.png',title:'Black & White',category:'mandala'},{file:'mandala.PNG',title:'Intricate Mandala',category:'mandala'},{file:'purplemandala.jpg',title:'Purple Mandala',category:'mandala'},{file:'mandala_blue.jpg',title:'Blue Mandala',category:'mandala'},{file:'mandala_green.jpg',title:'Teal Mandala',category:'mandala'},{file:'mandala_pink.jpg',title:'Pink Mandala',category:'mandala'},{file:'mandala_darkpink.jpg',title:'Hot Pink Mandala',category:'mandala'},{file:'mandala_orange.jpg',title:'Orange Mandala',category:'mandala'},{file:'mandala_yellow.jpg',title:'Yellow Mandala',category:'mandala'},{file:'mandala_circle.jpg',title:'Circle Mandala',category:'mandala'},{file:'mandala_w2.jpg',title:'Dual Mandala',category:'mandala'},
+            {file:'Tulips.jpg',title:'Tulips',category:'digital'},{file:'Untitled_Artwork_27.jpg',title:'Sweet Treats',category:'digital'},{file:'Untitled_Artwork_26.jpg',title:'Kitty Loops',category:'digital'},{file:'Untitled_Artwork_25.jpg',title:'Potat-Hoe',category:'digital'},{file:'cute_cat_ditigal_art.jpg',title:'Cereal-ously a Catch',category:'digital'},{file:'Untitled_Artwork_22.jpg',title:'Polaroid Cameras',category:'digital'},{file:'Untitled_Artwork_21.jpg',title:'Sunset Frame Purple',category:'digital'},{file:'Untitled_Artwork_20_copy.jpg',title:'Sunset Frame Warm',category:'digital'},{file:'Send_noods_2.jpg',title:'Send Noods',category:'digital'},{file:'Science_2.jpg',title:'Science Potions',category:'digital'},{file:'Roses.jpg',title:'Roses',category:'digital'},{file:'Little_prince_2.jpg',title:'Little Prince Rose',category:'digital'},{file:'Letter_2.jpg',title:'Flower Letter',category:'digital'},{file:'Gelato_.jpg',title:'Gelato at Yale',category:'digital'},{file:'Flower_Book_Open.jpg',title:'Flower Book',category:'digital'},{file:'Eggs_2.jpg',title:'Eggcellent',category:'digital'},{file:'Dog_hamburger_2.jpg',title:'Dog Burger',category:'digital'},{file:'Corgi__2.jpg',title:'Corgi Ice Cream',category:'digital'},{file:'Cinabunny_2.jpg',title:'Cinabunny',category:'digital'},{file:'Cat.jpg',title:'Reading Cat',category:'digital'},{file:'Cake.jpg',title:'Birthday Cake',category:'digital'},{file:'madeinchina.jpg',title:'Made in China',category:'digital'},
+            {file:'calligraphy.jpg',title:'Kathleen',category:'calligraphy'},{file:'calligraphy1.jpg',title:'Maryam',category:'calligraphy'},{file:'calligraphy2.jpg',title:'Rise',category:'calligraphy'},{file:'calligraphy3.jpg',title:'Thank You',category:'calligraphy'},{file:'calligraphy4.jpg',title:'Mom Card',category:'calligraphy'},{file:'calligraphy5.jpg',title:'Thinking of You',category:'calligraphy'},{file:'calligraphy6.jpg',title:'Robin',category:'calligraphy'},{file:'card_mandala.jpg',title:'Mandala Card',category:'calligraphy'},{file:'card_flowers.jpg',title:'You Are Amazing',category:'calligraphy'},{file:'cards.jpg',title:'Handmade Cards',category:'calligraphy'},{file:'bday_card.jpg',title:'Birthday Card',category:'calligraphy'},
+            {file:'face_full_of_stars.png',title:'Face Full of Stars',category:'fineart'},{file:'eyeswithcolors.jpg',title:'Colorful Eyes',category:'fineart'},{file:'peonies.png',title:'Peonies',category:'fineart'},{file:'mirror.jpg',title:'Broken Mirror',category:'fineart'},{file:'sunflowers.jpg',title:'Sunflowers',category:'fineart'},{file:'Reader.jpg',title:'The Reader',category:'fineart'},{file:'Books_Stacked.jpg',title:'Books Stacked',category:'fineart'},{file:'statueface.jpg',title:'Classical Statue',category:'fineart'},{file:'mybodyasnature.jpg',title:'My Body As Nature',category:'fineart'}
+        ];
+        let currentFilter='all';
+        function buildCollage(){const g=document.getElementById('galleryCollage');g.innerHTML='';const f=currentFilter==='all'?artworks:artworks.filter(a=>a.category===currentFilter);const d=document.createElement('div');d.className='collage-grid';f.forEach(a=>{const i=document.createElement('div');i.className='collage-item';i.innerHTML='<img src="images/'+a.file+'" alt="'+a.title+'"><div class="collage-item-title">'+a.title+'</div>';i.onclick=()=>openLightbox(a);d.appendChild(i);});g.appendChild(d);}
+        function openLightbox(a){document.getElementById('lightboxImg').src='images/'+a.file;document.getElementById('lightboxTitle').textContent=a.title;document.getElementById('lightboxCat').textContent=a.category;document.getElementById('lightbox').classList.add('active');}
+        document.getElementById('lightboxClose').onclick=()=>document.getElementById('lightbox').classList.remove('active');
+        document.getElementById('lightbox').onclick=e=>{if(e.target.id==='lightbox')document.getElementById('lightbox').classList.remove('active');};
+        
+        // Bubble click handling - removes pulse after first click
+        document.querySelectorAll('.cat-bubble').forEach(b=>b.onclick=()=>{
+            const c=b.dataset.cat;
+            // Remove pulse from all bubbles after first interaction
+            document.querySelectorAll('.cat-bubble').forEach(x=>{
+                x.classList.remove('active');
+                x.classList.remove('pulse-hint');
+            });
+            b.classList.add('active');
+            document.querySelectorAll('.exp-panel').forEach(p=>p.classList.remove('active'));
+            document.querySelector('[data-panel="'+c+'"]').classList.add('active');
+            // Hide hint text
+            document.getElementById('bubbleHint').classList.add('hidden');
+        });
+        
+        document.querySelectorAll('.exp-panel-close').forEach(b=>b.onclick=()=>{
+            document.querySelectorAll('.exp-panel').forEach(p=>p.classList.remove('active'));
+            document.querySelectorAll('.cat-bubble').forEach(x=>x.classList.remove('active'));
+        });
+        document.querySelectorAll('.flip-card').forEach(c=>c.onclick=()=>c.classList.toggle('flipped'));
+        document.getElementById('galleryPreview').onclick=()=>{document.getElementById('galleryModal').classList.add('active');document.body.style.overflow='hidden';buildCollage();};
+        document.getElementById('galleryClose').onclick=()=>{document.getElementById('galleryModal').classList.remove('active');document.body.style.overflow='';};
+        document.querySelectorAll('.gallery-modal-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.gallery-modal-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');currentFilter=t.dataset.filter;buildCollage();});
+        document.querySelector('.menu-btn').onclick=()=>document.querySelector('.mobile-menu').classList.toggle('open');
+        document.querySelectorAll('.mobile-menu a').forEach(l=>l.onclick=()=>document.querySelector('.mobile-menu').classList.remove('open'));
+        const reveal=()=>document.querySelectorAll('.reveal').forEach(e=>{if(e.getBoundingClientRect().top<window.innerHeight-60)e.classList.add('visible');});window.onscroll=reveal;reveal();
+        window.addEventListener('scroll',()=>{let c='about';document.querySelectorAll('section').forEach(s=>{if(s.id&&scrollY>=s.offsetTop-200)c=s.id;});document.querySelectorAll('.nav a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+c));});
+        document.querySelectorAll('a[href^="#"]').forEach(a=>a.onclick=function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth'});});
+        document.onkeydown=e=>{if(e.key==='Escape'){document.getElementById('galleryModal').classList.remove('active');document.getElementById('lightbox').classList.remove('active');document.body.style.overflow='';}};
+    </script>
 </body>
 </html>
