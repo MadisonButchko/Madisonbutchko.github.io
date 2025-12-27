@@ -18,46 +18,17 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body { font-family: var(--font-body); background: var(--bg-dark); color: var(--text-mid); line-height: 1.6; overflow-x: hidden; }
-        
-        /* --- NAVIGATION --- */
         .nav { position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 0.2rem; padding: 0.35rem; background: rgba(6, 10, 16, 0.92); backdrop-filter: blur(20px); border-radius: 50px; border: 1px solid var(--border); }
         .nav a { padding: 0.5rem 1rem; font-size: 0.78rem; color: var(--text-dim); text-decoration: none; border-radius: 50px; transition: all 0.3s ease; }
         .nav a:hover { color: var(--cyan); }
         .nav a.active { background: var(--cyan); color: var(--bg-dark); font-weight: 500; }
-        
-        /* Mobile Bar */
-        .mobile-bar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(6, 10, 16, 0.95); backdrop-filter: blur(20px); z-index: 200; align-items: center; justify-content: space-between; padding: 0 1.25rem; border-bottom: 1px solid var(--border); }
-        .mobile-logo { font-family: var(--font-display); font-size: 1.25rem; color: var(--white); }
-        
-        .menu-btn { display: flex; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 5px; z-index: 201; }
-        .menu-btn span { width: 24px; height: 2px; background: var(--cyan); transition: all 0.3s; }
-        
-        .mobile-menu { 
-            display: flex; 
-            flex-direction: column; 
-            position: fixed; 
-            top: 60px; /* Push below header */
-            left: 0; 
-            width: 100%; 
-            height: 0; 
-            background: var(--bg-dark); 
-            z-index: 199; 
-            overflow: hidden; 
-            transition: height 0.3s ease-in-out;
-            border-bottom: 1px solid var(--border);
-        }
-        .mobile-menu.open { height: auto; padding-bottom: 1rem; border-bottom: 1px solid var(--cyan); }
-        .mobile-menu a { 
-            padding: 1.25rem; 
-            font-size: 1.1rem; 
-            color: var(--text-mid); 
-            text-decoration: none; 
-            border-bottom: 1px solid var(--border); 
-            text-align: center;
-        }
-        .mobile-menu a:hover { color: var(--cyan); background: var(--bg-hover); }
-
-        /* --- HERO & GENERAL --- */
+        .mobile-bar { display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px; background: rgba(6, 10, 16, 0.95); backdrop-filter: blur(20px); z-index: 100; align-items: center; justify-content: space-between; padding: 0 1.25rem; border-bottom: 1px solid var(--border); }
+        .mobile-logo { font-family: var(--font-display); font-size: 1.15rem; color: var(--white); }
+        .menu-btn { display: flex; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; padding: 8px; }
+        .menu-btn span { width: 20px; height: 2px; background: var(--cyan); }
+        .mobile-menu { display: none; position: fixed; inset: 0; top: 56px; background: var(--bg-dark); z-index: 99; padding: 1.5rem; flex-direction: column; }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a { padding: 1rem; font-size: 1rem; color: var(--text-mid); text-decoration: none; border-bottom: 1px solid var(--border); }
         .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5rem 1.5rem 4rem; position: relative; }
         .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%; background: radial-gradient(ellipse at 50% 30%, rgba(0, 229, 255, 0.06) 0%, transparent 50%); pointer-events: none; }
         .hero-label { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.35em; text-transform: uppercase; color: var(--cyan); margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.8s ease forwards 0.2s; }
@@ -78,12 +49,19 @@
         .section-head { text-align: center; margin-bottom: 1rem; }
         .section-title { font-family: var(--font-display); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 400; color: var(--white); }
         .section-title em { font-style: italic; color: var(--cyan); }
-        .section-hint { text-align: center; font-size: 0.9rem; color: var(--white); margin-bottom: 2rem; font-weight: 300; }
+        
+        /* Plain text hint beneath headings */
+        .section-hint {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--white);
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
         
         /* ============================================
-           UNIFIED CIRCLE STYLES (Experience & Skills)
+           EXPERIENCE CIRCLES - 5 in a row on desktop
            ============================================ */
-        /* Containers */
         .circle-container { 
             display: flex; 
             justify-content: center; 
@@ -92,6 +70,58 @@
             margin-bottom: 1.5rem; 
         }
         
+        .dynamic-circle {
+            width: 130px; height: 130px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; text-align: center; position: relative;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(0, 184, 212, 0.05) 100%);
+            border: 2px solid rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+            flex-shrink: 0;
+        }
+        
+        /* Floating animation - staggered delays */
+        .dynamic-circle { animation: floatBubble 4s ease-in-out infinite; }
+        .dynamic-circle:nth-child(1) { animation-delay: 0s; }
+        .dynamic-circle:nth-child(2) { animation-delay: 0.5s; }
+        .dynamic-circle:nth-child(3) { animation-delay: 1s; }
+        .dynamic-circle:nth-child(4) { animation-delay: 1.5s; }
+        .dynamic-circle:nth-child(5) { animation-delay: 2s; }
+        @keyframes floatBubble { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        
+        /* Sequential highlight with pulse glow */
+        .dynamic-circle.highlight {
+            animation: floatBubble 4s ease-in-out infinite, pulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 229, 255, 0.6), 0 0 60px rgba(0, 229, 255, 0.3); }
+        }
+        
+        .dynamic-circle:hover {
+            transform: scale(1.1) translateY(-4px);
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.5);
+            border-color: var(--cyan);
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 184, 212, 0.1) 100%);
+            animation: none;
+        }
+        .dynamic-circle:hover .circle-label { color: var(--white); }
+        
+        .dynamic-circle.active {
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--teal) 100%);
+            border-color: var(--cyan);
+            transform: scale(1.1);
+            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.4);
+            animation: none;
+        }
+        .dynamic-circle.active .circle-label { color: var(--bg-dark) !important; }
+        
+        .circle-label { font-size: 0.95rem; font-weight: 500; color: var(--cyan); padding: 0 0.5rem; transition: color 0.3s; }
+        
+        /* ============================================
+           SKILL CIRCLES - Same cyan style, 4-4 on desktop
+           ============================================ */
         .skill-expanded-wrapper {
             position: relative;
             display: flex;
@@ -102,65 +132,46 @@
             margin: 0 auto 3rem auto;
             padding-bottom: 2rem;
         }
-
-        /* Shared Circle Styles */
-        .dynamic-circle, .skill-circle {
-            width: 130px; 
-            height: 130px; 
-            border-radius: 50%;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            cursor: pointer; 
-            text-align: center; 
-            position: relative;
+        
+        .skill-circle {
+            width: 130px; height: 130px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; text-align: center; position: relative;
             transition: all 0.3s ease;
             background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(0, 184, 212, 0.05) 100%);
             border: 2px solid rgba(0, 229, 255, 0.3);
             box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
-            flex-shrink: 0; /* Prevents squishing */
         }
-
-        .circle-label { font-size: 0.95rem; font-weight: 500; color: var(--cyan); padding: 0 0.5rem; transition: color 0.3s; line-height: 1.2; }
-
-        /* Animations */
-        .dynamic-circle, .skill-circle { animation: floatBubble 4s ease-in-out infinite; }
-        .dynamic-circle:nth-child(1), .skill-circle:nth-child(1) { animation-delay: 0s; }
-        .dynamic-circle:nth-child(2), .skill-circle:nth-child(2) { animation-delay: 0.5s; }
-        .dynamic-circle:nth-child(3), .skill-circle:nth-child(3) { animation-delay: 1s; }
-        .dynamic-circle:nth-child(4), .skill-circle:nth-child(4) { animation-delay: 1.5s; }
-        .dynamic-circle:nth-child(5), .skill-circle:nth-child(5) { animation-delay: 2s; }
-        .skill-circle:nth-child(6) { animation-delay: 2.5s; }
-        .skill-circle:nth-child(7) { animation-delay: 3s; }
-        .skill-circle:nth-child(8) { animation-delay: 3.5s; }
-
-        @keyframes floatBubble { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); } 50% { box-shadow: 0 0 40px rgba(0, 229, 255, 0.6), 0 0 60px rgba(0, 229, 255, 0.3); } }
-
-        /* Highlight & Hover States */
-        .dynamic-circle.highlight, .skill-circle.highlight { animation: floatBubble 4s ease-in-out infinite, pulseGlow 2s ease-in-out infinite; }
         
-        .dynamic-circle:hover, .skill-circle:hover {
+        /* Floating animation - staggered delays */
+        .skill-circle { animation: floatBubble 4s ease-in-out infinite; }
+        .skill-circle:nth-child(1) { animation-delay: 0s; }
+        .skill-circle:nth-child(2) { animation-delay: 0.4s; }
+        .skill-circle:nth-child(3) { animation-delay: 0.8s; }
+        .skill-circle:nth-child(4) { animation-delay: 1.2s; }
+        .skill-circle:nth-child(5) { animation-delay: 1.6s; }
+        .skill-circle:nth-child(6) { animation-delay: 2s; }
+        .skill-circle:nth-child(7) { animation-delay: 2.4s; }
+        .skill-circle:nth-child(8) { animation-delay: 2.8s; }
+        
+        .skill-circle.highlight {
+            animation: floatBubble 4s ease-in-out infinite, pulseGlow 2s ease-in-out infinite;
+        }
+        
+        .skill-circle:hover {
             transform: scale(1.1) translateY(-4px);
             box-shadow: 0 0 30px rgba(0, 229, 255, 0.5);
             border-color: var(--cyan);
             background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 184, 212, 0.1) 100%);
             animation: none;
         }
-        .dynamic-circle:hover .circle-label, .skill-circle:hover .circle-label { color: var(--white); }
+        .skill-circle:hover .circle-label { color: var(--white); }
         
-        .dynamic-circle.active {
-            background: linear-gradient(135deg, var(--cyan) 0%, var(--teal) 100%);
-            border-color: var(--cyan);
-            transform: scale(1.1);
-            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.4);
-            animation: none;
-        }
-        .dynamic-circle.active .circle-label { color: var(--bg-dark) !important; }
-        .skill-circle.active { display: none; } /* Skills disappear when expanded */
-
+        .skill-circle.active { display: none; }
+        .skill-circle .circle-label { color: var(--cyan); font-size: 0.95rem; }
+        
         /* ============================================
-           EXPANDED SKILL CIRCLE
+           EXPANDED SKILL CIRCLE - Bigger, lighter blue inside
            ============================================ */
         .expanded-skill {
             display: none;
@@ -177,14 +188,55 @@
             text-align: center;
             padding: 1.5rem;
         }
-        .expanded-skill.active { display: flex; animation: expandCircle 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes expandCircle { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .expanded-skill.active {
+            display: flex;
+            animation: expandCircle 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes expandCircle {
+            from { transform: scale(0.4); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
         
-        .expanded-skill-title { font-family: var(--font-display); font-size: 1.4rem; color: var(--white); margin-bottom: 1rem; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
-        .expanded-skill-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; max-width: 240px; }
-        .expanded-skill-tag { padding: 0.4rem 0.85rem; font-size: 0.8rem; background: rgba(0, 229, 255, 0.2); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 20px; color: var(--white); transition: all 0.3s; }
-        .expanded-skill-tag:hover { background: rgba(0, 229, 255, 0.35); transform: scale(1.05); }
-        .expanded-skill-close { position: absolute; top: 0.75rem; right: 0.75rem; width: 30px; height: 30px; border-radius: 50%; background: rgba(0, 229, 255, 0.3); border: none; color: var(--white); font-size: 1rem; cursor: pointer; transition: all 0.3s; }
+        .expanded-skill-title {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--white);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+        .expanded-skill-tags {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            max-width: 240px;
+        }
+        .expanded-skill-tag {
+            padding: 0.4rem 0.85rem;
+            font-size: 0.8rem;
+            background: rgba(0, 229, 255, 0.2);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 20px;
+            color: var(--white);
+            transition: all 0.3s;
+        }
+        .expanded-skill-tag:hover {
+            background: rgba(0, 229, 255, 0.35);
+            transform: scale(1.05);
+        }
+        .expanded-skill-close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 229, 255, 0.3);
+            border: none;
+            color: var(--white);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
         .expanded-skill-close:hover { background: rgba(0, 229, 255, 0.5); transform: rotate(90deg); }
         
         /* Experience panels */
@@ -218,7 +270,7 @@
         .writing-desc { font-size: 0.8rem; color: var(--text-dim); }
         .skill-tag { padding: 0.25rem 0.6rem; font-size: 0.72rem; color: var(--ice); background: rgba(0, 229, 255, 0.08); border-radius: 4px; }
         
-        /* Gallery */
+        /* Gallery - Original 5-column layout */
         .gallery-section { background: linear-gradient(180deg, transparent 0%, rgba(10, 16, 24, 0.5) 50%, transparent 100%); padding: 4rem 0; }
         .gallery-container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
         .gallery-preview { 
@@ -235,6 +287,7 @@
         .preview-item { overflow: hidden; }
         .preview-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
         .preview-item:hover img { transform: scale(1.08); }
+        /* Make some items span for variety */
         .preview-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
         .preview-item:nth-child(8) { grid-column: span 2; }
         .preview-item:nth-child(13) { grid-column: span 2; grid-row: span 2; }
@@ -261,12 +314,28 @@
         .collage-item-title { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem 0.5rem 0.5rem; background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-size: 0.7rem; color: var(--white); opacity: 0; transition: opacity 0.3s; }
         .collage-item:hover .collage-item-title { opacity: 1; }
         
+        /* Lightbox with arrows */
         .lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0, 0, 0, 0.95); display: none; align-items: center; justify-content: center; padding: 2rem; }
         .lightbox.active { display: flex; }
         .lightbox img { max-width: 80%; max-height: 85%; object-fit: contain; border-radius: 8px; }
         .lightbox-close { position: absolute; top: 1rem; right: 1rem; width: 50px; height: 50px; background: rgba(0, 229, 255, 0.2); border: none; border-radius: 50%; color: var(--cyan); font-size: 1.75rem; cursor: pointer; transition: all 0.3s; }
         .lightbox-close:hover { background: rgba(0, 229, 255, 0.4); }
-        .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: rgba(0, 229, 255, 0.2); border: 2px solid rgba(0, 229, 255, 0.4); border-radius: 50%; color: var(--cyan); font-size: 1.5rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
+        .lightbox-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px; height: 60px;
+            background: rgba(0, 229, 255, 0.2);
+            border: 2px solid rgba(0, 229, 255, 0.4);
+            border-radius: 50%;
+            color: var(--cyan);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .lightbox-arrow:hover { background: rgba(0, 229, 255, 0.4); transform: translateY(-50%) scale(1.1); }
         .lightbox-prev { left: 2rem; }
         .lightbox-next { right: 2rem; }
@@ -297,31 +366,24 @@
             .profile-photos { gap: 1rem; }
             .profile-photo { width: 140px; height: 140px; }
             
-            /* --- STANDARDIZED MOBILE CIRCLES --- */
-            /* Both containers wrap */
-            .circle-container, .skill-expanded-wrapper {
+            /* Experience circles: 3 on top, 2 on bottom */
+            .circle-container {
                 flex-wrap: wrap;
                 max-width: 320px;
                 gap: 1rem;
                 margin-left: auto;
                 margin-right: auto;
             }
+            .dynamic-circle { width: 90px; height: 90px; flex-shrink: 1; }
             
-            /* Enforce identical sizing for both types of circles */
-            .dynamic-circle, .skill-circle { 
-                width: 90px !important; 
-                height: 90px !important; 
-                flex-shrink: 0; /* Prevents oval squishing */
+            /* Skill circles: 3, 3, 2 layout */
+            .skill-expanded-wrapper {
+                max-width: 320px;
+                gap: 1rem;
             }
+            .skill-circle { width: 90px; height: 90px; }
             
-            /* Enforce identical text sizing */
-            .circle-label { 
-                font-size: 0.65rem !important; 
-                line-height: 1.1;
-                white-space: normal;
-                word-wrap: break-word;
-            }
-            
+            .circle-label { font-size: 0.7rem; }
             .expanded-skill { width: 220px; height: 220px; }
             .expanded-skill-title { font-size: 1.1rem; }
             .expanded-skill-tags { max-width: 180px; }
@@ -350,7 +412,7 @@
     </nav>
     <header class="mobile-bar">
         <span class="mobile-logo">Madison Butchko</span>
-        <button class="menu-btn" aria-label="Toggle Menu"><span></span><span></span><span></span></button>
+        <button class="menu-btn"><span></span><span></span><span></span></button>
     </header>
     <div class="mobile-menu">
         <a href="#about">About</a>
@@ -387,6 +449,7 @@
                 <div class="dynamic-circle" data-cat="additional"><span class="circle-label">Additional</span></div>
             </div>
             
+            <!-- Experience Panels -->
             <div class="exp-panel" data-panel="research">
                 <div class="exp-panel-header"><h3 class="exp-panel-title">Research Experience</h3><button class="exp-panel-close">×</button></div>
                 <div class="flip-cards">
@@ -436,6 +499,7 @@
             </div>
         </section>
         
+        <!-- SKILLS SECTION - 4-4 on desktop, 3-3-2 on mobile -->
         <section id="skills">
             <div class="section-head reveal"><h2 class="section-title">Skills & <em>Expertise</em></h2></div>
             <p class="section-hint reveal">Click a skill to see more</p>
@@ -449,6 +513,7 @@
                 <div class="skill-circle" data-skill="writing"><span class="circle-label">Writing</span></div>
                 <div class="skill-circle" data-skill="hobbies"><span class="circle-label">Hobbies</span></div>
                 
+                <!-- Expanded circles that appear ON TOP -->
                 <div class="expanded-skill" data-skillpanel="programming">
                     <button class="expanded-skill-close">×</button>
                     <h3 class="expanded-skill-title">Programming</h3>
@@ -658,6 +723,7 @@
             updateLightbox();
         };
         
+        // Keyboard navigation for lightbox
         document.addEventListener('keydown', (e)=>{
             if(document.getElementById('lightbox').classList.contains('active')){
                 if(e.key==='ArrowLeft') document.getElementById('lightboxPrev').click();
@@ -666,7 +732,7 @@
             }
         });
         
-        // Highlight animation Experience
+        // Sequential highlight for Experience circles - one at a time
         let expHighlightIndex = 0;
         const expCircles = document.querySelectorAll('.dynamic-circle');
         function cycleExpHighlight(){
@@ -677,9 +743,9 @@
             }
         }
         setInterval(cycleExpHighlight, 2000);
-        cycleExpHighlight();
+        cycleExpHighlight(); // Start immediately
         
-        // Highlight animation Skills
+        // Sequential highlight for Skill circles - one at a time
         let skillHighlightIndex = 0;
         const skillCircles = document.querySelectorAll('.skill-circle');
         function cycleSkillHighlight(){
@@ -690,9 +756,9 @@
             }
         }
         setInterval(cycleSkillHighlight, 2000);
-        setTimeout(cycleSkillHighlight, 500);
+        setTimeout(cycleSkillHighlight, 500); // Offset from experience
         
-        // Experience logic
+        // Experience circles click
         expCircles.forEach(c=>c.onclick=()=>{
             const cat=c.dataset.cat;
             expCircles.forEach(x=>{x.classList.remove('active');x.classList.remove('highlight');});
@@ -705,18 +771,24 @@
             expCircles.forEach(x=>x.classList.remove('active'));
         });
         
-        // Skill logic
+        // Skill circles click - expand on top, centered in viewport
         skillCircles.forEach(c=>c.onclick=()=>{
             const skill=c.dataset.skill;
             skillCircles.forEach(x=>{x.classList.remove('highlight');});
             document.querySelectorAll('.expanded-skill').forEach(p=>p.classList.remove('active'));
+            
+            // Get wrapper dimensions
             const wrapper = document.getElementById('skillCircles');
             const expanded = document.querySelector('[data-skillpanel="'+skill+'"]');
+            
+            // Center in the wrapper
             const expandedSize = window.innerWidth <= 768 ? 220 : 300;
             const centerX = (wrapper.offsetWidth - expandedSize) / 2;
             const centerY = (wrapper.offsetHeight - expandedSize) / 2;
+            
             expanded.style.left = centerX + 'px';
             expanded.style.top = Math.max(0, centerY) + 'px';
+            
             c.classList.add('active');
             expanded.classList.add('active');
         });
@@ -726,6 +798,8 @@
             document.querySelectorAll('.expanded-skill').forEach(p=>p.classList.remove('active'));
             skillCircles.forEach(x=>x.classList.remove('active'));
         });
+        
+        // Click outside expanded skill to close
         document.getElementById('skillCircles').onclick=(e)=>{
             if(e.target.id==='skillCircles'){
                 document.querySelectorAll('.expanded-skill').forEach(p=>p.classList.remove('active'));
@@ -737,30 +811,8 @@
         document.getElementById('galleryPreview').onclick=()=>{document.getElementById('galleryModal').classList.add('active');document.body.style.overflow='hidden';buildCollage();};
         document.getElementById('galleryClose').onclick=()=>{document.getElementById('galleryModal').classList.remove('active');document.body.style.overflow='';};
         document.querySelectorAll('.gallery-modal-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.gallery-modal-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');currentFilter=t.dataset.filter;buildCollage();});
-        
-        // --- MOBILE MENU LOGIC ---
-        const menuBtn = document.querySelector('.menu-btn');
-        const mobileMenu = document.querySelector('.mobile-menu');
-        const mobileLinks = document.querySelectorAll('.mobile-menu a');
-
-        menuBtn.onclick = () => {
-            mobileMenu.classList.toggle('open');
-        };
-
-        // Ensure clicking any link closes the menu immediately
-        mobileLinks.forEach(link => {
-            link.onclick = () => {
-                mobileMenu.classList.remove('open');
-            };
-        });
-        
-        // Close menu if clicking outside of it (optional polish)
-        document.addEventListener('click', (e) => {
-            if (!mobileMenu.contains(e.target) && !menuBtn.contains(e.target) && mobileMenu.classList.contains('open')) {
-                mobileMenu.classList.remove('open');
-            }
-        });
-
+        document.querySelector('.menu-btn').onclick=()=>document.querySelector('.mobile-menu').classList.toggle('open');
+        document.querySelectorAll('.mobile-menu a').forEach(l=>l.onclick=()=>document.querySelector('.mobile-menu').classList.remove('open'));
         const reveal=()=>document.querySelectorAll('.reveal').forEach(e=>{if(e.getBoundingClientRect().top<window.innerHeight-60)e.classList.add('visible');});window.onscroll=reveal;reveal();
         window.addEventListener('scroll',()=>{let c='about';document.querySelectorAll('section').forEach(s=>{if(s.id&&scrollY>=s.offsetTop-200)c=s.id;});document.querySelectorAll('.nav a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+c));});
         document.querySelectorAll('a[href^="#"]').forEach(a=>a.onclick=function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth'});});
