@@ -217,12 +217,22 @@
         .flip-card-back .flip-link-item::before { display: none; }
         .flip-card-back .flip-link { display: inline-block; color: var(--cyan); text-decoration: none; padding: 0.3rem 0.6rem; background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; transition: all 0.3s; margin-top: 0.25rem; }
         .flip-card-back .flip-link:hover { background: rgba(0, 229, 255, 0.25); border-color: var(--cyan); color: var(--white); }
-        .writing-links-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .writing-links-panel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+        @media (max-width: 1100px) { .writing-links-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .writing-link { display: block; padding: 1.25rem; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--cyan); border-radius: 0 12px 12px 0; text-decoration: none; transition: all 0.3s; }
         .writing-link:hover { background: var(--bg-hover); transform: translateX(5px); }
         .writing-pub { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--cyan); margin-bottom: 0.3rem; }
         .writing-role { font-family: var(--font-display); font-size: 1.05rem; color: var(--white); margin-bottom: 0.25rem; }
         .writing-desc { font-size: 0.8rem; color: var(--text-dim); }
+        a.writing-link { position: relative; padding-right: 2.5rem; }
+        a.writing-link::after { content: '\2197'; position: absolute; top: 1rem; right: 1rem; font-size: 0.95rem; color: var(--cyan); opacity: 0.55; transition: all 0.3s; }
+        a.writing-link:hover::after { opacity: 1; transform: translate(2px, -2px); }
+        a.writing-link:hover { border-top-color: rgba(0, 229, 255, 0.35); border-right-color: rgba(0, 229, 255, 0.35); border-bottom-color: rgba(0, 229, 255, 0.35); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 18px rgba(0, 229, 255, 0.08); }
+        .writing-link--static { background: transparent; border: 1px solid var(--border); border-top: 2px solid rgba(0, 229, 255, 0.35); border-radius: 12px; cursor: default; }
+        .writing-link--static:hover { background: rgba(13, 21, 32, 0.6); transform: none; }
+        .writing-link--static .writing-pub { color: var(--sky); opacity: 0.85; }
+        .writing-subhead { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-mid); margin: 1.75rem 0 0.9rem; display: flex; align-items: center; gap: 0.75rem; }
+        .writing-subhead::after { content: ''; flex: 1; height: 1px; background: var(--border); }
         .skill-tag { padding: 0.25rem 0.6rem; font-size: 0.72rem; color: var(--ice); background: rgba(0, 229, 255, 0.08); border-radius: 4px; }
         
         /* Gallery */
@@ -462,7 +472,14 @@
                     <a href="https://chinahandsmagazine.org/author/madisonbutchko/" target="_blank" class="writing-link"><div class="writing-pub">China Hands Magazine</div><h4 class="writing-role">Editor in Chief</h4><p class="writing-desc">Chinese history, technology & social issues (2023-Present)</p></a>
                     <a href="https://www.hercampus.com/author/maddie-butchko/" target="_blank" class="writing-link"><div class="writing-pub">Her Campus at Yale</div><h4 class="writing-role">Editor in Chief</h4><p class="writing-desc">Weekly lifestyle content (2021-Present)</p></a>
                     <a href="https://yaledailynews.com/author/madison-butchko" target="_blank" class="writing-link"><div class="writing-pub">Yale Daily News</div><h4 class="writing-role">Staff Writer & Columnist</h4><p class="writing-desc">Personal essays with illustrations (2023-Present)</p></a>
-                    <a href="https://yale-herald.com/2025/03/30/a-guide-to-achieving-perfect-skin/" target="_blank" class="writing-link"><div class="writing-pub">Yale Herald / Layer</div><h4 class="writing-role">Staff Writer</h4><p class="writing-desc">Lifestyle essays (2024-Present)</p></a>
+                    <a href="https://yale-herald.com/2025/03/30/a-guide-to-achieving-perfect-skin/" target="_blank" class="writing-link"><div class="writing-pub">Yale Herald / Layer</div><h4 class="writing-role">Staff Writer</h4><p class="writing-desc">Personal essays (2024-Present)</p></a>
+                </div>
+                <h4 class="writing-subhead">Additional Publications</h4>
+                <div class="writing-links-panel">
+                    <div class="writing-link writing-link--static"><div class="writing-pub">Yale Layer</div><h4 class="writing-role">Staff Writer &amp; Editor</h4><p class="writing-desc">Writing and editing for Yale's lifestyle magazine</p></div>
+                    <div class="writing-link writing-link--static"><div class="writing-pub">Yale Environmentalist</div><h4 class="writing-role">Staff Writer</h4><p class="writing-desc">Author of &ldquo;Catch and Kill&rdquo;</p></div>
+                    <div class="writing-link writing-link--static"><div class="writing-pub">295 Magazine</div><h4 class="writing-role">Staff Writer</h4><p class="writing-desc">Featured personal essays in the Yale Asian American Cultural Center's annual magazine</p></div>
+                    <div class="writing-link writing-link--static"><div class="writing-pub">Global Teaching Project</div><h4 class="writing-role">Lead Blog Writer</h4><p class="writing-desc">Writing on teaching, lesson planning &amp; educational access</p></div>
                 </div>
             </div>
             <div class="exp-panel" data-panel="leadership">
