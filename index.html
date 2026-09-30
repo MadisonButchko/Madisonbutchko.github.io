@@ -55,17 +55,22 @@
         .hero-tag:hover { background: rgba(0, 229, 255, 0.2); border-color: var(--cyan); color: var(--white); transform: translateY(-2px); }
         .profile-photos { position: relative; flex-shrink: 0; display: flex; align-items: center; opacity: 0; animation: fadeUp 0.8s ease forwards 0.8s; }
         .profile-photos::before { content: ''; position: absolute; inset: -22% -18%; background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.13) 0%, rgba(0, 188, 212, 0.05) 45%, transparent 70%); filter: blur(20px); z-index: -1; pointer-events: none; }
-        .profile-photo { position: relative; width: 232px; height: 308px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0, 229, 255, 0.85); box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45), 0 0 28px rgba(0, 229, 255, 0.18); transition: box-shadow 0.3s ease; }
-        .profile-photo + .profile-photo { margin-left: -12px; }
+        .profile-photo { position: relative; width: 212px; height: 284px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0, 229, 255, 0.85); box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45), 0 0 28px rgba(0, 229, 255, 0.18); transition: box-shadow 0.3s ease; }
+        .profile-photo + .profile-photo { margin-left: 2px; }
         .profile-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 35%; }
-        .profile-photo:nth-child(1) { z-index: 1; animation: tilt1 5s ease-in-out infinite; transform: rotate(-4deg); }
-        .profile-photo:nth-child(2) { z-index: 2; height: 334px; animation: tiltMid 5s ease-in-out infinite 0.3s; transform: translateY(-10px); }
-        .profile-photo:nth-child(3) { z-index: 1; animation: tilt2 5s ease-in-out infinite 0.6s; transform: rotate(4deg); }
-        .profile-photo:nth-child(2) img { object-position: center 80%; }
+        .profile-photo:nth-child(1) { z-index: 1; animation: tilt1 6.5s ease-in-out infinite; transform: rotate(-6deg); }
+        .profile-photo:nth-child(2) { z-index: 2; height: 308px; animation: tiltMid 5.5s ease-in-out infinite -1.2s; transform: translateY(-10px); }
+        .profile-photo:nth-child(3) { z-index: 1; animation: tilt2 7s ease-in-out infinite -2.5s; transform: rotate(6deg); }
+        .profile-photo:nth-child(3) img { object-position: center 80%; }
         .profile-photo:hover { z-index: 3; box-shadow: 0 28px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 255, 0.35); }
-        @keyframes tilt1 { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-8px); } }
-        @keyframes tiltMid { 0%, 100% { transform: translateY(-10px); } 50% { transform: translateY(-20px); } }
-        @keyframes tilt2 { 0%, 100% { transform: rotate(4deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-8px); } }
+        /* Hover-to-enlarge for photos of Madison (uses `scale` so it layers on top of the tilt animation) */
+        .profile-photo, .contact-photo { scale: 1; transition: scale 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease; cursor: zoom-in; }
+        .profile-photo:hover { scale: 1.2; }
+        .profile-photo img, .contact-photo img { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        .profile-photo:hover img, .contact-photo:hover img { transform: scale(1.04); }
+        @keyframes tilt1 { 0%, 100% { transform: rotate(-6deg) translate(0, 0); } 33% { transform: rotate(-1deg) translate(-4px, -14px); } 66% { transform: rotate(-8deg) translate(3px, -6px); } }
+        @keyframes tiltMid { 0%, 100% { transform: rotate(0deg) translateY(-10px); } 25% { transform: rotate(2.5deg) translateY(-24px); } 75% { transform: rotate(-2.5deg) translateY(-4px); } }
+        @keyframes tilt2 { 0%, 100% { transform: rotate(6deg) translate(0, 0); } 33% { transform: rotate(1deg) translate(4px, -14px); } 66% { transform: rotate(8deg) translate(-3px, -6px); } }
 
         /* Scroll cue */
         .scroll-cue { position: absolute; bottom: 2.25rem; left: 50%; transform: translateX(-50%); z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; font-size: 0.62rem; letter-spacing: 0.3em; padding-left: 0.3em; text-transform: uppercase; color: var(--text-dim); text-decoration: none; opacity: 0; animation: fadeUp 0.8s ease forwards 1.2s; transition: color 0.3s; }
@@ -287,6 +292,17 @@
         .social-links { display: flex; justify-content: center; gap: 0.6rem; }
         .social-link { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.08); border: 1px solid var(--border); border-radius: 50%; color: var(--cyan); text-decoration: none; font-size: 0.8rem; font-weight: 500; }
         .social-link:hover { background: var(--cyan); color: var(--bg-dark); }
+        /* Contact: photo beside text */
+        .contact-inner { display: flex; align-items: center; justify-content: center; gap: 3.25rem; max-width: 820px; margin: 0 auto; }
+        .contact-photo { position: relative; z-index: 1; flex-shrink: 0; width: 172px; height: 222px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0, 229, 255, 0.85); transform: rotate(-4deg); animation: contactSway 6s ease-in-out infinite; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 24px rgba(0, 229, 255, 0.16); }
+        .contact-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+        .contact-photo:hover { z-index: 3; scale: 1.3; box-shadow: 0 28px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 255, 0.35); }
+        .contact-inner .contact-body { text-align: left; }
+        .contact-inner .contact-title { font-size: clamp(2.25rem, 5vw, 3.4rem); line-height: 1.05; margin-bottom: 0.9rem; }
+        .contact-inner .contact-text { font-size: 1.1rem; line-height: 1.7; max-width: 440px; margin-bottom: 1.75rem; }
+        @keyframes contactSway { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-8px); } }
+        .contact-inner .contact-text { margin-left: 0; }
+        .contact-inner .social-links { justify-content: flex-start; }
         footer { text-align: center; padding: 1.5rem; border-top: 1px solid var(--border); }
         footer p { font-size: 0.75rem; color: var(--text-dim); }
         .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
@@ -309,9 +325,15 @@
             .hero-tags { justify-content: center; }
             .hero-intro { max-width: 100%; }
             .profile-photos { display: flex; justify-content: center; }
-            .profile-photo { width: 108px; height: 144px; border-width: 1.5px; }
-            .profile-photo:nth-child(2) { height: 158px; }
-            .profile-photo + .profile-photo { margin-left: -8px; }
+            .profile-photo { width: 100px; height: 136px; border-width: 1.5px; }
+            .profile-photo:nth-child(2) { height: 150px; }
+            .profile-photo + .profile-photo { margin-left: 0px; }
+            .contact-inner { flex-direction: column; gap: 1.75rem; }
+            .contact-photo { width: 150px; height: 194px; }
+            .contact-inner .contact-text { font-size: 1rem; }
+            .contact-inner .contact-body { text-align: center; }
+            .contact-inner .contact-text { margin-left: auto; }
+            .contact-inner .social-links { justify-content: center; }
             .hero-label { white-space: normal; letter-spacing: 0.16em; }
             .scroll-cue { bottom: 1.25rem; }
             .scroll-cue-line { height: 30px; }
@@ -394,8 +416,8 @@
                 </div>
                 <div class="profile-photos">
                     <div class="profile-photo"><img src="images/Madisonpic1.jpg" alt="Madison smiling with a bouquet of spring flowers"></div>
-                    <div class="profile-photo"><img src="images/Madisonpic2.jpg" alt="Madison laughing while holding flowers"></div>
                     <div class="profile-photo"><img src="images/Madisonpic3.jpg" alt="Madison under a blooming magnolia tree"></div>
+                    <div class="profile-photo"><img src="images/Madisonpic2.jpg" alt="Madison laughing while holding flowers"></div>
                 </div>
             </div>
             <a href="#experience" class="scroll-cue" aria-label="Scroll to Experience">Explore<span class="scroll-cue-line"></span></a>
@@ -593,13 +615,16 @@
             </div>
         </section>
         <section class="contact-section" id="contact">
-            <div class="reveal">
-                <h2 class="contact-title">Let's <em>Connect</em></h2>
-                <p class="contact-text">Open to research collaborations, creative projects, and interesting conversations.</p>
-                <div class="social-links">
-                    <a href="https://github.com/madisonbutchko" class="social-link" target="_blank">GH</a>
-                    <a href="https://www.linkedin.com/in/madisonbutchko" class="social-link" target="_blank">LI</a>
-                    <a href="https://www.deviantart.com/madisonbutchko" class="social-link" target="_blank">DA</a>
+            <div class="reveal contact-inner">
+                <div class="contact-photo"><img src="images/madisonpic4.jpg" alt="Portrait of Madison Butchko"></div>
+                <div class="contact-body">
+                    <h2 class="contact-title">Let's <em>Connect</em></h2>
+                    <p class="contact-text">Open to research collaborations, creative projects, and interesting conversations.</p>
+                    <div class="social-links">
+                        <a href="https://github.com/madisonbutchko" class="social-link" target="_blank">GH</a>
+                        <a href="https://www.linkedin.com/in/madisonbutchko" class="social-link" target="_blank">LI</a>
+                        <a href="https://www.deviantart.com/madisonbutchko" class="social-link" target="_blank">DA</a>
+                    </div>
                 </div>
             </div>
         </section>
