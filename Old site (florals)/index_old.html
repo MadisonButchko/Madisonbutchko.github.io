@@ -10,9 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,50;1,9..144,300..600,100&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* ===== v9: lightbox layout (ambient backdrop lives in style.css, driven by setBackdrop()) ===== */
-        #lightbox.lightbox { position: fixed; inset: 0; z-index: 300; background: #2a1f31 !important; display: none; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; flex-direction: column; gap: 0; }
+        /* ===== v9: lightbox backdrop — copied exactly from the old version (index copy 3) ===== */
+        #lightbox.lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(46, 34, 54, 0.94) !important; display: none; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; flex-direction: column; gap: 0; }
         #lightbox.lightbox.active { display: flex; animation: modalIn 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+        #lightbox::before, #lightbox::after { content: none !important; display: none !important; }
+        #lightbox .lb-backdrop { position: absolute !important; inset: -10% !important; background-size: cover !important; background-position: center !important; background-color: transparent !important; filter: blur(50px) saturate(1.3) !important; opacity: 0.45 !important; transition: background-image 0.6s; pointer-events: none; display: block !important; z-index: auto !important; transform: none !important; }
         #lightbox img#lightboxImg { position: relative; z-index: 1; max-height: 70vh; max-width: 78vw; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease; cursor: zoom-in; transform-origin: var(--ox, 50%) var(--oy, 50%); }
         #lightbox img#lightboxImg.swap-l { opacity: 0; transform: translateX(-60px) scale(0.94) rotate(-2deg); }
         #lightbox img#lightboxImg.swap-r { opacity: 0; transform: translateX(60px) scale(0.94) rotate(2deg); }
@@ -522,8 +524,13 @@
             document.getElementById('lightbox').classList.add('active');
         }
         
-        /* updateLightbox() is defined once, in the gallery script below (thumbs, palette backdrop, preloading). */
-        let updateLightbox = () => {};
+        function updateLightbox(){
+            const a = filteredArtworks[currentLightboxIndex];
+            document.getElementById('lightboxImg').src='images/'+a.file;
+            document.getElementById('lightboxTitle').textContent=a.title;
+            document.getElementById('lightboxCat').textContent=a.category;
+            document.getElementById('lightboxCounter').textContent = (currentLightboxIndex+1) + ' / ' + filteredArtworks.length;
+        }
         
         document.getElementById('lightboxClose').onclick=()=>document.getElementById('lightbox').classList.remove('active');
         document.getElementById('lightbox').onclick=e=>{if(e.target.id==='lightbox')document.getElementById('lightbox').classList.remove('active');};
@@ -1038,26 +1045,10 @@
             /* lightbox extras */
             const lb = document.getElementById('lightbox'), img = document.getElementById('lightboxImg');
             img.decoding = 'async';
-            /* one ambient backdrop: two image layers (crossfaded) + a color wash from artPalette() */
-            let back = lb.querySelector('.lb-backdrop');
-            if (!back){
-                back = document.createElement('div'); back.className = 'lb-backdrop'; back.setAttribute('aria-hidden', 'true');
-                back.innerHTML = '<div class="lb-backdrop-image"></div><div class="lb-backdrop-image"></div><div class="lb-backdrop-colors"></div>';
-                lb.prepend(back);
-            }
-            const bgLayers = [...back.querySelectorAll('.lb-backdrop-image')]; let bgFront = 0, bgFile = null;
+            const back = document.createElement('div'); back.className = 'lb-backdrop'; lb.prepend(back);
+            const bgs = [...back.children]; let bgi = 0;
             /* the whole lightbox washes into the artwork's own colors (gradients only, so it stays smooth) */
-            function setBackdrop(file){
-                const colors = palette.get(file);
-                /* no palette (e.g. canvas blocked when opened from file://): clear the wash so the previous piece's colors never linger */
-                lb.style.setProperty('--art1', colors ? colors[0] : 'rgba(46, 34, 54, 0)');
-                lb.style.setProperty('--art2', colors ? colors[1] : 'rgba(46, 34, 54, 0)');
-                if (file === bgFile) return;
-                bgFile = file; bgFront = 1 - bgFront;
-                const on = bgLayers[bgFront], off = bgLayers[1 - bgFront];
-                on.style.backgroundImage = 'url("images/' + file + '")';
-                on.classList.add('on'); off.classList.remove('on');
-            }
+            function setBackdrop(file){ back.style.backgroundImage = 'url("images/' + file + '")'; }
             const thumbs = document.createElement('div'); thumbs.className = 'lb-thumbs'; lb.appendChild(thumbs);
             const play = document.createElement('button'); play.className = 'lb-play'; play.innerHTML = ICON_PLAY + ' Slideshow'; lb.appendChild(play);
             const prog = document.createElement('div'); prog.className = 'lb-progress'; lb.appendChild(prog);
@@ -1200,13 +1191,33 @@
     })();
     </script>
     <script>
-    /* Gallery v3: rainbow frame around the preview */
+    /* Gallery v3: color sampling, section tint, hover-to-open */
     (function(){
+        const cache = new Map();
+        function artColor(img){
+            if (cache.has(img.src)) return cache.get(img.src);
+            let out = 'rgba(244, 167, 191, 0.9)';
+            try {
+                const c = document.createElement('canvas'); c.width = c.height = 18; const x = c.getContext('2d');
+                x.drawImage(img, 0, 0, 18, 18); const d = x.getImageData(0, 0, 18, 18).data;
+                let r = 0, g = 0, b = 0, n = 0;
+                for (let i = 0; i < d.length; i += 4){ const mx = Math.max(d[i], d[i+1], d[i+2]), mn = Math.min(d[i], d[i+1], d[i+2]); const w = 0.2 + (mx - mn) / 255; r += d[i] * w; g += d[i+1] * w; b += d[i+2] * w; n += w; }
+                r /= n; g /= n; b /= n;
+                const avg = (r + g + b) / 3; r = Math.min(255, avg + (r - avg) * 1.6); g = Math.min(255, avg + (g - avg) * 1.6); b = Math.min(255, avg + (b - avg) * 1.6);
+                out = `rgba(${r | 0}, ${g | 0}, ${b | 0}, 0.95)`;
+            } catch (e) {}
+            cache.set(img.src, out); return out;
+        }
+
         /* rainbow frame around the preview + hint */
         const prev = document.getElementById('galleryPreview'), sec = document.getElementById('gallery');
         if (prev && !prev.parentElement.classList.contains('gallery-frame')){
             const fr = document.createElement('div'); fr.className = 'gallery-frame'; prev.parentNode.insertBefore(fr, prev); fr.appendChild(prev);
         }
+
+        /* lightbox: also tint with the piece's own color */
+        const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lightboxImg');
+        lbImg.addEventListener('load', () => { lb.style.setProperty('--art', artColor(lbImg)); });
     })();
     </script>
     <script>
