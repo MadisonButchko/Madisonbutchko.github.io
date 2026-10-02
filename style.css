@@ -485,17 +485,17 @@ section:nth-of-type(3n+1) .title-bloom { color: var(--yellow); --center: #d99a12
 
 /* Circles become pastel blossoms */
 .dynamic-circle, .skill-circle { background: #fff; border: 2px solid var(--border); box-shadow: 0 10px 26px rgba(120, 72, 96, 0.1); }
-.dynamic-circle:nth-child(5n+1), .skill-circle:nth-child(5n+1) { background: var(--yellow-soft); border-color: rgba(242, 194, 48, 0.6); --act1: #c38a0b; --act2: #8f6205; }
-.dynamic-circle:nth-child(5n+2), .skill-circle:nth-child(5n+2) { background: var(--pink-soft); border-color: rgba(244, 167, 191, 0.8); --act1: #d0507f; --act2: #a12d5c; }
-.dynamic-circle:nth-child(5n+3), .skill-circle:nth-child(5n+3) { background: var(--lilac-soft); border-color: rgba(185, 162, 222, 0.8); --act1: #8461c6; --act2: #5b3b9a; }
-.dynamic-circle:nth-child(5n+4), .skill-circle:nth-child(5n+4) { background: var(--green-soft); border-color: rgba(110, 154, 76, 0.45); --act1: #5d8f3b; --act2: #3b6823; }
-.dynamic-circle:nth-child(5n), .skill-circle:nth-child(5n) { background: #fde8d6; border-color: rgba(240, 160, 110, 0.55); --act1: #d6743f; --act2: #a54c22; }
+.dynamic-circle:nth-child(5n+1), .skill-circle:nth-child(5n+1) { background: var(--yellow-soft); border-color: rgba(242, 194, 48, 0.6); --act1: rgba(250, 214, 110, 0.78); --act2: rgba(255, 240, 196, 0.6); --act-edge: #e8b923; --act-ink: #8a5e05; }
+.dynamic-circle:nth-child(5n+2), .skill-circle:nth-child(5n+2) { background: var(--pink-soft); border-color: rgba(244, 167, 191, 0.8); --act1: rgba(246, 170, 196, 0.75); --act2: rgba(253, 222, 232, 0.6); --act-edge: #e07fa3; --act-ink: #a8336a; }
+.dynamic-circle:nth-child(5n+3), .skill-circle:nth-child(5n+3) { background: var(--lilac-soft); border-color: rgba(185, 162, 222, 0.8); --act1: rgba(198, 178, 238, 0.78); --act2: rgba(234, 226, 251, 0.6); --act-edge: #9d7fd0; --act-ink: #5f3f99; }
+.dynamic-circle:nth-child(5n+4), .skill-circle:nth-child(5n+4) { background: var(--green-soft); border-color: rgba(110, 154, 76, 0.45); --act1: rgba(172, 207, 140, 0.78); --act2: rgba(222, 238, 206, 0.6); --act-edge: #7fa65c; --act-ink: #3f6826; }
+.dynamic-circle:nth-child(5n), .skill-circle:nth-child(5n) { background: #fde8d6; border-color: rgba(240, 160, 110, 0.55); --act1: rgba(248, 190, 150, 0.78); --act2: rgba(254, 229, 208, 0.6); --act-edge: #e8956a; --act-ink: #9c4b25; }
 .circle-label { color: var(--white); font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; }
 .dynamic-circle:hover, .skill-circle:hover { background: #fff; border-color: var(--cyan); box-shadow: 0 14px 34px rgba(194, 69, 126, 0.22); }
 .dynamic-circle:hover .circle-label, .skill-circle:hover .circle-label { color: var(--cyan); }
-/* selected circle: a deeper, richer version of its own color (vars set per circle above) */
-.dynamic-circle.active { background: linear-gradient(135deg, var(--act1, var(--cyan)) 0%, var(--act2, var(--teal)) 100%); border-color: transparent; transform: scale(1.1); box-shadow: 0 10px 34px color-mix(in srgb, var(--act1, var(--cyan)) 45%, transparent); animation: none; }
-.dynamic-circle.active .circle-label { color: #fff !important; }
+/* selected circle: a soft, translucent gradient of its own color with a light sheen, a colored rim and deep-toned text */
+.dynamic-circle.active { background: radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 48%), linear-gradient(145deg, var(--act1, var(--pink-soft)) 0%, var(--act2, #fff) 100%); border: 2px solid color-mix(in srgb, var(--act-edge, var(--cyan)) 70%, transparent); transform: scale(1.1); box-shadow: 0 10px 28px color-mix(in srgb, var(--act-edge, var(--cyan)) 30%, transparent), inset 0 0 0 4px rgba(255, 255, 255, 0.45); animation: none; }
+.dynamic-circle.active .circle-label { color: var(--act-ink, var(--cyan)) !important; font-weight: 600; }
 @keyframes pulseGlow { 0%, 100% { box-shadow: 0 10px 26px rgba(120, 72, 96, 0.1), 0 0 0 0 rgba(244, 167, 191, 0.5); } 50% { box-shadow: 0 10px 26px rgba(120, 72, 96, 0.1), 0 0 0 10px rgba(244, 167, 191, 0); } }
 .expanded-skill { border: 3px solid #fff; box-shadow: 0 24px 60px rgba(120, 72, 96, 0.22); }
 .expanded-skill-title { text-shadow: none; }
@@ -595,9 +595,10 @@ a.writing-link:hover { border-top-color: var(--edge); border-right-color: var(--
 .scroll-stem-bud { position: fixed; top: -9px; left: 0; width: 22px; height: 22px; z-index: 121; pointer-events: none; color: var(--pink); overflow: visible; animation: spinSlow 6s linear infinite; }
 
 /* Growing side vines */
-.vine { position: fixed; top: 0; width: 90px; height: 100vh; z-index: 0; pointer-events: none; overflow: visible; display: none; }
+.vine { position: fixed; top: 0; width: 90px; height: 100vh; z-index: 0; pointer-events: none; overflow: visible; display: block; }
 .vine-left { left: 6px; } .vine-right { right: 6px; }
-@media (min-width: 1240px) { .vine { display: block; } }
+/* narrower screens: a slim vine tucked into each page gutter (drawn at ~0.42 scale by the script) */
+@media (max-width: 1239px) { .vine { width: 38px; } .vine-left { left: -12px; } .vine-right { right: -12px; } }
 .vine-path { fill: none; stroke: #8db36a; stroke-width: 2.4; stroke-linecap: round; opacity: 0.75; }
 .vine-item { transform-box: fill-box; transform-origin: center; transform: scale(0) rotate(-120deg); transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .vine-item.on { transform: scale(1) rotate(0deg); }
@@ -662,7 +663,7 @@ a.writing-link:hover { border-top-color: var(--edge); border-right-color: var(--
 .dynamic-circle::after, .skill-circle::after { content: '\273F\FE0E'; position: absolute; top: -4px; right: 6px; font-size: 1.35rem; color: var(--cyan); transform: scale(0) rotate(-180deg); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .dynamic-circle:nth-child(odd)::after, .skill-circle:nth-child(odd)::after { color: var(--teal); }
 .dynamic-circle:hover::after, .skill-circle:hover::after, .dynamic-circle.active::after { transform: scale(1) rotate(0); }
-.dynamic-circle.active::after { color: #fff; }
+.dynamic-circle.active::after { color: var(--act-edge, var(--yellow)); }
 
 /* Section-title flowers spin fast on hover */
 .section-head:hover .title-bloom { animation-duration: 1.2s; }
@@ -1043,27 +1044,29 @@ main > section:not(.hero)::before { display: none !important; }
 .section-hint.reveal { clip-path: inset(0 100% 0 0); opacity: 1; transform: none; transition: clip-path 1.4s cubic-bezier(0.6, 0.1, 0.3, 1) 0.8s; }
 .section-hint.reveal.visible { clip-path: inset(0 -5% 0 0); }
 
-/* back-to-top: a potted flower that grows with scroll progress (bud at the top, full bloom at the bottom) */
-.to-top { position: fixed; right: 18px; bottom: 16px; z-index: 110; width: 50px; height: 72px; padding: 0; border: none; background: none; cursor: pointer; transition: opacity 0.4s ease; }
-.to-top.at-top { opacity: 0.75; }
-.to-top svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 8px rgba(120, 72, 96, 0.22)); transform-origin: 50% 92%; transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.to-top:hover svg, .to-top:focus-visible svg { transform: rotate(-6deg) translateY(-3px); }
-.to-top:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; border-radius: 14px; }
-.tt-pot { fill: #e9a3bb; } .tt-rim { fill: #f4bfd0; }
-.tt-stem { fill: none; stroke: #7fa65c; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 1; transition: stroke-dashoffset 0.3s ease; }
-.tt-leaf { transform-box: fill-box; transform-origin: 0% 100%; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.tt-leaf + .tt-leaf { transform-origin: 100% 100%; }
-.tt-petal, .tt-center { transition: scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.tt-bud, .tt-sepal { transition: opacity 0.35s ease; }
-.to-top.bloomed .tt-spin { animation: spinSlow 10s linear infinite; }
-.tt-arrow { fill: none; stroke: var(--cyan); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+/* scroll indicator + back to top: a sunflower on its own soft pad (separate from the page decorations) */
+.to-top { position: fixed; right: 26px; bottom: 14px; z-index: 115; width: 64px; height: 106px; padding: 0; border: 0; background: none; border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.to-top svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 4px rgba(110, 80, 50, 0.22)); }
+.to-top:hover, .to-top:focus-visible { transform: translateY(-4px); }
+.to-top .sf-pot { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.to-top:hover .sf-pot, .to-top:focus-visible .sf-pot { transform: scale(1.05, 0.96); }
+.to-top:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.sf-stem { fill: none; stroke: #6e9a4c; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; }
+.sf-pet { stroke: rgba(170, 110, 10, 0.25); stroke-width: 0.5; }
+.sf-disk g { opacity: calc(var(--sfq, 0) * 1.2); }
+.to-top.bloomed .sf-sway { animation: sfSway 4.5s ease-in-out infinite; }
+@keyframes sfSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.tt-arrow { fill: none; stroke: #c98a06; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .to-top:hover .tt-arrow, .to-top:focus-visible .tt-arrow { opacity: 1; transform: none; }
-.tt-tip { position: absolute; right: calc(100% + 4px); top: 18px; white-space: nowrap; font-family: var(--font-hand); font-size: 1.05rem; color: var(--cyan); background: rgba(255, 255, 255, 0.92); padding: 0.05rem 0.6rem 0.15rem; border-radius: 14px; box-shadow: 0 4px 12px rgba(120, 72, 96, 0.12); opacity: 0; translate: 6px 0; pointer-events: none; transition: opacity 0.3s ease, translate 0.35s ease; }
+.tt-tip { position: absolute; right: calc(100% + 8px); top: 30px; white-space: nowrap; font-family: var(--font-hand); font-size: 1.05rem; color: #9a6b06; background: rgba(255, 255, 255, 0.95); padding: 0.05rem 0.65rem 0.15rem; border-radius: 14px; box-shadow: 0 4px 12px rgba(120, 72, 96, 0.12); opacity: 0; translate: 6px 0; pointer-events: none; transition: opacity 0.3s ease, translate 0.35s ease; }
 .to-top:hover .tt-tip, .to-top:focus-visible .tt-tip { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .to-top.bloomed .sf-sway { animation: none; } }
 
 @media (max-width: 768px) {
     .gallery-preview.visible .preview-item:hover { transform: none; box-shadow: none; }
-    .to-top { right: 10px; bottom: 10px; width: 40px; height: 58px; }
+    .to-top { right: 12px; bottom: 10px; width: 50px; height: 83px; border-radius: 12px; }
+    footer { padding-bottom: 96px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .page-bg::before, .ambient span { animation: none; }
@@ -1197,9 +1200,9 @@ footer { position: relative; padding-top: 0 !important; }
 .lightbox img#lightboxImg.loading { opacity: 0.12; transform: scale(0.97); }
 
 /* click the side vines: flowers grow on evenly spaced spots, then fade */
-.vine-hit { position: fixed; top: 0; width: 84px; height: 100vh; z-index: 4; display: none; cursor: pointer; }
+.vine-hit { position: fixed; top: 0; width: 84px; height: 100vh; z-index: 4; display: block; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .vine-hit.left { left: 8px; } .vine-hit.right { right: 8px; }
-@media (min-width: 1240px) { .vine-hit { display: block; } }
+@media (max-width: 1239px) { .vine-hit { width: 20px; } .vine-hit.left { left: 0; } .vine-hit.right { right: 0; } }
 .vine-tip { position: fixed; left: 0; top: 0; z-index: 130; pointer-events: none; font-family: var(--font-hand); font-size: 1.1rem; color: var(--green); background: rgba(255, 255, 255, 0.9); padding: 0.1rem 0.75rem 0.2rem; border-radius: 20px; box-shadow: 0 4px 14px rgba(120, 72, 96, 0.12); opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
 .vine-tip.show { opacity: 1; }
 .vine-sprout { transition: opacity 1.4s ease; }
@@ -1210,6 +1213,49 @@ footer { position: relative; padding-top: 0 !important; }
 .vine-sprout.wilt .sprout { animation: sproutOut 1.5s ease-in forwards; }
 .vine-sprout.eaten { opacity: 0; transition-duration: 0.8s; }
 .vine-sprout.eaten .sprout { animation: sproutOut 0.8s ease-in forwards; }
+/* sprig levels: the newest level animates in; levels that already existed are redrawn instantly */
+.vine-sprout .sp-lv .sprout-stem { stroke-dasharray: 60; stroke-dashoffset: 60; }
+.vine-sprout .sp-lv2 .sprout-stem, .vine-sprout .sp-lv3 .sprout-stem { stroke-width: 1.5; }
+.vine-sprout .still, .vine-sprout .still * { animation-duration: 0s !important; animation-delay: 0s !important; }
+.vine-sprout .tendril { stroke-width: 1.2; }
+.vine-sprout .sprout { transition: scale 0.5s cubic-bezier(0.34, 1.8, 0.64, 1); }
+.vine-sprout .sprout use { animation: none; }
+.vine-sprout .sp-spin { transform-box: fill-box; transform-origin: center; animation: spinSlow 16s linear infinite; }
+.vine-sprout .sprout.grow { scale: 1.45; }
+/* a caterpillar crawling along a side vine */
+.vine-cat { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 17px; margin: -15px 0 0 -17px; cursor: pointer; opacity: 0; transition: opacity 0.5s ease; will-change: transform; }
+.vine-cat.on { opacity: 1; }
+.vine-cat svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(90, 67, 102, 0.2)); }
+.vine-cat::after { content: ''; position: absolute; inset: -12px; }
+.vine-cat.rev .vc-flip { transform: scaleY(-1); }
+.vine-cat .vc-flip { animation: inch 0.8s ease-in-out infinite; transform-origin: left bottom; }
+.vine-cat.rev .vc-flip { animation-name: inchRev; }
+@keyframes inchRev { 0%, 100% { transform: scaleY(-1) scaleX(1); } 50% { transform: scaleY(-1) scaleX(0.86); } }
+.vine-cat.eating .vc-flip { animation: nibble 0.22s ease-in-out infinite; }
+.vine-cat.eating.rev .vc-flip { animation: none; }
+.vine-cat.drop { transition: opacity 0.8s ease; opacity: 0; }
+.vine-cat.drop svg { animation: catDrop 0.85s ease-in forwards; }
+@keyframes catDrop { to { transform: translateY(70px) rotate(220deg); } }
+@media (max-width: 1239px) { .vine-cat { width: 26px; height: 13px; margin: -11px 0 0 -13px; } }
+/* birds flying through the page */
+.flyby-bird { position: fixed; left: 0; top: 0; z-index: 3; pointer-events: none; will-change: transform; }
+.flyby-bird svg { display: block; width: calc(36px * var(--fs, 0.7)); height: calc(29px * var(--fs, 0.7)); overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.15)); }
+.flyby-bird .c-wing { transform-box: fill-box; transform-origin: 30% 80%; animation: wingFlap 0.34s ease-in-out infinite alternate; }
+.flyby-bird.left-facing .c-flip { transform: scaleX(-1); }
+/* flower patches in open spaces */
+.page-posy { position: absolute; z-index: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.page-posy svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.pp-grass { fill: none; stroke: #8db36a; stroke-width: 2.4; stroke-linecap: round; }
+.pp-st { fill: none; stroke: #7fa65c; stroke-width: 2.2; stroke-linecap: round; }
+.pp-stem { transform-box: view-box; transform-origin: 0 0; animation: ppSway var(--sd, 4s) ease-in-out var(--dl, 0s) infinite alternate; }
+@keyframes ppSway { from { transform: rotate(-3.5deg); } to { transform: rotate(3.5deg); } }
+.page-posy:hover .pp-stem { animation-duration: 1.1s; }
+.pp-pop { transform-box: fill-box; transform-origin: center; transform: scale(0) rotate(-120deg); transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); transition-delay: calc(var(--i, 0) * 120ms); }
+.page-posy.open .pp-pop { transform: scale(1) rotate(0deg); }
+.page-posy.boing .pp-pop { animation: ppBoing 0.8s cubic-bezier(0.34, 1.6, 0.64, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes ppBoing { 0%, 100% { transform: scale(1) rotate(0); } 40% { transform: scale(1.4) rotate(40deg); } 70% { transform: scale(0.92) rotate(-8deg); } }
+.pp-petal { position: absolute; width: 6px; height: 9px; margin: -4px 0 0 -3px; border-radius: 60% 60% 50% 50% / 70% 70% 30% 30%; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .pp-stem, .page-posy.boing .pp-pop, .flyby-bird, .vine-cat { animation: none !important; } .pp-pop { transition: none; } }
 @keyframes sproutOut { from { transform: scale(1) rotate(0deg); } to { transform: scale(0.15) rotate(80deg); } }
 
 /* birds (vines + garden) */
@@ -1284,7 +1330,8 @@ footer { position: relative; padding-top: 0 !important; }
 .critter { position: absolute; left: 0; top: 0; bottom: auto; z-index: 3; cursor: pointer; will-change: transform; }
 .critter.bird { z-index: 4; }
 .critter.flutter { z-index: 4; pointer-events: none; }
-.critter.deer { z-index: 4; }
+.critter.deer { z-index: 4; transition: opacity 0.6s ease; }
+.critter.deer.faded { opacity: 0; }
 .critter:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 8px; }
 .critter .c-body { transform-origin: bottom center; }
 .critter svg { display: block; overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.18)); }
@@ -1292,7 +1339,7 @@ footer { position: relative; padding-top: 0 !important; }
 .critter.snail svg { width: 40px; height: 26px; }
 .critter.flutter svg { width: 26px; height: 22px; filter: none; }
 .critter.caterpillar svg { width: 44px; height: 22px; }
-.critter.deer svg { width: 88px; height: 78px; }
+.critter.deer svg { width: 108px; height: 97px; }
 .critter.flutter .bf-wing-l, .critter.flutter .bf-wing-r { animation-duration: 0.16s; }
 .critter.flutter.perch .bf-wing-l, .critter.flutter.perch .bf-wing-r { animation-duration: 0.9s; }
 .critter.bunny.moving .c-body { animation: hop 0.42s ease-in-out infinite; }
@@ -1305,21 +1352,31 @@ footer { position: relative; padding-top: 0 !important; }
 /* shooed: a startled hop before running off */
 .critter.startled svg { animation: startle 0.4s cubic-bezier(0.34, 1.8, 0.64, 1); }
 @keyframes startle { 0%, 100% { transform: none; } 35% { transform: translateY(-14px) scale(1.15, 0.9) rotate(-8deg); } }
-/* deer: walks, sniffs (ears twitch), then grazes head-down */
-.deer-head { transform-box: view-box; transform-origin: 62px 48px; transition: transform 0.4s ease; }
+/* deer: legs swing in pairs while walking, it looks around when it arrives, and lowers its head to nibble */
+.critter.deer .leg { transform-box: view-box; }
+.critter.deer.moving .leg.la { animation: deerLeg 0.56s ease-in-out infinite; }
+.critter.deer.moving .leg.lb { animation: deerLeg 0.56s ease-in-out -0.28s infinite; }
+@keyframes deerLeg { 0%, 100% { transform: rotate(13deg); } 50% { transform: rotate(-13deg); } }
+.critter.deer.moving .c-body { animation: deerStep 0.28s ease-in-out infinite; }
+@keyframes deerStep { 50% { transform: translateY(-1.5px); } }
+.deer-head { transform-box: view-box; transform-origin: 63px 47px; transition: transform 0.45s ease; }
 .deer-ear { transform-box: fill-box; transform-origin: 50% 100%; }
-.critter.deer.moving .c-body { animation: deerStep 0.45s ease-in-out infinite; }
-@keyframes deerStep { 50% { transform: translateY(-2px); } }
+.critter.deer.moving .deer-head { animation: deerNod 0.56s ease-in-out infinite; }
+@keyframes deerNod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg); } }
+.critter.deer.sniff .deer-head { animation: deerLook 1.8s ease-in-out infinite; }
+@keyframes deerLook { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-7deg); } 65% { transform: rotate(6deg); } }
 .critter.deer.sniff .deer-ear { animation: earTwitch 0.9s ease-in-out infinite; }
-@keyframes earTwitch { 0%, 60%, 100% { transform: rotate(0); } 75% { transform: rotate(-14deg); } }
-.critter.deer.eating .deer-head { animation: deerGraze 0.7s ease-in-out infinite; }
-@keyframes deerGraze { 0%, 100% { transform: rotate(18deg); } 50% { transform: rotate(28deg); } }
+.critter.deer.eating .deer-head { transform: rotate(32deg); animation: deerNibble 0.42s ease-in-out infinite; }
+@keyframes deerNibble { 0%, 100% { transform: rotate(30deg); } 50% { transform: rotate(36deg); } }
+.critter.deer.eating .e2 { animation: earTwitch 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .critter.deer .leg, .critter.deer .c-body, .critter.deer .deer-ear, .critter.deer .deer-head { animation: none !important; } .critter.deer.eating .deer-head { transform: rotate(32deg); } }
 .garden-bed.deer-alert { animation: deerAlert 1.6s ease-in-out infinite; }
 @keyframes deerAlert { 0%, 100% { box-shadow: inset 0 0 0 0 rgba(194, 69, 126, 0); } 50% { box-shadow: inset 0 -30px 40px -20px rgba(194, 69, 126, 0.22); } }
 @keyframes nibble { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(5deg) translateY(1px); } }
 .shoo-pop { position: absolute; z-index: 6; font-family: var(--font-hand); font-size: 1.2rem; color: var(--cyan); pointer-events: none; white-space: nowrap; animation: shooUp 1.1s ease-out forwards; }
 @keyframes shooUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -30px); } }
-@media (max-width: 768px) { .garden-bed { height: 220px; } .g-stats { flex-basis: 100%; text-align: center; } }
+@media (max-width: 768px) { .garden-bed { height: 245px; } .g-stats { flex-basis: 100%; text-align: center; } }
+
 @media (prefers-reduced-motion: reduce) { .g-pop { transform: none; } .vine-hit { display: none !important; } .mote { display: none; } }
 /* =====================================================
    v8: cursor breeze, starblooms, rain cloud, badges,
@@ -1335,16 +1392,23 @@ footer { position: relative; padding-top: 0 !important; }
 .bloom-ring.rare-ring { border-color: rgba(242, 194, 48, 0.9); border-width: 3px; }
 
 /* rain cloud */
-.g-cloud { position: absolute; left: 0; top: 0; z-index: 6; width: 110px; height: 62px; cursor: pointer; will-change: transform; filter: drop-shadow(0 6px 10px rgba(120, 140, 170, 0.18)); }
+.g-cloud { position: absolute; left: 0; top: 0; z-index: 6; width: 110px; height: 62px; cursor: pointer; will-change: transform, opacity; opacity: 0; filter: drop-shadow(0 4px 6px rgba(120, 140, 170, 0.16)); }
 .g-cloud svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .g-cloud .cl-body { fill: #fff; stroke: #bcd0ea; stroke-width: 2; stroke-linejoin: round; transition: fill 0.6s, stroke 0.6s; }
 .g-cloud.raining .cl-body { fill: #dfe9f7; stroke: #92afd6; }
 .g-cloud:hover, .g-cloud:focus-visible { outline: none; filter: drop-shadow(0 0 9px rgba(169, 216, 234, 0.95)); }
-.raindrop { z-index: 5; width: 3px; height: 18px; margin-left: -1.5px; border-radius: 3px; background: linear-gradient(rgba(79, 150, 200, 0), #4f96c8 65%, #6fb2de); box-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
-.splash { width: 11px; height: 4px; border: 1.5px solid rgba(95, 166, 211, 0.75); border-radius: 50%; }
+/* raindrops: small soft teardrops (length and width are set per drop) */
+.raindrop { z-index: 5; width: 2.4px; height: 10px; margin-left: -1.2px; border-radius: 50% 50% 50% 50% / 35% 35% 65% 65%; background: linear-gradient(rgba(120, 180, 224, 0.3), #7ab6e0 50%, #5fa6d8); }
+.splash { width: 9px; height: 3.5px; border: 1.3px solid rgba(140, 196, 230, 0.75); border-radius: 50%; }
 .g-sun { position: absolute; top: 4px; right: 7%; z-index: 1; width: 56px; height: 56px; pointer-events: none; opacity: 0; transform: translateY(-80px) scale(0.6); transition: transform 1.1s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.8s ease; }
 .garden-bed.sunny .g-sun { opacity: 1; transform: none; }
-.g-sun svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 10px rgba(255, 214, 94, 0.55)); }
+.g-sun svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* the sun bobs gently and its glow breathes; rays turn slowly */
+.garden-bed.sunny .g-sun svg { animation: sunBob 5.5s ease-in-out infinite; }
+@keyframes sunBob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
+.sun-glow { fill: #ffe9a0; transform-box: fill-box; transform-origin: center; animation: sunGlow 3.6s ease-in-out infinite; }
+@keyframes sunGlow { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 0.7; transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .garden-bed.sunny .g-sun svg, .sun-glow, .sun-rays { animation: none !important; } }
 .sun-rays { stroke: #f6c544; stroke-width: 3.2; stroke-linecap: round; transform-box: view-box; transform-origin: 0 0; animation: spinSlow 18s linear infinite; }
 /* the garden visibly fills out as it grows: hedge, wildflowers and glow follow data-stage (0 fresh .. 5 overflowing) */
 .g-hedge { position: absolute; left: 2%; bottom: 14px; width: 96%; height: 70px; z-index: 0; pointer-events: none; opacity: 0; transform: scaleY(0.4); transform-origin: bottom; transition: opacity 1.4s ease, transform 1.4s cubic-bezier(0.34, 1.3, 0.64, 1); }
@@ -1440,3 +1504,45 @@ footer { position: relative; padding-top: 0 !important; }
 .promo-bird:focus-visible .pb-banner { outline: 2px solid var(--cyan); outline-offset: 2px; }
 @media (max-width: 768px) { .pb-banner { font-size: 1.05rem; } .pb-bird svg { width: 38px; height: 30px; } }
 @media (prefers-reduced-motion: reduce) { .sky-shift i { animation: none; } .sky-shift i:nth-child(1) { opacity: 0.45; } .promo-bird { display: none; } }
+
+/* phones: a taller bed, smaller plants and critters with bigger tap areas, and a stacked HUD with roomy controls */
+@media (max-width: 600px) {
+    .garden-bed { height: 240px; border-radius: 0 0 22px 22px; }
+    .g-plant.row-back { transform: scale(0.7); } .g-plant.row-mid { transform: scale(0.78); } .g-plant.row-front { transform: scale(0.86); }
+    .critter.bunny svg { width: 40px; height: 35px; } .critter.snail svg { width: 36px; height: 23px; } .critter.caterpillar svg { width: 38px; height: 19px; }
+    .critter.bird svg { width: 32px; height: 26px; } .critter.deer svg { width: 74px; height: 66px; }
+    .critter:not(.flutter)::after { content: ''; position: absolute; inset: -12px; }
+    .g-cloud { width: 78px; height: 44px; } .g-sun { width: 40px; height: 40px; right: 5%; top: 6px; }
+    .g-toast { top: 56px; max-width: calc(100% - 28px); white-space: normal; text-align: center; font-size: 1rem; padding: 0.3rem 0.85rem 0.35rem; }
+    .shoo-pop { font-size: 1.05rem; }
+    .garden-tip { gap: 0.55rem 0.6rem; padding: 0 0.9rem; font-size: 1.08rem; }
+    .garden-tip .gt-text { flex-basis: 100%; text-align: center; line-height: 1.35; }
+    .garden-meter { width: min(70%, 240px); height: 9px; }
+    .g-stats { font-size: 0.74rem; line-height: 1.7; }
+    .g-badges { flex-basis: 100%; justify-content: center; flex-wrap: wrap; gap: 7px; }
+    .g-bdg { width: 22px; height: 22px; }
+    .g-reset { min-height: 40px; padding: 0.4rem 1.2rem; font-size: 0.82rem; }
+}
+
+/* cloud: still raindrops are only shown when motion is reduced (the animated drizzle is skipped then) */
+.g-cloud .cl-still { display: none; }
+@media (prefers-reduced-motion: reduce) { .g-cloud .cl-still { display: block; opacity: 0.7; } }
+
+/* Let's Connect: each link hovers (and keyboard-focuses) in the accent of its own tinted circle */
+.social-link:nth-child(1) { --acc: #8a63b8; --acc-bg: #dccdf3; --acc-glow: rgba(138, 99, 184, 0.35); }
+.social-link:nth-child(2) { --acc: #c2457e; --acc-bg: #f9cfdf; --acc-glow: rgba(194, 69, 126, 0.32); }
+.social-link:nth-child(3) { --acc: #4f7a34; --acc-bg: #c9e0b6; --acc-glow: rgba(79, 122, 52, 0.32); }
+.social-link { transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.social-link:hover, .social-link:focus-visible { background: var(--acc-bg); color: var(--acc); border-color: var(--acc); box-shadow: 0 6px 16px var(--acc-glow); transform: translateY(-4px) rotate(-6deg); }
+.social-link:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+.social-link:hover *, .social-link:focus-visible * { color: inherit; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .social-link:hover, .social-link:focus-visible { transform: none; } .guide-bird { transition: none; } }
+
+/* scattered single blooms and leaves (same look as the hero decorations) */
+.scatter { position: absolute; z-index: 1; pointer-events: none; opacity: 0; scale: 0.3; transition: opacity 1s ease, scale 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.scatter.open { opacity: 0.92; scale: 1; }
+.scatter svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.sc-bloom svg { animation: spinSlow var(--spin, 40s) linear var(--sdl, 0s) infinite; }
+.sc-leaf { rotate: var(--rot, 0deg); }
+.sc-leaf svg { animation: leafSway 6s ease-in-out var(--sdl, 0s) infinite; }
+@media (prefers-reduced-motion: reduce) { .scatter { opacity: 0.92; scale: 1; transition: none; } .sc-bloom svg, .sc-leaf svg { animation: none; } }
