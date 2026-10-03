@@ -3198,15 +3198,17 @@ const WorldState = (() => {
            vase neck and curve gently apart; flowers get a little smaller as the bouquet fills so it never crowds. */
         const SLOTS = [[0, 18, 1], [-15, 27, .95], [15, 26, .95], [-27, 39, .85], [27, 38, .85], [0, 38, .9], [-14, 46, .8], [14, 45, .8], [-30, 26, .72], [30, 25, .72], [-7, 28, .74], [7, 52, .7]];
         const NECK = 40, BASE = 66, GREEN = '#8db36a';
+        /* mostly-green specimens are drawn smaller, paler and less saturated so they sit quietly among the blooms: [size, opacity, saturation] */
+        const SOFT = { 'pf-programming': [0.74, 0.72, 0.6], 'pf-data': [0.88, 0.85, 0.8], 'pf-writing': [0.74, 1, 1] };
         /* Writing: the pressed specimen leans and does not sit on a bouquet stem, so the bouquet gets its own small upright ear of wheat */
         function wheatEar(x, y, s, dx) {
             const u = s / 34; let h = '';
-            for (let k = 0; k < 6; k++) {
-                const gy = -4.4 * k - 1, w = 2.7 - k * 0.12, fill = k % 2 ? '#c99a4a' : '#d8b46a';
-                h += '<ellipse cx="' + f1(-w) + '" cy="' + f1(gy) + '" rx="2" ry="3.3" transform="rotate(-26 ' + f1(-w) + ' ' + f1(gy) + ')" fill="' + fill + '" stroke="#9a7a3a" stroke-width=".4"/>'
-                    + '<ellipse cx="' + f1(w) + '" cy="' + f1(gy) + '" rx="2" ry="3.3" transform="rotate(26 ' + f1(w) + ' ' + f1(gy) + ')" fill="' + (k % 2 ? '#d8b46a' : '#c99a4a') + '" stroke="#9a7a3a" stroke-width=".4"/>';
+            for (let k = 0; k < 5; k++) {
+                const gy = -4.2 * k - 1, w = 1.9 - k * 0.1, fill = k % 2 ? '#c9a032' : '#d8b445';
+                h += '<ellipse cx="' + f1(-w) + '" cy="' + f1(gy) + '" rx="1.35" ry="2.7" transform="rotate(-24 ' + f1(-w) + ' ' + f1(gy) + ')" fill="' + fill + '" stroke="#a88524" stroke-width=".3"/>'
+                    + '<ellipse cx="' + f1(w) + '" cy="' + f1(gy) + '" rx="1.35" ry="2.7" transform="rotate(24 ' + f1(w) + ' ' + f1(gy) + ')" fill="' + (k % 2 ? '#d8b445' : '#c9a032') + '" stroke="#a88524" stroke-width=".3"/>';
             }
-            h += '<ellipse cx="0" cy="-27" rx="1.9" ry="3.2" fill="#d8b46a" stroke="#9a7a3a" stroke-width=".4"/><path d="M0 -29 L-2.4 -37 M0 -29 L0 -38 M0 -29 L2.4 -37" stroke="#b99a4e" stroke-width=".6" stroke-linecap="round" fill="none"/>';
+            h += '<ellipse cx="0" cy="-22.5" rx="1.3" ry="2.5" fill="#ecdbb0" stroke="#a88524" stroke-width=".3"/><path d="M0 -24.5 L-1.8 -30 M0 -24.5 L0 -31 M0 -24.5 L1.8 -30" stroke="#b8942f" stroke-width=".4" stroke-linecap="round" fill="none"/>';
             return '<g transform="translate(' + f1(x) + ' ' + f1(y) + ') rotate(' + f1(dx * 0.3) + ') scale(' + f1(u) + ')">' + h + '</g>';
         }
         function draw(newId) {
@@ -3214,11 +3216,11 @@ const WorldState = (() => {
             const n = found.length, shrink = n <= 5 ? 1 : n <= 8 ? 0.9 : 0.8;
             const slotOf = i => { const b = SLOTS[i % SLOTS.length], r = Math.floor(i / SLOTS.length); return r ? [b[0] + (r % 2 ? 4 : -4), b[1] + 3, b[2]] : b; };
             found.map((id, i) => ({ id, i })).filter(o => CATS[o.id]).sort((a, b) => slotOf(a.i)[1] - slotOf(b.i)[1]).forEach(({ id, i }) => {
-                const c = CATS[id], [dx, ty, sc] = slotOf(i), s = (c.kind === 'Skills' ? 28 : 32) * 1.2 * sc * shrink;
+                const c = CATS[id], [dx, ty, sc] = slotOf(i), tone = SOFT[c.sym] || [1, 1, 1], s = (c.kind === 'Skills' ? 28 : 32) * 1.2 * sc * shrink * tone[0];
                 const wheat = c.sym === 'pf-writing', x0 = NECK + dx * 0.1, tx = NECK + dx, ey = ty + s * (wheat ? 0.42 : 0.25), bow = (i % 2 ? 1 : -1) * 3;
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'bq-stem' + (id === newId && !reduce ? ' new' : ''));
-                g.innerHTML = '<path class="bq-s" pathLength="1" d="M' + f1(x0) + ' ' + BASE + ' C' + f1(x0 + dx * 0.05) + ' ' + f1(BASE - (BASE - ey) * 0.5) + ' ' + f1(tx - dx * 0.1 + bow) + ' ' + f1(ey + (BASE - ey) * 0.28) + ' ' + f1(tx) + ' ' + f1(ey) + '" fill="none" stroke="' + (wheat ? '#c4a257' : GREEN) + '" stroke-width="1.4" stroke-linecap="round"/>'
-                    + '<g class="bq-f">' + (wheat ? wheatEar(tx, ey, s, dx) : '<use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + f1(s) + '" height="' + f1(s) + '"/>') + '</g>';
+                g.innerHTML = '<path class="bq-s" pathLength="1" d="M' + f1(x0) + ' ' + BASE + ' C' + f1(x0 + dx * 0.05) + ' ' + f1(BASE - (BASE - ey) * 0.5) + ' ' + f1(tx - dx * 0.1 + bow) + ' ' + f1(ey + (BASE - ey) * 0.28) + ' ' + f1(tx) + ' ' + f1(ey) + '" fill="none" stroke="' + (wheat ? '#b9993e' : GREEN) + '" stroke-width="' + (wheat ? 1 : 1.4) + '" stroke-linecap="round"/>'
+                    + '<g class="bq-f" style="opacity:' + tone[1] + (tone[2] < 1 ? ';filter:saturate(' + tone[2] + ') brightness(1.08)' : '') + '">' + (wheat ? wheatEar(tx, ey, s, dx) : '<use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + f1(s) + '" height="' + f1(s) + '"/>') + '</g>';
                 stems.appendChild(g);
             });
             /* baby's breath: a few tiny sprigs that fill in as you explore pieces (never more than six) */
