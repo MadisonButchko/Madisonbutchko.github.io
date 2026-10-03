@@ -1955,7 +1955,7 @@ const WorldState = (() => {
             }, () => { c.el.classList.remove('moving'); if (done) done(); });
         }
         function dropCritter(c){
-            if (c.tok) c.tok.stop = true; clearTimeout(c.timer); clearInterval(c.shed); clearInterval(c.munch);
+            if (c.tok) c.tok.stop = true; clearTimeout(c.timer); clearInterval(c.shed); clearInterval(c.munch); clearInterval(c.watch);
             c.el.remove(); const i = C.indexOf(c); if (i > -1) C.splice(i, 1);
             if (deer === c){ deer = null; bed.classList.remove('deer-alert'); }
             updateHud();
@@ -2057,7 +2057,7 @@ const WorldState = (() => {
         const narrowBed = () => bed.clientWidth < 600;
         const deerReach = () => narrowBed() ? 30 : 44;
         const deerSpeed = () => narrowBed() ? 55 : 72;
-        const mouthX = c => c.fromLeft ? c.x + c.w * 0.93 : c.x + c.w * 0.07;
+        const mouthX = c => c.fromLeft ? c.x + c.w * 0.945 : c.x + c.w * 0.055;
         function spawnDeer(){
             if (deer || !started || !count()) return;
             const c = makeCritter('deer'), W = bed.clientWidth; deer = c;
@@ -2079,34 +2079,75 @@ const WorldState = (() => {
             });
             updateHud();
         }
-        /* walk to the next plants ahead of the deer (in its walking direction), or leave if there are none */
+        /* The deer's eating anchor: the muzzle tip in the deer art (viewBox 100x90), as an offset from the head's pivot
+           (63,47). Lowering the head swings that point about the pivot, so the stopping spot is computed for the pose the
+           deer will actually have while it eats, not for the deer's centre. */
+        const MOUTH = { px: 63, py: 47, dx: 31.5, dy: -24 };
+        const mouthAt = deg => { const a = deg * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a); return { x: MOUTH.px + MOUTH.dx * cs - MOUTH.dy * sn, y: MOUTH.py + MOUTH.dx * sn + MOUTH.dy * cs }; };
+        /* head angle that brings the muzzle to the flower's height (clamped to what a deer can do) and where that puts its nose */
+        function deerPose(c, hd){
+            const s = c.w / 100, lo0 = -8, hi0 = 62, want = (hd.y + 12 - c.y) / s;
+            const y = Math.max(mouthAt(lo0).y, Math.min(mouthAt(hi0).y, want)); let lo = lo0, hi = hi0;
+            for (let i = 0; i < 18; i++){ const mid = (lo + hi) / 2; if (mouthAt(mid).y < y) lo = mid; else hi = mid; }
+            const deg = (lo + hi) / 2; return { deg, noseX: mouthAt(deg).x / 100 * c.w };
+        }
+        /* left edge of the deer so its nose sits just beside the flower head: facing right = nose on the flower's left, facing left = on its right.
+           Only x changes; y stays on the ground line. */
+        function deerStop(c, hd, faceRight){
+            const pose = deerPose(c, hd), gap = Math.round(12 * c.w / 100);
+            return { x: faceRight ? hd.x - gap - pose.noseX : hd.x + gap - (c.w - pose.noseX), pose };
+        }
+        const livePlants = c => P.filter(p => p.state !== 'gone' && p.el.isConnected && p.deerSeen !== c);
+        /* pick the next flower: nearest one still ahead of the muzzle, otherwise turn round for the nearest remaining one */
         function deerNext(c){
             if (c.state === 'leaving' || !c.el.isConnected) return;
-            c.el.classList.remove('sniff', 'eating'); c.state = 'grazing';
-            const W = bed.clientWidth, R = deerReach(), dir = c.fromLeft ? 1 : -1, m = mouthX(c);
-            const ahead = P.filter(p => p.state !== 'gone' && p.deerSeen !== c).map(p => p.x / 100 * W).filter(px => (px - m) * dir > -R).sort((a, b) => (a - b) * dir);
-            if (!ahead.length || c.stops >= 18) return deerGone(c, false);
-            const mouth = ahead[0] + dir * R * 0.7;
-            const nx = Math.max(2, Math.min(W - c.w - 2, mouth - (c.fromLeft ? c.w * 0.93 : c.w * 0.07)));
-            c.el.classList.toggle('left-facing', !c.fromLeft);
-            if (Math.abs(nx - c.x) < 1) deerBite(c);
-            else { go(c, nx, c.y, deerSpeed(), 0, () => deerBite(c)); c.el.classList.toggle('left-facing', !c.fromLeft); }
+            clearInterval(c.watch); c.el.classList.remove('sniff', 'eating'); c.state = 'grazing';
+            if (c.target){ c.target.targeted = false; c.target = null; }
+            const W = bed.clientWidth, dir = c.fromLeft ? 1 : -1, m = mouthX(c);
+            const cand = livePlants(c).map(p => ({ p, hd: headOf(p) }));
+            if (!cand.length || c.stops >= 40) return deerGone(c, false);
+            const ahead = cand.filter(o => (o.hd.x - m) * dir > -4).sort((a, b) => (a.hd.x - b.hd.x) * dir);
+            const pickd = ahead.length ? ahead[0] : cand.sort((a, b) => Math.abs(a.hd.x - m) - Math.abs(b.hd.x - m))[0];
+            const t = pickd.p, hd = pickd.hd, inside = narrowBed();
+            /* keep the current facing when the spot is on screen; otherwise approach from the other side */
+            const lo = inside ? 2 : -c.w * 0.35, hi = inside ? W - c.w - 2 : W - c.w * 0.65;
+            let face = ahead.length ? c.fromLeft : hd.x >= m, st = deerStop(c, hd, face);
+            if (st.x < lo || st.x > hi){ const alt = deerStop(c, hd, !face); if (alt.x >= lo && alt.x <= hi) { face = !face; st = alt; } }
+            const nx = Math.max(lo, Math.min(hi, st.x));
+            c.fromLeft = face; c.target = t; c.pose = st.pose; c.realign = 0; t.targeted = true;
+            c.el.style.setProperty('--er', st.pose.deg.toFixed(1) + 'deg');
+            deerWalk(c, t, nx);
             updateHud();
         }
-        function deerBite(c){
+        /* walk to the stopping spot; if the flower disappears on the way (eaten by someone else, withered), pick again */
+        function deerWalk(c, t, nx){
+            clearInterval(c.watch);
+            if (Math.abs(nx - c.x) < 1){ c.el.classList.toggle('left-facing', !c.fromLeft); return deerBite(c, t); }
+            c.watch = setInterval(() => {
+                if (t.state !== 'gone' && t.el.isConnected) return;
+                clearInterval(c.watch); if (c.tok) c.tok.stop = true; c.el.classList.remove('moving'); t.targeted = false; deerNext(c);
+            }, 120);
+            go(c, nx, c.y, deerSpeed(), 0, () => { clearInterval(c.watch); deerBite(c, t); });
+            c.el.classList.toggle('left-facing', !c.fromLeft);
+        }
+        function deerBite(c, t){
             if (c.state === 'leaving') return;
+            if (!t || t.state === 'gone' || !t.el.isConnected) return deerNext(c);   /* the flower vanished before we got there */
+            const hd = headOf(t), st = deerStop(c, hd, c.fromLeft);
+            /* final alignment check against the flower's real position (it may have shifted): one small correction, horizontal only */
+            if (Math.abs(st.x - c.x) > 3 && c.realign++ < 2){ c.pose = st.pose; c.el.style.setProperty('--er', st.pose.deg.toFixed(1) + 'deg'); return deerWalk(c, t, st.x); }
             c.state = 'eating'; c.el.classList.add('eating'); c.stops++;
-            const W = bed.clientWidth, R = deerReach(), m = mouthX(c);
-            c.prey = P.filter(p => p.state !== 'gone' && p.deerSeen !== c && Math.abs(p.x / 100 * W - m) <= R);
+            /* the flower in front of the nose, plus any others growing at the very same spot (other rows): nothing behind the head is touched */
+            c.prey = livePlants(c).filter(p => p === t || Math.abs(headOf(p).x - hd.x) <= 14);
             c.prey.forEach(p => { p.deerSeen = c; p.targeted = true; p.el.classList.add('nibbled'); });
             if (!reduce) c.shed = setInterval(() => c.prey.forEach(p => { if (p.state !== 'gone' && Math.random() < 0.45) shedPetals(p, 1); }), 260);
             c.timer = setTimeout(() => {
                 clearInterval(c.shed);
-                /* nearly everything in reach is eaten; now and then a plant is lucky */
-                c.prey.forEach(p => { if (p.state === 'gone') return; if (Math.random() < 0.92){ removePlant(p, 'eaten'); c.ate++; } else { p.targeted = false; p.el.classList.remove('nibbled'); } });
-                c.prey = [];
+                /* the flower it walked to is always eaten; a neighbour at the same spot is now and then spared */
+                c.prey.forEach(p => { if (p.state === 'gone') return; if (p === t || Math.random() < 0.92){ removePlant(p, 'eaten'); c.ate++; } else { p.targeted = false; p.el.classList.remove('nibbled'); } });
+                c.prey = []; c.target = null;
                 if (c.state === 'eating') c.timer = setTimeout(() => deerNext(c), 200);
-            }, c.prey.length ? 1150 : 300);
+            }, 1150);
             updateHud();
         }
         function hitDeer(c){
@@ -2119,7 +2160,7 @@ const WorldState = (() => {
         }
         function deerGone(c, scared){
             if (c.state === 'leaving') return;
-            c.state = 'leaving'; clearTimeout(c.timer); clearInterval(c.shed); c.el.classList.remove('eating', 'sniff');
+            c.state = 'leaving'; clearTimeout(c.timer); clearInterval(c.shed); clearInterval(c.watch); if (c.target){ c.target.targeted = false; c.target = null; } c.el.classList.remove('eating', 'sniff');
             c.prey.forEach(p => { if (p.state !== 'gone'){ p.targeted = false; p.el.classList.remove('nibbled'); } }); c.prey = [];
             if (deer === c) deer = null; bed.classList.remove('deer-alert');
             S.deer++; deerAt = play + Math.round(rand(45, 60));
