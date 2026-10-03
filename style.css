@@ -2079,7 +2079,7 @@ main > section, footer { overflow-x: clip; }
 /* bouquet ribbon (chosen once the bouquet is full enough) */
 .bq-band { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); transition: fill 0.5s, stroke 0.5s; }
 /* the bow: its own button, sitting where the stems are gathered */
-.bq-bowbtn { position: absolute; left: 50%; top: 65%; z-index: 2; width: 46px; height: 35px; padding: 0; border: 0; background: none; translate: -50% -50%; cursor: pointer; -webkit-tap-highlight-color: transparent; transform-origin: 50% 50%; transition: transform 0.35s var(--spring); }
+.bq-bowbtn { position: absolute; left: 50%; top: 72%; z-index: 2; width: 40px; height: 30px; padding: 0; border: 0; background: none; translate: -50% -50%; cursor: pointer; -webkit-tap-highlight-color: transparent; transform-origin: 50% 50%; transition: transform 0.35s var(--spring); }
 .bq-bowbtn::before { content: ''; position: absolute; inset: -6px -8px; }   /* comfortable touch target */
 .bq-bowbtn:hover, .bq-bowbtn[aria-expanded="true"] { transform: scale(1.1) rotate(-3deg); }
 .bq-bowbtn:focus-visible { outline: 2px dashed var(--focus); outline-offset: 3px; border-radius: 10px; }
@@ -2088,7 +2088,7 @@ main > section, footer { overflow-x: clip; }
 .bw-loop, .bw-tail, .bw-knot { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); stroke-width: 1.3; stroke-linejoin: round; transition: fill 0.5s, stroke 0.5s; }
 .bw-knot { fill: var(--ribbon-edge, #d9789e); }
 .bw-fold { fill: none; stroke: #fff; stroke-opacity: 0.55; stroke-width: 1.6; stroke-linecap: round; }
-.bq-pick { position: absolute; left: calc(50% + 20px); top: 65%; z-index: 3; display: flex; align-items: center; gap: 0.2rem; padding: 0.3rem 0.5rem; translate: 0 -50%; border-radius: 999px; background: rgba(255, 253, 248, 0.97); border: 1px solid rgba(201, 160, 106, 0.45); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.18); animation: fanItem 0.35s var(--glide); }
+.bq-pick { position: absolute; left: calc(50% + 18px); top: 72%; z-index: 3; display: flex; align-items: center; gap: 0.2rem; padding: 0.3rem 0.5rem; translate: 0 -50%; border-radius: 999px; background: rgba(255, 253, 248, 0.97); border: 1px solid rgba(201, 160, 106, 0.45); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.18); animation: fanItem 0.35s var(--glide); }
 .bq-pick[hidden] { display: none; }
 .bq-pick::before { content: ''; position: absolute; left: -5px; top: 50%; width: 9px; height: 9px; translate: 0 -50%; rotate: 45deg; background: inherit; border-left: 1px solid rgba(201, 160, 106, 0.45); border-bottom: 1px solid rgba(201, 160, 106, 0.45); }
 .bq-pick button { position: relative; width: 34px; height: 28px; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer; transition: transform 0.3s var(--spring), background 0.2s; --ribbon: var(--rc); --ribbon-edge: var(--re); }
@@ -2097,7 +2097,7 @@ main > section, footer { overflow-x: clip; }
 .bq-pick button:hover { transform: translateY(-2px) scale(1.12); }
 .bq-pick button[aria-checked="true"] { background: rgba(244, 167, 191, 0.2); box-shadow: 0 0 0 2px var(--re); }
 .bq-pick button:focus-visible { outline: 2px dashed var(--focus); outline-offset: 2px; }
-@media (max-width: 1239px) { .bq-bowbtn { width: 36px; height: 28px; top: 65.5%; } .bq-pick { left: calc(50% + 16px); top: 65.5%; } }
+@media (max-width: 1239px) { .bq-bowbtn { width: 32px; height: 24px; top: 72%; } .bq-pick { left: calc(50% + 14px); top: 72%; } }
 @media (max-width: 700px) { .mb-bouquet.is-picking { transform: translateX(calc(8px + var(--safe-l))); } }
 @media (max-width: 400px) { .bq-pick button { width: 30px; } }
 @media (prefers-reduced-motion: reduce) { .bq-bowbtn, .bq-bowbtn.wiggle, .bq-pick { animation: none !important; transition: none !important; } }
@@ -2399,3 +2399,145 @@ html body .rb-host:hover .rb-vis .rb-ch, html body .rb-host:focus-visible .rb-vi
 footer:not(:has(.garden-bed)) { min-height: 320px; }
 @media (max-width: 768px) { footer:not(:has(.garden-bed)) { min-height: 300px; } }
 .mb-bouquet.is-picking .bq-label { opacity: 0 !important; }
+
+/* an instanced <symbol> is its own little viewport that clips to its viewBox; flowers that turn about their content centre, or
+   whose art runs a hair past the box, must never lose a petal to it */
+symbol, use { overflow: visible; }
+
+/* =====================================================================
+   The garden ecosystem (ecosystem.js): seeds pouring, the yard, the
+   watering can, the nest, the caterpillar and the butterfly, and the
+   Experience / Skills breeze. Transforms and opacity only.
+   ===================================================================== */
+/* the passive versions of the nest and the caterpillar are replaced by the interactive ones in the yard */
+.w-nest, .w-story, .w-jade { display: none !important; }
+
+/* --- flowers that relied on overflowing their own svg box get room, so no petal can meet an invisible edge --- */
+.page-posy svg { position: absolute; left: -20%; top: -20%; width: 140%; height: 140%; }
+
+/* --- Experience / Skills: each flower breathes at its own pace (the JS sets --amp --dir and timings) --- */
+@keyframes gardenBreeze { 0% { rotate: calc(var(--dir, 1) * var(--amp, 1) * -3.2deg); translate: calc(var(--amp, 1) * -1.5px) 1px; scale: 1; } 50% { rotate: calc(var(--dir, 1) * var(--amp, 1) * 0.6deg); translate: 0 calc(var(--amp, 1) * -4px); scale: 1.02; } 100% { rotate: calc(var(--dir, 1) * var(--amp, 1) * 3.4deg); translate: calc(var(--amp, 1) * 1.5px) 0; scale: 1; } }
+@keyframes specimenBreeze { 0% { --sway: calc(var(--dir, 1) * var(--amp, 1) * -2.6deg); translate: 0 1px; } 50% { translate: 0 calc(var(--amp, 1) * -4px); } 100% { --sway: calc(var(--dir, 1) * var(--amp, 1) * 2.8deg); translate: 0 0; } }
+@keyframes stemBend { from { transform: skewX(calc(var(--dir, 1) * var(--amp, 1) * -2.4deg)); } to { transform: skewX(calc(var(--dir, 1) * var(--amp, 1) * 2.6deg)); } }
+.g-art > use, .h-art > use { transform-box: fill-box; transform-origin: 50% 100%; animation: stemBend var(--bd, 6s) ease-in-out var(--bl, 0s) infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .g-art > use, .h-art > use { animation: none !important; } }
+
+/* --- seed packet: a clearer lift on hover, and the seeds that pour out --- */
+.seed-wrap { position: relative; }
+.seed-packet:hover { transform: translateY(-4px) rotate(-2deg); }
+.pour-seed { position: absolute; z-index: 5; pointer-events: none; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 35% 30%, #e0aa70, #9a6b3a 60%, #7a4f26); box-shadow: 0 1px 1px rgba(80, 50, 20, 0.25); will-change: transform; }
+
+/* --- the yard --- */
+.eco-yard { position: relative; padding: 1.5rem 0 0 !important; }
+.yard-wrap { position: relative; height: calc(330px * var(--ys, 1)); max-width: 100%; margin: 0 auto; }
+.yard { position: absolute; left: 50%; top: 0; width: 560px; height: 330px; transform: translateX(-50%) scale(var(--ys, 1)); transform-origin: 50% 0; }
+.yard-wrap:not(.yd-live) .yard *, .yard-wrap:not(.yd-live) .yard *::before { animation-play-state: paused !important; }
+.yard button { position: absolute; z-index: 2; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; font: inherit; }
+.yard button[hidden] { display: none; }
+.yard button:focus-visible { outline: 2px dashed var(--focus); outline-offset: 4px; border-radius: 14px; }
+.yard svg { display: block; overflow: visible; }
+.yd-art, .yd-ground { position: absolute; left: 0; width: 100%; pointer-events: none; }
+.yd-art { top: 0; height: 100%; z-index: 0; }
+.yd-ground { bottom: 0; height: 60px; z-index: 1; }
+.yard button::before { content: ''; position: absolute; inset: -8px; }          /* comfortable touch target */
+.yd-nest { left: 30px; top: 78px; width: 116px; height: 81px; transition: transform 0.4s var(--spring); }
+.yd-nest:hover { transform: translateY(-2px); }
+.yd-nest svg, .yd-food svg, .yd-chrys svg, .yd-can svg, .yd-cat svg { width: 100%; height: 100%; }
+.yd-nest.happy svg { animation: nestHop 0.45s ease 2; }
+@keyframes nestHop { 50% { transform: translateY(-3px) rotate(-1.5deg); } }
+.yd-food { left: 152px; top: 112px; width: 44px; height: 30px; transition: opacity 0.4s, transform 0.4s var(--spring); }
+.yd-food:hover { transform: translateY(-2px) rotate(-3deg); }
+.yd-food.arrive { animation: foodIn 0.8s var(--spring); }
+@keyframes foodIn { from { transform: scale(0.2) translateY(-18px); opacity: 0; } }
+.yd-food.used { opacity: 0.25; pointer-events: none; }
+.yd-morsel { position: absolute; z-index: 4; width: 7px; height: 9px; border-radius: 50%; background: #c98a4c; pointer-events: none; }
+.yd-heart { position: absolute; z-index: 4; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none; }
+/* eggs and chicks */
+.egg .eg-in { transform-box: fill-box; transform-origin: 50% 100%; }
+.egg.wig .eg-in, .egg.crack .eg-in { animation: eggWig 0.55s ease-in-out; }
+.egg.tick .eg-in { animation: eggTick 0.8s ease-in-out; }
+@keyframes eggWig { 0%, 100% { rotate: 0deg; } 18% { rotate: -9deg; } 40% { rotate: 8deg; } 62% { rotate: -6deg; } 82% { rotate: 4deg; } }
+@keyframes eggTick { 0%, 100% { rotate: 0deg; } 25% { rotate: -5deg; } 55% { rotate: 4deg; } 80% { rotate: -2deg; } }
+.egg .eg-crack { stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset 0.4s ease; }
+.egg.crack .eg-crack { stroke-dashoffset: 0; }
+.egg .eg-cap { transform-box: fill-box; transform-origin: 20% 100%; transition: transform 0.65s cubic-bezier(0.3, 1.3, 0.5, 1), opacity 0.5s 0.15s; }
+.egg.open .eg-cap { transform: translate(6px, -17px) rotate(42deg); opacity: 0; }
+.egg .chick { opacity: 0; transform: translateY(7px) scale(0.2); transform-box: fill-box; transform-origin: 50% 100%; transition: transform 0.8s var(--spring), opacity 0.3s; }
+.egg.open .chick { opacity: 1; transform: none; }
+.yd-nest.hatched .chick { animation: chickBob 3.6s ease-in-out infinite; }
+.yd-nest.hatched .e1 .chick { animation-duration: 4.3s; animation-delay: -1.2s; } .yd-nest.hatched .e2 .chick { animation-duration: 3.1s; animation-delay: -2.1s; }
+@keyframes chickBob { 0%, 100% { transform: translateY(0) rotate(0deg); } 30% { transform: translateY(-1.6px) rotate(-3deg); } 65% { transform: translateY(-0.6px) rotate(3deg); } }
+.chick .mouth, .chick .beak-b { opacity: 0; transition: opacity 0.15s; }
+.chick .beak-t { transition: transform 0.2s; }
+.chick.open .mouth, .chick.open .beak-b { opacity: 1; }
+.chick.open .beak-t { transform: translateY(-3px); }
+.chick.look { translate: 0 -2px; }
+.chick.gulp { animation: gulp 0.5s ease; }
+@keyframes gulp { 40% { scale: 1.12 0.9; } 70% { scale: 0.96 1.06; } }
+/* the caterpillar: a slow loop up its stem, across the leaf, round the tip and back down the underside */
+.yd-cat { left: 226px; top: 150px; width: 38px; height: 16px; z-index: 3; offset-rotate: auto; offset-anchor: 50% 75%; animation: catLoop 66s ease-in-out infinite; }
+@supports (offset-path: path('M0 0 L1 1')) { .yd-cat { left: 0; top: 0; } }
+@keyframes catLoop { 0% { offset-distance: 0%; } 14% { offset-distance: 22%; } 21% { offset-distance: 22%; } 40% { offset-distance: 41%; } 47% { offset-distance: 41%; } 62% { offset-distance: 66%; } 68% { offset-distance: 66%; } 90% { offset-distance: 96%; } 100% { offset-distance: 100%; } }
+.cat-segs circle { transform-box: fill-box; transform-origin: 50% 100%; animation: catWave 1.2s ease-in-out infinite alternate; }
+.cat-segs circle:nth-child(2) { animation-delay: -0.2s; } .cat-segs circle:nth-child(3) { animation-delay: -0.4s; } .cat-segs circle:nth-child(4) { animation-delay: -0.6s; } .cat-segs circle:nth-child(5) { animation-delay: -0.8s; }
+@keyframes catWave { from { transform: translateY(0) scaleY(1); } to { transform: translateY(-1.4px) scaleY(1.08); } }
+.yd-cat.nibble svg { animation: catNibble 0.7s ease; }
+@keyframes catNibble { 0%, 100% { transform: none; } 20% { transform: scale(1.08, 0.88); } 40% { transform: scale(0.94, 1.08) translateX(2px); } 60% { transform: scale(1.06, 0.9); } 80% { transform: scale(0.98, 1.04); } }
+.yd-cat.curl svg { transition: transform 0.9s ease, opacity 0.9s ease; transform: scale(0.5, 1.3) rotate(-50deg); opacity: 0.3; }
+.yd-crumb { position: absolute; z-index: 4; width: 4px; height: 4px; border-radius: 50% 0 50% 0; background: #8db36a; pointer-events: none; }
+.yd-plant-hit { left: 196px; top: 20px; width: 130px; height: 300px; pointer-events: none; }
+.yd-plant-hit::before { display: none; }
+body.is-watering .yd-plant-hit { pointer-events: auto; outline: 2px dashed rgba(120, 190, 230, 0.5); outline-offset: -2px; border-radius: 40%; }
+/* chrysalis */
+.yd-chrys { width: 24px; height: 44px; transform-origin: 50% 0; animation: chSway 5s ease-in-out infinite alternate; }
+@keyframes chSway { from { rotate: -2deg; } to { rotate: 2.5deg; } }
+.yd-chrys .ch-thread { stroke-dasharray: 10; }
+.yd-chrys .ch-body, .yd-chrys .ch-husk { transform-box: fill-box; transform-origin: 50% 0; }
+.yd-chrys .ch-husk { opacity: 0; transition: opacity 0.6s; }
+.yd-chrys .ch-crack { stroke-dasharray: 30; stroke-dashoffset: 30; }
+.yd-chrys.forming .ch-body { animation: chForm 1.5s ease-out both; }
+.yd-chrys.forming .ch-thread { animation: chThread 0.8s ease-out both; }
+@keyframes chForm { 0% { transform: scale(0.5, 0.2); opacity: 0; filter: saturate(1.5); } 60% { transform: scale(1.1, 1.05); opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes chThread { from { stroke-dashoffset: 10; } to { stroke-dashoffset: 0; } }
+.yd-chrys.shake { animation: chShake 0.7s ease-in-out; }
+@keyframes chShake { 0%, 100% { rotate: 0deg; } 15% { rotate: -9deg; } 35% { rotate: 8deg; } 55% { rotate: -6deg; } 75% { rotate: 4deg; } }
+.yd-chrys.opening { animation: chShake 0.5s ease-in-out 3; }
+.yd-chrys.opening .ch-crack { stroke-dashoffset: 0; transition: stroke-dashoffset 1s ease; }
+.yd-chrys.split .ch-body, .yd-chrys.empty .ch-body { opacity: 0; transition: opacity 0.7s; }
+.yd-chrys.split .ch-husk, .yd-chrys.empty .ch-husk { opacity: 1; }
+.yd-chrys.empty { animation: chSway 6s ease-in-out infinite alternate; cursor: default; }
+/* flowers to water */
+.yd-flower { width: 80px; margin-left: -8px; z-index: 2; }
+.yd-flower svg { width: 100%; height: 100%; transform-origin: 50% 100%; animation: ydSway var(--sd, 5s) ease-in-out var(--dl, 0s) infinite alternate; }
+@keyframes ydSway { from { rotate: -3.4deg; } to { rotate: 3.2deg; } }
+.yd-flower.sway-hit svg { animation: ydHit 0.9s ease; }
+@keyframes ydHit { 0%, 100% { rotate: 0deg; } 25% { rotate: -9deg; } 55% { rotate: 7deg; } 80% { rotate: -3deg; } }
+.yd-flower .yf-head, .yd-flower .yf-bud { transform-box: fill-box; transform-origin: 50% 50%; transition: scale 0.9s var(--spring), opacity 0.6s; }
+.yd-flower .yf-bud { scale: 0; opacity: 0; }
+.yd-flower[data-lv="1"] .yf-head { scale: 1.1; } .yd-flower[data-lv="2"] .yf-head { scale: 1.2; } .yd-flower[data-lv="3"] .yf-head { scale: 1.32; }
+.yd-flower[data-lv="2"] .yf-bud, .yd-flower[data-lv="3"] .yf-bud { scale: 1; opacity: 1; }
+.yd-flower[data-lv="3"] .yf-bud { scale: 1.35; }
+/* the watering can */
+.yd-can { left: 474px; top: 258px; width: 84px; height: 65px; transition: opacity 0.3s, transform 0.4s var(--spring); transform-origin: 50% 90%; }
+.yd-can:hover { transform: translateY(-3px) rotate(-3deg); }
+.yd-can.rock { animation: canRock 1.3s ease-in-out; }
+@keyframes canRock { 0%, 100% { rotate: 0deg; } 18% { rotate: -10deg; } 38% { rotate: 6deg; } 58% { rotate: -5deg; } 78% { rotate: 2deg; } }
+.yd-can.away { opacity: 0; pointer-events: none; }
+.eco-can { position: fixed; left: 0; top: 0; width: 84px; height: 65px; z-index: 120; pointer-events: none; will-change: transform; filter: drop-shadow(0 6px 6px rgba(70, 100, 120, 0.22)); }
+.eco-can svg { width: 100%; height: 100%; overflow: visible; }
+.eco-drop { position: fixed; z-index: 121; width: 4px; height: 8px; margin: -4px 0 0 -2px; border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%; background: linear-gradient(#e5f4fb, #7fbfdc); pointer-events: none; will-change: transform; }
+.eco-spark { position: fixed; z-index: 121; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 6px rgba(255, 255, 255, 0.9); }
+body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .hero-flowers .bloom, body.is-watering .page-posy, body.is-watering .yd-flower, body.is-watering .sc-bloom { filter: drop-shadow(0 0 5px rgba(120, 190, 230, 0.95)); cursor: pointer; }
+/* the butterfly */
+.eco-bf { position: fixed; left: 0; top: 0; width: 34px; height: 28px; z-index: 110; pointer-events: none; will-change: transform; }
+.eco-bf svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(90, 67, 102, 0.18)); }
+.eb-wl, .eb-wr { transform-origin: 0 0; transition: transform 1.7s ease-in-out; }
+.eco-bf.fold .eb-wl, .eco-bf.fold .eb-wr { transform: scaleX(0.12); }
+.eco-bf.flap .eb-wl, .eco-bf.flap .eb-wr { animation: ebFlap 0.24s ease-in-out infinite alternate; }
+.eco-bf.rest .eb-wl, .eco-bf.rest .eb-wr { animation: ebFlap 1.4s ease-in-out infinite alternate; }
+@keyframes ebFlap { from { transform: scaleX(1); } to { transform: scaleX(0.25); } }
+@media (prefers-reduced-motion: reduce) {
+    .yd-cat { animation: none; offset-distance: 22%; }
+    .cat-segs circle, .yd-flower svg, .yd-chrys, .yd-nest.hatched .chick, .eco-bf.flap .eb-wl, .eco-bf.flap .eb-wr, .eco-bf.rest .eb-wl, .eco-bf.rest .eb-wr { animation: none !important; }
+    .eb-wl, .eb-wr, .egg .chick, .egg .eg-cap { transition: none; }
+}

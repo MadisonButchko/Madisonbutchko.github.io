@@ -1167,7 +1167,7 @@ const WorldState = (() => {
             function make(seed){
                 const R = rng(seed), n = 3 + Math.floor(R() * 3), el = document.createElement('div');
                 el.className = 'page-posy'; el.setAttribute('aria-hidden', 'true');
-                let h = '<svg viewBox="-50 -100 100 100">';
+                let h = '<svg viewBox="-70 -120 140 140">';
                 for (let k = 0; k < 4; k++){ const gx = (k - 1.5) * 7 + (R() - 0.5) * 4, gh = 10 + R() * 9, b = (R() - 0.5) * 8; h += `<path class="pp-grass" d="M${vf(gx)} 0 Q${vf(gx + b * 0.4)} ${vf(-gh * 0.6)} ${vf(gx + b)} ${vf(-gh)}"/>`; }
                 for (let k = 0; k < n; k++){
                     const a = (-34 + 68 * (n === 1 ? 0.5 : k / (n - 1)) + (R() - 0.5) * 10) * Math.PI / 180, L = 46 + R() * 36, tx = Math.sin(a) * L, ty = -Math.cos(a) * L;
@@ -3056,7 +3056,7 @@ const WorldState = (() => {
             + '<path d="M17 62 L63 62 L45 101 Q40 104 35 101 Z" fill="#f3dcbd" stroke="#c9a06a" stroke-width="1.3" stroke-linejoin="round"/>'
             + '<path d="M17 62 L40 70 L63 62" fill="none" stroke="#c9a06a" stroke-width="1.1" opacity=".7"/>'
             + '<path d="M27 66 L33 92 M53 66 L46 92" stroke="#e8cfa6" stroke-width="1.4" opacity=".8"/>'
-            + '<path class="bq-band" d="M29 63.5 Q40 68.5 51 63.5 L51.6 68 Q40 73 28.4 68Z" stroke-width=".8"/></svg>'
+            + '<path class="bq-band" d="M29 67.5 Q40 72.5 51 67.5 L51.6 72 Q40 77 28.4 72Z" stroke-width=".8"/></svg>'
             + '<span class="vh">Your discoveries</span></button>'
             + '<button type="button" class="bq-bowbtn" aria-expanded="false" aria-controls="bqPick" aria-label="Change the bow colour">' + BOW_SVG + '</button>'
             + '<div class="bq-pick" id="bqPick" role="radiogroup" aria-label="Bow colour" hidden></div>'
@@ -3251,12 +3251,13 @@ const WorldState = (() => {
             if (busy) return; busy = true;
             const it = draw();
             packet.classList.add('opening'); say('Sprouting: ' + it.title, true);
+            const pour = window.__eco && window.__eco.pour ? window.__eco.pour(packet) : 0;
             setTimeout(() => {
                 packet.classList.remove('opening'); busy = false;
                 if (it.type === 'card') { gotoItem(it.cat + ':' + it.id); say('Planted: ' + it.title); }
                 else if (it.type === 'link') { gotoItem(it.cat + ':' + it.id, { focus: false }); preview(it); }
                 else { say('Planted: ' + it.title); openGallery(null, it.file); }
-            }, reduce ? 350 : 1300);
+            }, reduce ? 350 : Math.max(1300, pour + 250));
         });
     })();
 
