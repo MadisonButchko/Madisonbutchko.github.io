@@ -283,7 +283,7 @@ const WorldState = (() => {
         function targetFrac(v, p){
             const base = p > 0 ? 0.04 + p * 0.96 : 0;
             const gate = smooth(p / 0.03) * smooth((p - (v.bonusAt - 0.22)) / 0.18);
-            return Math.min(1, base + v.bonus * gate);
+            return Math.min(1, Math.max(base, (v.reach || 0) * gate));   /* a click sets how far the vine has grown; scrolling can carry it further */
         }
         const ITEM_SPAN = 55;   /* path units over which a leaf / flower finishes growing after the stem reaches it */
         function renderVine(v){
@@ -301,7 +301,7 @@ const WorldState = (() => {
             });
             /* the vine's click strip covers only the part of the vine that is drawn (plus a little past its tip) */
             const hit = v.hit || (v.hit = document.querySelector('.vine-hit.' + v.side));
-            if (hit){ const hpx = shown > 1 ? Math.min(innerHeight, Math.round(innerHeight * shown / v.len) + 40) : 0; if (hit._h !== hpx){ hit._h = hpx; hit.style.height = hpx + 'px'; hit.style.display = hpx ? '' : 'none'; } }
+            if (hit){ const hpx = shown > 1 ? innerHeight : 0;   /* once any vine shows, the whole gutter listens: a click below the tip grows it toward the click */ if (hit._h !== hpx){ hit._h = hpx; hit.style.height = hpx + 'px'; hit.style.display = hpx ? '' : 'none'; } }
             return window.__vineSprigs ? window.__vineSprigs(v.side, q, performance.now()) : false;
         }
         let raf = 0, last = 0;
@@ -327,8 +327,7 @@ const WorldState = (() => {
         /* a click earns the vine a little extra length beyond what scrolling shows */
         window.__vineBonus = (side, d) => {
             const v = vines.find(x => x.side === side); if (!v || !v.len) return;
-            const p = vineProgress(), base = p > 0 ? 0.04 + p * 0.96 : 0;
-            v.bonus = Math.max(v.bonus, Math.min(0.3, Math.min(1, d / v.len) - base)); v.bonusAt = p; vineWake();
+            v.reach = Math.max(v.reach || 0, Math.min(1, d / v.len)); v.bonusAt = vineProgress(); vineWake();
         };
         if (!reduce){ buildVine('left'); buildVine('right'); }
         /* phones resize the viewport as the address bar shows/hides; only rebuild on a real layout change so grown sprigs stay put */
@@ -1046,24 +1045,38 @@ const WorldState = (() => {
         /* TODO(human): how many click-grown blooms may one vine carry in total? Picking this number is a
            design decision: a low number keeps the composition airy, a high one rewards persistent clicking.
            (v.narrow is true on phones, where the vine is slimmer and the page gutter is tighter.) */
-        function clickGrowthLimit(v){ return v.narrow ? 6 : 10; }
+        function clickGrowthLimit(v){ return v.narrow ? 14 : 24; }
         let vineClicks = 0;
         /* returns false when that stretch of vine is already at its limit */
         function growVine(side, clientY){
             const v = VINE[side]; if (!v) return false;
             vineClicks++;
             const r = v.svg.getBoundingClientRect(), py = (clientY - r.top) / v.k, win = 320 / v.k, grown = GROWN[side];
-            const reach = vineShown(v) + 200;   /* growth always continues from the vine's own tip, never from nowhere */
-            const near = v.slots.filter(s => Math.abs(s.y - py) < win && s.d <= reach);
-            const adj = s => grown.has(s.i - 1) || grown.has(s.i + 1) ? 1 : 0;
             let used = 0; grown.forEach(sp => { used += sp.level; });
-            const room = clickGrowthLimit(v) - used; if (room <= 0) return false;
-            const empty = near.filter(s => !s.sp && !s.pending).sort((a, b) => (adj(b) - adj(a)) || Math.abs(a.y - py) - Math.abs(b.y - py));
-            const fresh = empty.slice(0, Math.min(2, room));
-            const upg = near.filter(s => s.sp && !s.sp.gone && s.sp.spec.level < 3).sort((a, b) => Math.abs(a.y - py) - Math.abs(b.y - py)).slice(0, Math.min(fresh.length ? 1 : 3, room - fresh.length));
-            if (!fresh.length && !upg.length) return false;
-            extendVine(v, side, Math.max(...fresh.concat(upg).map(s => s.d)) + 70);
-            if (window.GardenLog) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
+            const room = clickGrowthLimit(v) - used;
+            /* 1) the vine grows on from its current tip (toward the click if it was below the tip) */
+            const tipD = Math.max(vineShown(v), (v.reach || 0) * v.len), STEP = 280;
+            const clickD = v.slots.reduce((b, s) => Math.abs(s.y - py) < Math.abs(b.y - py) ? s : b, v.slots[0]).d;
+            const endD = Math.min(v.len - 12, tipD + Math.min(420, Math.max(STEP, clickD + 80 - tipD)));
+            const grew = endD > tipD + 8;
+            /* 2) blooms are planted along that new stretch (evenly spread); once the vine is fully out they go near the click instead */
+            const adj = s => grown.has(s.i - 1) || grown.has(s.i + 1) ? 1 : 0;
+            let fresh = [], upg = [];
+            if (room > 0){
+                if (grew){
+                    const fringe = v.slots.filter(s => !s.sp && !s.pending && s.d > tipD - 20 && s.d <= endD);
+                    const want = Math.min(4, room), stride = Math.max(1, Math.floor(fringe.length / want));
+                    for (let i = Math.min(1, fringe.length - 1); i < fringe.length && fresh.length < want; i += stride) fresh.push(fringe[i]);
+                } else {
+                    const near = v.slots.filter(s => Math.abs(s.y - py) < win && s.d <= tipD + 60);
+                    const empty = near.filter(s => !s.sp && !s.pending).sort((a, b) => (adj(b) - adj(a)) || Math.abs(a.y - py) - Math.abs(b.y - py));
+                    fresh = empty.slice(0, Math.min(2, room));
+                    upg = near.filter(s => s.sp && !s.sp.gone && s.sp.spec.level < 3).sort((a, b) => Math.abs(a.y - py) - Math.abs(b.y - py)).slice(0, Math.min(fresh.length ? 1 : 3, room - fresh.length));
+                }
+            }
+            if (!grew && !fresh.length && !upg.length) return false;
+            if (grew) extendVine(v, side, endD);
+            if (window.GardenLog && (fresh.length || upg.length)) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
             const now = performance.now();
             fresh.forEach(s => {
                 const spec = { level: 1, seed: 1 + Math.floor(Math.random() * 2e9), leafy: Math.random() < 0.12, t: { 1: now } };
