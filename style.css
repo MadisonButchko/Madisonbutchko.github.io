@@ -2790,3 +2790,53 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
 .lightbox { transition: --art1 0.35s ease, --art2 0.35s ease; }
 #lightbox .lb-thumbs img { background: rgba(255, 248, 236, 0.12); }
 @media (prefers-reduced-motion: reduce) { #lightbox img#lightboxImg, .lb-backdrop-image { transition: none; } }
+
+/* A quiet wish, drifting pappus seeds, and temporary flowers in clear spaces. */
+.dandelion-wish {
+    position: fixed; z-index: 180; width: 148px; pointer-events: none;
+    font: 400 1.3rem/1.2 var(--font-hand); text-align: center; color: #aa91c6;
+    opacity: 0.78; animation: wishFade 2.8s ease both;
+}
+.wish-words {
+    display: inline-block; color: transparent;
+    background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.85) 50%, transparent 60%), linear-gradient(90deg, #c98da8, #aa91c6 27%, #d5a56a 48%, #a5b77d 70%, #85afc4);
+    background-size: 250% 100%, 100% 100%; background-position: 120% 0, 0 0;
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 0 2px rgba(255, 253, 246, 0.7));
+    animation: wishGlimmer 2.4s ease-in-out both;
+}
+.dandelion-wish::before, .dandelion-wish::after {
+    content: '✧'; position: absolute; top: 0; color: #c9afd8;
+    font-size: 0.9rem; animation: wishShimmer 1.4s ease-in-out 2;
+}
+.dandelion-wish::before { left: 3px; top: 6px; animation-delay: 0.2s; }
+.dandelion-wish::after { right: 3px; color: #d5bc84; }
+.dandelion-wish.dismissed { animation: wishDismiss 0.35s ease forwards; }
+@keyframes wishFade { 0%, 100% { opacity: 0; } 20%, 70% { opacity: 0.78; } }
+@keyframes wishDismiss { from { opacity: 0.6; } to { opacity: 0; } }
+@keyframes wishGlimmer { to { background-position: -100% 0, 0 0; } }
+@keyframes wishShimmer { 0%, 100% { opacity: 0.15; transform: scale(0.7) rotate(-12deg); } 50% { opacity: 0.85; transform: scale(1.15) rotate(12deg); } }
+.v11-dand .wd-seed { transition: opacity 1.2s ease; }
+.v11-dand .wd-seed.gone { transition-duration: 0.3s; }
+.w-fluff { width: 13px; height: 17px; margin: -6px 0 0 -6px; background: none; scale: var(--fluff-size, 1); }
+.w-fluff::before { content: ''; position: absolute; left: 6px; top: 6px; width: 1px; height: 10px; background: #c9bca3; rotate: 12deg; }
+.w-fluff::after {
+    content: ''; position: absolute; inset: 0 0 7px; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 65%, #fffef9 0 25%, rgba(255, 254, 249, 0.8) 38%, transparent 70%), repeating-conic-gradient(from 5deg at 50% 90%, #fffdf6 0deg 11deg, transparent 11deg 30deg);
+    filter: drop-shadow(0 0 0.6px #b8ad98);
+}
+.wish-grown { position: absolute; z-index: 1; width: 32px; height: 58px; pointer-events: none; transition: opacity 1.5s ease; }
+.wish-grown svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.wish-grown.fading { opacity: 0; }
+.wish-spark { transform-origin: 16px 48px; animation: wishLanding 0.9s ease both; }
+.wish-sprout, .wish-stem { transform-origin: 16px 56px; animation: wishGrow 1.3s ease-out 0.55s both; }
+.wish-stem { animation-duration: 1.8s; animation-delay: 1.1s; }
+.wish-bloom { transform-origin: 16px 18px; animation: wishGrow 1.4s ease-out 2.5s both; }
+@keyframes wishLanding { 0% { opacity: 0; transform: scale(0.4); } 35% { opacity: 0.85; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes wishGrow { from { opacity: 0; transform: scale(0.1, 0); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+    .dandelion-wish, .wish-words, .dandelion-wish::before, .dandelion-wish::after, .wish-grown g { animation: none !important; }
+    .dandelion-wish.dismissed { opacity: 0; }
+    .v11-dand .wd-seed, .wish-grown { transition: none; }
+    .w-fluff, .wish-grown .wish-spark { display: none; }
+}

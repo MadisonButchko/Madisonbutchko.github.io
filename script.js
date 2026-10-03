@@ -3841,8 +3841,8 @@ const WorldState = (() => {
         for (let n = tw.nextNode(); n; n = tw.nextNode()) { range.selectNodeContents(n); rects.push(...range.getClientRects()); }
         return rects.filter(r => r.width && r.height);
     }
-    function placeIn(sec, w, h) {
-        const sr = sec.getBoundingClientRect(), blocks = contentRects(sec), W2 = document.documentElement.clientWidth, m = 12;
+    function placeIn(sec, w, h, extra = []) {
+        const sr = sec.getBoundingClientRect(), blocks = contentRects(sec).concat(extra), W2 = document.documentElement.clientWidth, m = 12;
         for (const fy of [0.995, 0.97, 0.9, 0.8, 0.68, 0.55, 0.4]) for (const fx of [0.025, 0.975, 0.06, 0.94, 0.12, 0.88, 0.2, 0.8]) {
             const cx = sr.left + sr.width * fx, by = sr.top + sr.height * fy, box = { l: cx - w / 2, r: cx + w / 2, t: by - h, b: by };
             if (box.l < 6 || box.r > W2 - 6 || box.t < sr.top + 4 || box.b > sr.bottom - 2) continue;
@@ -4285,15 +4285,94 @@ const WorldState = (() => {
        Dandelions, here and there down the page: fluffy clocks, half-blown
        ones and a few yellow flowers. Tap a clock and a few seeds let go;
        tap again and more do; brush or swipe across it and many go at once.
-       The head really loses the seeds that flew (and ends as a bare head).
+       The head loses the seeds that flew, then slowly replenishes its fluff.
        Seeds drift slowly, each on its own path, on a shared breeze; now and
-       then one leaves on its own. Rarely, one takes root further down.
+       then one leaves on its own. A few land in clear spaces and bloom briefly.
        ------------------------------------------------------------------ */
     const Dandelions = (() => {
         const NSV = 'http://www.w3.org/2000/svg';
         const narrow = () => innerWidth < 700;
         const PLAN = [['home', 'puff'], ['about', 'yellow'], ['experience', 'partial'], ['skills', 'puff'], ['gallery', 'yellow'], ['contact', 'puff']];
         const list = [];
+        const motion = matchMedia('(prefers-reduced-motion: reduce)');
+        const MAX_AIR = 24, MAX_FLOWERS = 4, flowers = new Set();
+        let pending = 0, wish = null, wishTimer = 0;
+        const BLOCKERS = 'p,h1,h2,h3,h4,h5,h6,li,label,a,button,input,textarea,select,[tabindex],[role="button"],nav,header,footer,img,.gs-note,.gs-inner,.garden,.herbarium,[class*="card"],dialog,.lightbox,.gallery-modal,.gallery-frame,.contact-inner,.about-body,.collage,.mb-bouquet,.to-top,.wish-grown';
+        const intersects = (a, b, pad = 10) => a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
+        function obstacles(sec, ignore) {
+            return World.contentRects(sec).concat($$(BLOCKERS).filter(e => e !== ignore && !ignore?.contains(e)).map(e => e.getBoundingClientRect())).filter(r => r.width && r.height);
+        }
+        function landingBox(spot) {
+            const r = spot.sec.getBoundingClientRect();
+            return { left: r.left + spot.left, right: r.left + spot.left + 32, top: r.top + spot.top, bottom: r.top + spot.top + 58 };
+        }
+        function safe(spot, blocks) {
+            const r = landingBox(spot), sec = spot.sec.getBoundingClientRect();
+            return r.left >= 8 && r.right <= innerWidth - 8 && r.top >= sec.top + 8 && r.bottom <= sec.bottom - 8 && !blocks.some(b => intersects(r, b));
+        }
+        function landing() {
+            if (flowers.size + air.filter(p => p.target).length >= MAX_FLOWERS) return null;
+            const top = Math.max(90, $('.m-header')?.getBoundingClientRect().bottom || 0);
+            for (const sec of $$('main > section')) {
+                const sr = sec.getBoundingClientRect(), lo = Math.max(top, sr.top + 12), hi = Math.min(innerHeight - 24, sr.bottom - 12) - 58;
+                if (hi <= lo) continue;
+                const blocks = obstacles(sec);
+                for (let k = 0; k < 36; k++) {
+                    const spot = { sec, left: rnd(Math.max(8, sr.left), Math.min(innerWidth - 40, sr.right - 40)) - sr.left, top: rnd(lo, hi) - sr.top };
+                    if (safe(spot, blocks)) return spot;
+                }
+            }
+            return null;
+        }
+        function grow(spot) {
+            if (motion.matches || flowers.size >= MAX_FLOWERS || !safe(spot, obstacles(spot.sec))) return;
+            const choices = [['fl-daisy', '#fffdf6'], ['fl-bloom', '#f4a7bf'], ['fl-daisy', '#f6d36b'], ['fl-bloom', '#b9a2de'], ['fl-forsythia', '#f2c230']];
+            const [sym, color] = choices[Math.floor(Math.random() * choices.length)];
+            const el = document.createElement('span'); el.className = 'wish-grown'; el.setAttribute('aria-hidden', 'true');
+            el.style.left = spot.left + 'px'; el.style.top = spot.top + 'px';
+            el.innerHTML = '<svg viewBox="0 0 32 58"><g class="wish-spark"><path d="M16 43v10M11 48h10M12 44l8 8M12 52l8-8" stroke="#d8b65b" stroke-width="1"/></g><g class="wish-sprout"><path d="M16 55C5 52 7 45 8 44C14 46 16 50 16 55M16 55C25 50 26 44 25 43C18 46 16 51 16 55" fill="#9fbe88"/></g><g class="wish-stem"><path d="M16 56Q12 38 16 18" fill="none" stroke="#8db36a" stroke-width="1.6" stroke-linecap="round"/><path d="M15 40Q25 38 24 30Q16 32 15 40" fill="#a7c48d"/></g><g class="wish-bloom" style="color:' + color + ';--center:#f2c230"><use href="#' + sym + '" x="3" y="3" width="26" height="26"/></g></svg>';
+            spot.sec.appendChild(el); const entry = { el, spot }; flowers.add(entry);
+            setTimeout(() => { if (!el.isConnected) return; el.classList.add('fading'); setTimeout(() => { el.remove(); flowers.delete(entry); }, 1500); }, 45000);
+        }
+        function validateFlowers() {
+            for (const entry of flowers) if (!safe(entry.spot, obstacles(entry.spot.sec, entry.el))) { entry.el.remove(); flowers.delete(entry); }
+        }
+        let validation = 0;
+        const validateSoon = () => { if (flowers.size && !validation) validation = setTimeout(() => { validation = 0; validateFlowers(); }, 100); };
+        addEventListener('resize', () => { air.forEach(p => { p.target = null; }); validateSoon(); });
+        addEventListener('scroll', validateSoon, { passive: true });
+        document.addEventListener('click', validateSoon);
+        const layoutObserver = new ResizeObserver(validateSoon);
+        $$('main > section').forEach(sec => layoutObserver.observe(sec));
+        new MutationObserver(validateSoon).observe(document.querySelector('main'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded'] });
+        function makeWish(d) {
+            // Each dandelion offers its wish once per visit; further taps dismiss it.
+            if (d.wished) {
+                if (wish?.dataset.sec === d.sec) {
+                    wish.classList.add('dismissed'); clearTimeout(wishTimer);
+                    wishTimer = setTimeout(() => { wish?.remove(); wish = null; }, 350);
+                }
+                return;
+            }
+            d.wished = true;
+            if (wish) wish.remove(); clearTimeout(wishTimer);
+            const r = d.el.getBoundingClientRect();
+            wish = document.createElement('span'); wish.className = 'dandelion-wish'; wish.setAttribute('role', 'status'); wish.dataset.sec = d.sec; wish.innerHTML = '<span class="wish-words">make a wish</span>';
+            wish.style.left = Math.max(8, Math.min(innerWidth - 156, r.left + r.width / 2 - 74)) + 'px';
+            wish.style.top = Math.max(72, r.top - 34) + 'px';
+            document.body.appendChild(wish);
+            wishTimer = setTimeout(() => { wish?.remove(); wish = null; }, 2800);
+        }
+        function regrow(d) {
+            if (d.regrowTimer) return;
+            const replenish = () => {
+                const seed = $('.wd-seed.gone', d.el);
+                if (!seed) { d.regrowTimer = 0; return; }
+                seed.classList.remove('gone'); d.el.classList.remove('bare');
+                d.regrowTimer = setTimeout(replenish, 650);
+            };
+            d.regrowTimer = setTimeout(replenish, 18000);
+        }
         /* one loop moves every loose seed; it only runs while seeds are in the air */
         const air = []; let raf = 0, last = 0;
         function fly(now) {
@@ -4303,18 +4382,23 @@ const WorldState = (() => {
                 const p = air[i]; p.age += dt;
                 p.vx += (p.dir * wind * p.catch - p.vx) * 0.35 * dt; p.vy += (p.sink - p.vy) * 0.18 * dt;
                 p.x += (p.vx + Math.sin(p.age * p.wf + p.ph) * p.sway) * dt; p.y += (p.vy + Math.cos(p.age * p.wf * 0.7 + p.ph) * 4) * dt;
-                const o = Math.min(1, p.age * 2.5, (p.life - p.age) / 1.8);
+                if (p.target) {
+                    const t = Math.min(1, p.age / p.life), ease = t * t * (3 - 2 * t), end = landingBox(p.target);
+                    p.x = p.startX - scrollX + (end.left + 16 - (p.startX - scrollX)) * ease + Math.sin(t * Math.PI * 2) * 18;
+                    p.y = p.startY - scrollY + (end.bottom - 5 - (p.startY - scrollY)) * ease - Math.sin(t * Math.PI) * 38;
+                }
+                const o = Math.min(1, p.age * 2.5, (p.life - p.age) / (p.target ? 0.5 : 1.8));
                 p.d.style.transform = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px) rotate(' + (Math.sin(p.age * 1.9 + p.ph) * 28).toFixed(0) + 'deg)';
                 p.d.style.opacity = Math.max(0, o).toFixed(2);
-                if (p.age > p.life || p.x < -30 || p.x > innerWidth + 30 || p.y < -40) { p.d.remove(); air.splice(i, 1); FX.free(1); }
+                if (p.age > p.life || p.x < -30 || p.x > innerWidth + 30 || p.y < -40 || p.y > innerHeight + 60) { if (p.target && p.age >= p.life) grow(p.target); p.d.remove(); air.splice(i, 1); FX.free(1); }
             }
             raf = air.length ? requestAnimationFrame(fly) : 0;
         }
-        function launch(x, y, dir, strength) {
-            if (!FX.claim(1)) return false;
-            const d = document.createElement('i'); d.className = 'w-fluff'; d.setAttribute('aria-hidden', 'true'); document.body.appendChild(d);
+        function launch(x, y, dir, strength, target = null) {
+            if (motion.matches || document.hidden || air.length >= MAX_AIR || !FX.claim(1)) return false;
+            const d = document.createElement('i'); d.className = 'w-fluff'; d.setAttribute('aria-hidden', 'true'); d.style.setProperty('--fluff-size', rnd(0.85, 1.2).toFixed(2)); document.body.appendChild(d);
             d.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'; d.style.opacity = '0';
-            air.push({ d, x, y, dir, age: 0, life: rnd(7, 13), ph: rnd(0, 6.3), wf: rnd(1.2, 2.2), sway: rnd(6, 15), catch: rnd(0.55, 1.15),
+            air.push({ d, x, y, dir, target, startX: x + scrollX, startY: y + scrollY, age: 0, life: target ? rnd(4, 6) : rnd(7, 11), ph: rnd(0, 6.3), wf: rnd(1.2, 2.2), sway: rnd(6, 15), catch: rnd(0.55, 1.15),
                 vx: dir * rnd(6, 16) * (0.6 + strength * 0.6), vy: rnd(-26, -8) * (0.7 + strength * 0.4), sink: rnd(2, 8) });
             if (!raf) { last = performance.now(); raf = requestAnimationFrame(fly); }
             return true;
@@ -4330,14 +4414,15 @@ const WorldState = (() => {
                 el.setAttribute('aria-label', 'A yellow dandelion');
                 h += '<g class="wd-flower"><use href="#fl-daisy" x="9" y="8" width="26" height="26" style="color:#f6cf3a;--center:#e0a020"/><circle cx="22" cy="21" r="3.2" fill="#e8a91a"/></g>';
             } else {
-                el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'A dandelion. Press to blow some of its seeds');
-                const n = reduce ? 10 : narrow() ? 14 : 18;
+                el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Make a wish: release a few dandelion seeds');
+                const n = 42;
                 h += '<g class="wd-puff">';
                 for (let k = 0; k < n; k++) {
-                    const a = (k / n) * Math.PI * 2 + seeded() * 0.25, r = 13 + seeded() * 3, x = 22 + Math.cos(a) * r, y = 21 + Math.sin(a) * r;
+                    const a = (k / n) * Math.PI * 2 + seeded() * 0.25, r = (k % 3 === 0 ? 9 : 14) + seeded() * 3, x = 22 + Math.cos(a) * r, y = 21 + Math.sin(a) * r;
                     const tx = Math.cos(a), ty = Math.sin(a), px = -ty, py = tx;
                     h += '<g class="wd-seed" data-k="' + k + '"><path d="M22 21 L' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="#d8d2c4" stroke-width=".55"/>'
-                        + '<path d="M' + (x + px * 2.6).toFixed(1) + ' ' + (y + py * 2.6).toFixed(1) + ' Q' + (x + tx * 2.4).toFixed(1) + ' ' + (y + ty * 2.4).toFixed(1) + ' ' + (x - px * 2.6).toFixed(1) + ' ' + (y - py * 2.6).toFixed(1) + '" stroke="#efe9db" stroke-width=".9" fill="none"/>'
+                        + '<path d="M' + (x + px * 2.6).toFixed(1) + ' ' + (y + py * 2.6).toFixed(1) + ' Q' + (x + tx * 2.4).toFixed(1) + ' ' + (y + ty * 2.4).toFixed(1) + ' ' + (x - px * 2.6).toFixed(1) + ' ' + (y - py * 2.6).toFixed(1) + '" stroke="#fffdf6" stroke-width="1.1" fill="none"/>'
+                        + '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' l' + (tx * 3.5).toFixed(1) + ' ' + (ty * 3.5).toFixed(1) + ' M' + (x + px * 3.2).toFixed(1) + ' ' + (y + py * 3.2).toFixed(1) + ' L' + (x - px * 3.2).toFixed(1) + ' ' + (y - py * 3.2).toFixed(1) + '" stroke="#fffdf6" stroke-width=".75" stroke-linecap="round"/>'
                         + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.5" fill="#fffdf6" stroke="#e4ddcd" stroke-width=".4"/></g>';
                 }
                 h += '</g><g class="wd-bare"><circle cx="22" cy="21" r="3.4" fill="#c9b98a"/><circle cx="21" cy="20" r=".6" fill="#a8956a"/><circle cx="23.2" cy="21.6" r=".6" fill="#a8956a"/><circle cx="21.6" cy="22.4" r=".5" fill="#a8956a"/></g>'
@@ -4353,22 +4438,27 @@ const WorldState = (() => {
         /* let `n` seeds go, from the side the push comes from; returns how many went */
         function release(d, n, dir, strength) {
             const now = performance.now();
-            if (now - d.lastRelease < 240) return 0; d.lastRelease = now;
-            const left = $$('.wd-seed:not(.gone)', d.el); if (!left.length) { REACT.nod(d.el); return 0; }
-            if (left.length - n <= 2) n = left.length;   /* never leave one or two lonely seeds */
-            const box = d.el.getBoundingClientRect(), cx = box.left + box.width / 2;
-            left.sort((a, b) => dir * (a.getBoundingClientRect().left - b.getBoundingClientRect().left) + (Math.random() - 0.5) * 8);
+            if (now - d.lastRelease < 900) return 0; d.lastRelease = now;
+            const left = $$('.wd-seed:not(.gone):not(.leaving)', d.el);
+            if (!left.length) { regrow(d); return 0; }
+            const count = Math.min(n, left.length, motion.matches ? 5 : MAX_AIR - air.length - pending);
+            if (count <= 0) return 0;
+            // Reserve staggered particles so repeated taps cannot overfill the shared loop.
             let went = 0;
-            left.slice(0, n).forEach((sd, k) => {
-                const c = $('circle', sd).getBoundingClientRect();
-                sd.classList.add('gone'); went++;
-                if (reduce) return;
-                setTimeout(() => launch(c.left + c.width / 2, c.top + c.height / 2, dir || (c.left < cx ? -1 : 1), strength), k * rnd(30, 90));
+            left.sort(() => Math.random() - 0.5);
+            left.slice(0, count).forEach((sd, k) => {
+                sd.classList.add('leaving'); pending++; went++;
+                setTimeout(() => {
+                    pending--; sd.classList.remove('leaving');
+                    if (d.el.hidden || !World.inView(d.el)) return;
+                    const c = $('circle', sd).getBoundingClientRect();
+                    const target = k < 2 && Math.random() < 0.18 ? landing() : null;
+                    if (motion.matches || launch(c.left + c.width / 2, c.top + c.height / 2, k % 3 === 0 ? -dir : dir, strength, target)) sd.classList.add('gone');
+                    if (!$$('.wd-seed:not(.gone)', d.el).length) d.el.classList.add('bare');
+                }, motion.matches ? 0 : k * 140 + rnd(0, 80));
             });
-            if (!$$('.wd-seed:not(.gone)', d.el).length) d.el.classList.add('bare');
-            d.el.classList.remove('puffed'); void d.el.offsetWidth; d.el.classList.add('puffed');
-            /* a seed or two may take root later, further down the page */
-            for (let k = 0; k < went; k++) if (Math.random() < 0.035 && World.plantSeed) { World.plantSeed(d.sec); break; }
+            if (!motion.matches) { d.el.classList.remove('puffed'); void d.el.offsetWidth; d.el.classList.add('puffed'); }
+            regrow(d);
             if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:' + d.sec, kind: 'dandelion', sym: 'dandelion', color: '#fffdf6', center: '#c9b98a' }); if (window.World) World.note(1); }
             return went;
         }
@@ -4379,17 +4469,18 @@ const WorldState = (() => {
                 el.addEventListener('click', e => { e.stopPropagation(); REACT.nod(el, e); if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:y:' + d.sec, kind: 'flower', sym: 'fl-daisy', color: '#f6cf3a', center: '#e0a020' }); } });
                 return;
             }
-            const tapCount = () => (d.taps++ === 0 ? 3 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 3));
+            const tapCount = () => (d.taps++ === 0 ? 8 + Math.floor(Math.random() * 3) : 9 + Math.floor(Math.random() * 4));
             el.addEventListener('click', e => {
                 e.stopPropagation();
-                if (e.detail === 0) return;   /* keyboard activation is handled below */
+                makeWish(d);
                 const r = el.getBoundingClientRect();
                 release(d, tapCount(), e.clientX < r.left + r.width / 2 ? 1 : -1, 0.6);
             });
-            el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); release(d, tapCount(), 1, 0.6); } });
+            el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!e.repeat) { makeWish(d); release(d, tapCount(), 1, 0.6); } } });
             /* brushing or swiping across it: the faster the stroke, the more seeds go */
             let lx = null, lt = 0;
             el.addEventListener('pointermove', e => {
+                if (e.pointerType !== 'mouse' || motion.matches) return;
                 const now = performance.now();
                 if (lx != null && now - lt < 80) {
                     const v = (e.clientX - lx) / Math.max(1, now - lt);
@@ -4410,7 +4501,13 @@ const WorldState = (() => {
                 if (!d) { d = build(kind, i); sec.appendChild(d.el); }
                 d.el.hidden = true;   /* measure the section without this one */
                 d.el.classList.toggle('small', small);
-                const p = World.placeIn && World.placeIn(sec, w, h);
+                // Fixed vine hover strips sit above main; reserve their columns even off screen.
+                const vineWidth = innerWidth >= 1240 ? 92 : 20;
+                const vineColumns = fine && !motion.matches ? [
+                    { left: 0, right: vineWidth, top: -Infinity, bottom: Infinity },
+                    { left: innerWidth - vineWidth, right: innerWidth, top: -Infinity, bottom: Infinity }
+                ] : [];
+                const p = World.placeIn && World.placeIn(sec, w, h, vineColumns);
                 if (!p) return;
                 d.el.style.left = p.left.toFixed(1) + 'px'; d.el.style.top = p.top.toFixed(1) + 'px'; d.el.hidden = false; shown++;
             });
@@ -4425,9 +4522,12 @@ const WorldState = (() => {
             const seen = list.filter(d => d.kind !== 'yellow' && !d.el.hidden && World.inView(d.el) && $$('.wd-seed:not(.gone)', d.el).length > 6);
             if (!seen.length) return;
             const d = seen[Math.floor(Math.random() * seen.length)], left = $$('.wd-seed:not(.gone)', d.el), sd = left[Math.floor(Math.random() * left.length)];
-            const c = $('circle', sd).getBoundingClientRect(); sd.classList.add('gone'); launch(c.left + 1, c.top + 1, 1, 0.3);
+            const c = $('circle', sd).getBoundingClientRect(); if (launch(c.left + 1, c.top + 1, 1, 0.3)) { sd.classList.add('gone'); regrow(d); }
         });
-        return { place, list, release };
+        const clearAir = () => { cancelAnimationFrame(raf); raf = 0; air.forEach(p => { p.d.remove(); FX.free(1); }); air.length = 0; };
+        motion.addEventListener('change', () => { if (motion.matches) clearAir(); });
+        document.addEventListener('visibilitychange', () => { if (document.hidden) clearAir(); });
+        return { place, list, release, landing, launch, stats: () => ({ particles: air.length, pending, flowers: flowers.size }) };
     })();
     if (/[?&]v11debug\b/.test(location.search)) window.__dand = Dandelions;
 
