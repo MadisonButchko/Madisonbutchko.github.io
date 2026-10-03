@@ -93,7 +93,7 @@ const WorldState = (() => {
         /* v10: Experience and Skills interactions live in explore.js (garden clusters, specimen cards, bouquet). */
         /* gallery preview: clicking a piece opens the gallery straight to that piece; clicking elsewhere just opens the gallery */
         document.querySelectorAll('#galleryPreview .preview-item img').forEach(img => {
-            const file = img.getAttribute('src').replace(/^images\//, ''), art = artworks.find(a => a.file === file);
+            const file = img.dataset.file || img.getAttribute('src').replace(/^images\//, ''), art = artworks.find(a => a.file === file);
             if (!art) return;
             img.closest('.preview-item').dataset.art = file;
             if (!img.alt) img.alt = art.title;
@@ -215,7 +215,7 @@ const WorldState = (() => {
         function buildVine(side){
             const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'vine vine-' + side);
             document.body.insertBefore(svg, document.body.firstChild.nextSibling);
-            vines.push({ svg, side });
+            vines.push({ svg, side, pf: 0, qf: 0, bonus: 0, bonusAt: 0 });
         }
         function layoutVines(){
             vines.forEach((v, vi) => {
@@ -232,7 +232,6 @@ const WorldState = (() => {
                 path.setAttribute('class', 'vine-path');
                 /* start fully hidden, with no transition: measuring the path below forces a style pass, and the
                    dash-offset transition would otherwise animate from "fully drawn" (the flash on page load) */
-                path.style.transition = 'none'; path.style.strokeDasharray = '0 99999';
                 svg.appendChild(path);
                 const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len; v.path = path; v.len = len; v.items = [];
                 let i = 0;
@@ -242,25 +241,15 @@ const WorldState = (() => {
                     const inner = document.createElementNS(NS, 'g'); inner.setAttribute('class', 'vine-item' + (isFlower ? ' spin' : ''));
                     const u = document.createElementNS(NS, 'use'); const f = FLOWERS[(i + vi * 2) % FLOWERS.length];
                     if (isFlower){ const s = rand(22, 32);
-                        // Reserve the rotated diagonal at maximum hover + interaction scale.
-                        const clearance = s * 1.9 * 1.32 * Math.SQRT1_2 * 1.15 + 8 / k;
-                        const bx = v.side === 'left' ? Math.max(pt.x, clearance) : Math.min(pt.x, 90 - clearance);
-                        g.setAttribute('transform', `translate(${bx},${pt.y})`);
-                        if (bx !== pt.x) {
-                            const stem = document.createElementNS(NS, 'path');
-                            stem.setAttribute('d', `M${pt.x - bx} 0 Q${(pt.x - bx) / 2} 5 0 0`);
-                            stem.setAttribute('fill', 'none'); stem.setAttribute('stroke', '#8db36a'); stem.setAttribute('stroke-width', '1.4');
-                            stem.classList.add('vine-attachment'); g.appendChild(stem);
-                        }
+                        /* flowers sit right on the vine line: no loose stems hanging off it */
                         u.setAttribute('href', '#' + f[0]); u.setAttribute('x', -s / 2); u.setAttribute('y', -s / 2); u.setAttribute('width', s); u.setAttribute('height', s); inner.style.color = f[1]; inner.style.setProperty('--center', f[2]); }
                     else { const s = 15, dir = i % 2 ? 1 : -1; u.setAttribute('href', '#fl-leaf'); u.setAttribute('x', dir > 0 ? 0 : -s); u.setAttribute('y', -s); u.setAttribute('width', s); u.setAttribute('height', s); if (dir < 0) u.setAttribute('transform', `scale(-1,1) translate(${s},0)`); inner.style.color = i % 4 ? '#7fa65c' : '#a3c47f'; }
-                    inner.dataset.d = d.toFixed(0); inner.appendChild(u); g.appendChild(inner); svg.appendChild(g); v.items.push({ el: inner, d }); i++;
+                    inner.dataset.d = d.toFixed(0); inner.appendChild(u); g.appendChild(inner); svg.appendChild(g); v.items.push({ el: inner, d, flower: isFlower, g, gv: -1, sv: -1, on: false }); i++;
                 }
             });
-            updateScroll();
-            /* transitions come back only after the hidden starting state has been painted */
-            requestAnimationFrame(() => requestAnimationFrame(() => vines.forEach(v => { if (v.path) v.path.style.transition = ''; })));
+            /* the sprigs a visitor has grown are redrawn first, then everything is painted at its current growth in one go */
             if (window.__onVineLayout) window.__onVineLayout();
+            vines.forEach(renderVine); vineWake();
         }
         /* the vines wait below the hero: nothing at the top of the page; they begin as the About section
            comes up and reach the bottom of the screen at the end of the page */
@@ -272,26 +261,78 @@ const WorldState = (() => {
             const h = document.documentElement.scrollHeight - innerHeight, start = Math.max(0, aboutTop - innerHeight * 0.75);
             return h > start ? Math.max(0, Math.min(1, (scrollY - start) / (h - start))) : progress();
         }
-        function updateScroll(){
-            const p = vineProgress();
+        /* ---------------------------------------------------------------------------
+           ONE growth system for scroll AND clicks.
+             scrollGrowth   : how far the page has scrolled (0..1 of the vine)
+             interactionBonus: extra growth earned by clicking (remembered, but only counts while the
+                              visitor is near the spot where they clicked, so scrolling back up retreats it)
+             visible growth = clamp(scrollGrowth + interactionBonus)
+           Every leaf, bud, bloom and click-grown sprig derives its own 0..1 progress from that single
+           visible growth, so nothing can be on screen without the vine that carries it.
+           pf = where the drawn stem tip is; qf = where leaves/blooms are allowed to reach.
+           On the way down they move together; on the way up qf retreats faster, so blooms close, then
+           leaves soften, and only then does the stem pull back.
+           --------------------------------------------------------------------------- */
+        const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+        const smooth = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
+        const range = (t, a, b) => smooth((t - a) / (b - a));
+        window.__gm = { clamp01, smooth, range };
+        function targetFrac(v, p){
+            const base = p > 0 ? 0.04 + p * 0.96 : 0;
+            const gate = smooth(p / 0.03) * smooth((p - (v.bonusAt - 0.22)) / 0.18);
+            return Math.min(1, base + v.bonus * gate);
+        }
+        const ITEM_SPAN = 55;   /* path units over which a leaf / flower finishes growing after the stem reaches it */
+        function renderVine(v){
+            if (!v.len) return;
+            const shown = v.pf * v.len, q = v.qf * v.len;
+            v.path.style.strokeDashoffset = v.len - shown;
+            v.items.forEach(it => {
+                const u = (q - it.d) / ITEM_SPAN; let g, st;
+                if (it.flower){ st = range(u, 0, 0.4); g = 0.2 * clamp01((st - 0.5) * 2) + 0.8 * range(u, 0.3, 1); }
+                else { st = 0; g = range(u, 0.05, 0.6); }
+                if (it.sv !== st){ it.sv = st; if (it.flower) it.g.style.setProperty('--st', st.toFixed(3)); }
+                if (it.gv !== g){ it.gv = g; it.el.style.setProperty('--g', g.toFixed(3)); }
+                const on = g > 0.35;
+                if (it.on !== on){ it.on = on; it.el.classList.toggle('on', on); if (!on) it.el.classList.remove('near'); }
+            });
+            /* the vine's click strip covers only the part of the vine that is drawn (plus a little past its tip) */
+            const hit = v.hit || (v.hit = document.querySelector('.vine-hit.' + v.side));
+            if (hit){ const hpx = shown > 1 ? Math.min(innerHeight, Math.round(innerHeight * shown / v.len) + 40) : 0; if (hit._h !== hpx){ hit._h = hpx; hit.style.height = hpx + 'px'; hit.style.display = hpx ? '' : 'none'; } }
+            return window.__vineSprigs ? window.__vineSprigs(v.side, q, performance.now()) : false;
+        }
+        let raf = 0, last = 0;
+        function tick(now){
+            raf = 0; const dt = Math.min(0.1, (now - last) / 1000 || 0.016); last = now;
+            const p = vineProgress(); let busy = false;
             vines.forEach(v => {
                 if (!v.len) return;
-                const shown = Math.max(p > 0 ? v.len * (0.04 + p * 0.96) : 0, (window.__vineReach || {})[v.side] || 0);
-                v.path.style.strokeDashoffset = v.len - shown;
-                v.items.forEach(it => { const on = it.d <= shown; it.el.classList.toggle('on', on); const stem = it.el.parentNode.querySelector('.vine-attachment'); if (stem) stem.style.opacity = on ? '1' : '0'; });
-                /* the vine's click strip covers only the part of the vine that is drawn (plus a little past its tip),
-                   so it never sits invisibly over the page edges or over flowers there */
-                const hit = v.hit || (v.hit = document.querySelector('.vine-hit.' + v.side));
-                if (hit){ const hpx = shown > 0 ? Math.min(innerHeight, Math.round(innerHeight * shown / v.len) + 40) : 0; if (hit._h !== hpx){ hit._h = hpx; hit.style.height = hpx + 'px'; hit.style.display = hpx ? '' : 'none'; } }
+                const t = targetFrac(v, p);
+                v.pf += (t - v.pf) * (1 - Math.exp(-dt * (t > v.pf ? 9 : 4.5)));
+                v.qf += (t - v.qf) * (1 - Math.exp(-dt * (t > v.qf ? 9 : 11)));
+                if (Math.abs(t - v.pf) < 0.0003) v.pf = t;
+                if (Math.abs(t - v.qf) < 0.0003) v.qf = t;
+                if (v.qf > v.pf) v.qf = v.pf;
+                if (renderVine(v) || v.pf !== t || v.qf !== t) busy = true;
             });
+            if (window.__onVineTick) window.__onVineTick();
+            if (busy) raf = requestAnimationFrame(tick);
         }
-        window.__vineUpdate = () => updateScroll();
+        function vineWake(){ if (!raf){ last = performance.now(); raf = requestAnimationFrame(tick); } }
+        window.__vineUpdate = vineWake;
+        window.__vineQ = side => { const v = vines.find(x => x.side === side); return v && v.len ? v.qf * v.len : 0; };
+        /* a click earns the vine a little extra length beyond what scrolling shows */
+        window.__vineBonus = (side, d) => {
+            const v = vines.find(x => x.side === side); if (!v || !v.len) return;
+            const p = vineProgress(), base = p > 0 ? 0.04 + p * 0.96 : 0;
+            v.bonus = Math.max(v.bonus, Math.min(0.3, Math.min(1, d / v.len) - base)); v.bonusAt = p; vineWake();
+        };
         if (!reduce){ buildVine('left'); buildVine('right'); }
         /* phones resize the viewport as the address bar shows/hides; only rebuild on a real layout change so grown sprigs stay put */
         let lastVW = 0, lastVH = 0;
         const relayout = () => { if (innerWidth === lastVW && Math.abs(innerHeight - lastVH) < 160) return; lastVW = innerWidth; lastVH = innerHeight; layoutVines(); };
         relayout(); addEventListener('resize', relayout);
-        let vq = 0; addEventListener('scroll', () => { if (!vq) vq = requestAnimationFrame(() => { vq = 0; updateScroll(); }); }, { passive: true });
+        addEventListener('scroll', vineWake, { passive: true }); addEventListener('resize', vineWake); addEventListener('load', () => setTimeout(vineWake, 0));
 
         if (reduce) return;
 
@@ -499,13 +540,18 @@ const WorldState = (() => {
                 pending.set(file, pr); return pr;
             }
 
+            /* small copies (about 70KB) for the grid; the full-size file is only fetched for the lightbox */
+            const thumbOf = f => 'images/thumbs/' + f.replace(/\.[^.]+$/, '') + '.jpg';
+            const warm = () => { if (warm.done) return; warm.done = true; (artView || artworks).slice(0, 18).forEach(a => { const im = new Image(); im.decoding = 'async'; im.src = thumbOf(a.file); }); };
+            const gsec = document.getElementById('gallery');
+            if (gsec && 'IntersectionObserver' in window) new IntersectionObserver((es, o) => { if (es.some(e => e.isIntersecting)) { warm(); o.disconnect(); } }, { rootMargin: '1200px 0px' }).observe(gsec); else setTimeout(warm, 2500);
             buildCollage = function(){
                 const g = document.getElementById('galleryCollage'); g.innerHTML = '';
                 const base = artView || artworks; filteredArtworks = currentFilter === 'all' ? base : base.filter(a => a.category === currentFilter);
                 const d = document.createElement('div'); d.className = 'collage-grid';
                 filteredArtworks.forEach((a, i) => {
                     const item = document.createElement('div'); item.className = 'collage-item'; item.style.setProperty('--i', Math.min(i, 30));
-                    item.innerHTML = '<img loading="lazy" decoding="async" src="images/' + a.file + '" alt="' + a.title + '"><div class="collage-item-title">' + a.title + '</div>';
+                    item.innerHTML = '<img decoding="async" src="' + thumbOf(a.file) + '" onerror="this.onerror=null;this.src=\'images/' + a.file + '\'" alt="' + a.title + '"><div class="collage-item-title">' + a.title + '</div>';
                     item.addEventListener('pointerenter', () => preload(a.file), { once: true });
                     item.addEventListener('pointerdown', () => preload(a.file), { once: true });
                     item.onclick = () => openArtwork(a.file); d.appendChild(item);
@@ -810,12 +856,11 @@ const WorldState = (() => {
         const BF = '<svg viewBox="-24 -20 48 40"><g class="bf-wing-l"><path d="M-1 -2 C-10 -20 -26 -16 -21 -3 C-18 4 -8 3 -1 0Z" fill="{C1}"/><path d="M-1 1 C-9 3 -18 10 -13 16 C-8 19 -3 10 -1 3Z" fill="{C2}"/></g><g class="bf-wing-r"><path d="M1 -2 C10 -20 26 -16 21 -3 C18 4 8 3 1 0Z" fill="{C1}"/><path d="M1 1 C9 3 18 10 13 16 C8 19 3 10 1 3Z" fill="{C2}"/></g><rect x="-1.5" y="-8" width="3" height="20" rx="1.5" fill="#5a4366"/></svg>';
 
         /* --- vines: give each flower a little stem that grows with it; gentle grow when cursor is near --- */
-        function addStems(){
+        function addStems(){ return;   /* the vine stays one clean line; only click-grown sprigs carry stems */
             document.querySelectorAll('.vine').forEach(v => {
                 v.querySelectorAll('.vine-item.spin').forEach(it => {
                     const g = it.parentNode; if (g.querySelector('.vine-bud-stem')) return;
-                    const st = document.createElementNS(NS, 'path'); st.setAttribute('class', 'vine-bud-stem'); st.setAttribute('d', 'M0 0 Q -4 6 0 10'); g.insertBefore(st, it);
-                    new MutationObserver(() => st.classList.toggle('on', it.classList.contains('on'))).observe(it, { attributes: true, attributeFilter: ['class'] });
+                    const st = document.createElementNS(NS, 'path'); st.setAttribute('class', 'vine-bud-stem'); st.setAttribute('d', 'M0 0 Q -4 6 0 10'); st.setAttribute('pathLength', '1'); g.insertBefore(st, it);
                 });
             });
         }
@@ -928,25 +973,63 @@ const WorldState = (() => {
             const [ex, ey] = safeBloom(s.nx * L, s.ny * L, 25 * z);
             const cx = ex * 0.5 + s.ny * bend * 0.5, cy = ey * 0.5 - s.nx * bend * 0.5, ang = Math.atan2(ey, ex) * 180 / Math.PI;
             const f = BLOOMS[Math.floor(R() * BLOOMS.length)], f2 = BLOOMS[Math.floor(R() * BLOOMS.length)], f3 = BLOOMS[Math.floor(R() * BLOOMS.length)];
-            const lv = n => `sp-lv${fresh > n ? ' still' : ''}`;
-            let h = `<g class="${lv(1)}"><path class="sprout-stem" d="M0 0 Q ${vf(cx)} ${vf(cy)} ${vf(ex)} ${vf(ey)}"/>${leafAt(ex * 0.45, ey * 0.45, ang - 60, 10 * z)}`;
+            const lv = n => `vs-lv sp-lv" data-lv="${n}`;
+            let h = `<g class="${lv(1)}"><path pathLength="1" class="sprout-stem" d="M0 0 Q ${vf(cx)} ${vf(cy)} ${vf(ex)} ${vf(ey)}"/>${leafAt(ex * 0.45, ey * 0.45, ang - 60, 10 * z)}`;
             h += spec.leafy ? `<g class="sprout leafy" style="color:#7fa65c"><use href="#fl-leaf" x="${vf(ex - 8 * z)}" y="${vf(ey - 8 * z)}" width="${vf(16 * z)}" height="${vf(16 * z)}" transform="rotate(${vf(ang - 45)} ${vf(ex)} ${vf(ey)})"/></g>` : bloomAt(ex, ey, (19 + R() * 6) * z, f, 'main');
             h += '</g>';
             const side = R() < 0.5 ? 1 : -1, px = -s.ny * side, py = s.nx * side; /* perpendicular to the sprig */
             if (spec.level >= 2){
                 const mx = ex * 0.55, my = ey * 0.55, tl = 11 * z;
                 const [bx, by] = safeBloom(mx + (px * 0.85 + s.nx * 0.5) * tl, my + (py * 0.85 + s.ny * 0.5) * tl, 12 * z);
-                h += `<g class="${lv(2)}"><path class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2 + s.nx * 3)} ${vf((my + by) / 2 + s.ny * 3)} ${vf(bx)} ${vf(by)}"/>${leafAt(mx, my, ang + 70 * side, 9 * z, '#7fa65c')}${bloomAt(bx, by, 12 * z, f2)}</g>`;
+                h += `<g class="${lv(2)}"><path pathLength="1" class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2 + s.nx * 3)} ${vf((my + by) / 2 + s.ny * 3)} ${vf(bx)} ${vf(by)}"/>${leafAt(mx, my, ang + 70 * side, 9 * z, '#7fa65c')}${bloomAt(bx, by, 12 * z, f2)}</g>`;
             }
             if (spec.level >= 3){
                 const mx = ex * 0.3, my = ey * 0.3, tl = 12 * z;
                 const [bx, by] = safeBloom(mx - (px * 0.9 - s.nx * 0.4) * tl, my - (py * 0.9 - s.ny * 0.4) * tl, 11 * z);
-                h += `<g class="${lv(3)}"><path class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2)} ${vf((my + by) / 2 + 3)} ${vf(bx)} ${vf(by)}"/>${bloomAt(bx, by, 14 * z, ['fl-daisy', f3[1] === '#ffffff' ? '#fde1ea' : '#ffffff', '#f2c230'])}`
-                    + `<path class="sprout-stem tendril" d="M${vf(ex)} ${vf(ey)} q ${vf(s.nx * 6 * z)} ${vf(s.ny * 6 * z)} ${vf((s.nx * 4 + px * 4) * z)} ${vf((s.ny * 4 + py * 4) * z)} q ${vf(-px * 3 * z)} ${vf(-py * 3 * z)} ${vf(-s.nx * 2 * z)} ${vf(-s.ny * 2 * z)}"/></g>`;
+                h += `<g class="${lv(3)}"><path pathLength="1" class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2)} ${vf((my + by) / 2 + 3)} ${vf(bx)} ${vf(by)}"/>${bloomAt(bx, by, 14 * z, ['fl-daisy', f3[1] === '#ffffff' ? '#fde1ea' : '#ffffff', '#f2c230'])}`
+                    + `<path pathLength="1" class="sprout-stem tendril" d="M${vf(ex)} ${vf(ey)} q ${vf(s.nx * 6 * z)} ${vf(s.ny * 6 * z)} ${vf((s.nx * 4 + px * 4) * z)} ${vf((s.ny * 4 + py * 4) * z)} q ${vf(-px * 3 * z)} ${vf(-py * 3 * z)} ${vf(-s.nx * 2 * z)} ${vf(-s.ny * 2 * z)}"/></g>`;
             }
             const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'vine-sprout'); g.setAttribute('transform', `translate(${vf(s.x)},${vf(s.y)})`);
-            g.innerHTML = h; v.layer.appendChild(g);
-            s.sp = { g, spec, slot: s, side: v.side, leafy: !!spec.leafy };
+            const swayD = 5.5 + R() * 4, swayO = R() * 8;   /* phase follows the clock, so redrawing a sprig never restarts its sway */
+            g.innerHTML = `<g class="vs-sway" style="--sd:${vf(swayD)}s;--sl:-${vf(((performance.now() / 1000 + swayO) % (2 * swayD)))}s">${h}</g>`; v.layer.appendChild(g);
+            const lvs = Array.from(g.querySelectorAll('.vs-lv')).map(el => ({ el, n: +el.dataset.lv }));
+            s.sp = { g, spec, slot: s, side: v.side, leafy: !!spec.leafy, lvs, sway: g.firstElementChild };
+            updateSprig(s.sp, window.__vineQ ? window.__vineQ(v.side) : 0, performance.now());   /* painted at its true growth before the next frame: no blink */
+        }
+        /* a sprig's three stages (stem, leaf, bloom) follow the vine's visible growth at its own slot, and a
+           short clock for the moment a level was earned. Whichever is behind wins, so a new bloom still
+           opens bud -> stem -> petals, and a bloom can never outrun the vine carrying it. */
+        function updateSprig(sp, q, now){
+            const { range, clamp01 } = window.__gm; let anim = false;
+            const u0 = (q - sp.slot.d) / 70;
+            sp.lvs.forEach(({ el, n }) => {
+                const a = clamp01((now - (sp.spec.t[n] || 0)) / (n === 1 ? 800 : 650)); if (a < 1) anim = true;
+                const o = n > 1 ? 0.18 : 0, u = (u0 - o) / (1 - o);   /* side buds start once the main stem is partly out */
+                const stem = Math.min(range(u, 0, 0.4), range(a, 0, 0.5));
+                const leaf = Math.min(range(u, 0.15, 0.6), range(a, 0.2, 0.7));
+                const open = Math.min(range(u, 0.3, 1), range(a, 0.4, 1)), bud = 0.22 * clamp01((stem - 0.5) * 2);
+                const key = stem.toFixed(3) + leaf.toFixed(3) + open.toFixed(3);
+                if (el._k === key) return; el._k = key;
+                el.style.setProperty('--st', stem.toFixed(3)); el.style.setProperty('--lf', leaf.toFixed(3)); el.style.setProperty('--bl', (bud + (1 - bud) * open).toFixed(3));
+            });
+            return anim;
+        }
+        window.__vineSprigs = (side, q, now) => {
+            const v = VINE[side]; if (!v) return false; let anim = false;
+            v.slots.forEach(s => { if (s.sp && !s.sp.gone && updateSprig(s.sp, q, now)) anim = true; });
+            return anim;
+        };
+        /* tiny pollen puffs and a bend of the nearby branches: the garden answers a click it cannot grow from */
+        function react(v, x, y){
+            v.slots.forEach(s => { if (s.sp && !s.sp.gone && s.sp.sway){ const r = s.sp.g.getBoundingClientRect(); if (Math.abs(r.top - y) < 130) s.sp.sway.animate([{ scale: 1 }, { scale: 1.08 }, { scale: 0.98 }, { scale: 1 }], { duration: 700, easing: 'ease-out' }); } });
+            if (reduce) return;
+            for (let k = 0; k < 6; k++){
+                const d = document.createElement('i'), sz = rand(2, 3.6);
+                d.setAttribute('aria-hidden', 'true'); d.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;border-radius:50%;background:#f2c230;pointer-events:none;z-index:130;opacity:0`;
+                document.body.appendChild(d);
+                const dx = rand(-26, 26), dy = rand(-34, -8);
+                d.animate([{ transform: 'translate(0,0)', opacity: 0.9 }, { transform: `translate(${dx}px,${dy}px)`, opacity: 0.8, offset: 0.6 }, { transform: `translate(${dx * 1.3}px,${dy + 14}px)`, opacity: 0 }], { duration: rand(700, 1000), easing: 'ease-out', delay: k * 30 }).onfinish = () => d.remove();
+            }
         }
         /* eaten by a bird or caterpillar: the sprig drops away and its spot is free to regrow */
         function fadeSprout(sp, eaten){
@@ -955,40 +1038,35 @@ const WorldState = (() => {
             sp.g.classList.add(eaten ? 'eaten' : 'wilt');
             setTimeout(() => { sp.g.remove(); if (sp.slot.sp === sp) sp.slot.sp = null; }, eaten ? 900 : 1700);
         }
-        function extendVine(v, side, d){
-            const reach = window.__vineReach || (window.__vineReach = {});
-            if (d <= vineShown(v) - 10) return 0;
-            reach[side] = Math.max(reach[side] || 0, Math.min(v.len, d));
-            v.path.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)';
-            if (window.__vineUpdate) window.__vineUpdate();
-            setTimeout(() => { v.path.style.transition = ''; }, 850);
-            return 520;
-        }
+        /* a click does not draw anything itself: it earns the vine some extra growth, and the shared system draws it */
+        function extendVine(v, side, d){ if (window.__vineBonus) window.__vineBonus(side, d); }
+        /* TODO(human): how many click-grown blooms may one vine carry in total? Picking this number is a
+           design decision: a low number keeps the composition airy, a high one rewards persistent clicking.
+           (v.narrow is true on phones, where the vine is slimmer and the page gutter is tighter.) */
+        function clickGrowthLimit(v){ return v.narrow ? 6 : 10; }
         let vineClicks = 0;
         /* returns false when that stretch of vine is already at its limit */
         function growVine(side, clientY){
             const v = VINE[side]; if (!v) return false;
             vineClicks++;
-            if (window.GardenLog) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
             const r = v.svg.getBoundingClientRect(), py = (clientY - r.top) / v.k, win = 320 / v.k, grown = GROWN[side];
-            const near = v.slots.filter(s => Math.abs(s.y - py) < win);
+            const reach = vineShown(v) + 200;   /* growth always continues from the vine's own tip, never from nowhere */
+            const near = v.slots.filter(s => Math.abs(s.y - py) < win && s.d <= reach);
             const adj = s => grown.has(s.i - 1) || grown.has(s.i + 1) ? 1 : 0;
+            let used = 0; grown.forEach(sp => { used += sp.level; });
+            const room = clickGrowthLimit(v) - used; if (room <= 0) return false;
             const empty = near.filter(s => !s.sp && !s.pending).sort((a, b) => (adj(b) - adj(a)) || Math.abs(a.y - py) - Math.abs(b.y - py));
-            const fresh = empty.slice(0, 2);
-            const upg = near.filter(s => s.sp && !s.sp.gone && s.sp.spec.level < 3).sort((a, b) => Math.abs(a.y - py) - Math.abs(b.y - py)).slice(0, fresh.length ? 1 : 3);
+            const fresh = empty.slice(0, Math.min(2, room));
+            const upg = near.filter(s => s.sp && !s.sp.gone && s.sp.spec.level < 3).sort((a, b) => Math.abs(a.y - py) - Math.abs(b.y - py)).slice(0, Math.min(fresh.length ? 1 : 3, room - fresh.length));
             if (!fresh.length && !upg.length) return false;
-            const far = Math.max(...fresh.concat(upg).map(s => s.d));
-            const wait = extendVine(v, side, far + 70);
-            fresh.forEach((s, n) => {
-                const spec = { level: 1, seed: 1 + Math.floor(Math.random() * 2e9), leafy: Math.random() < 0.12 };
-                s.pending = true; grown.set(s.i, spec);
-                setTimeout(() => { s.pending = false; if (VINE[side] === v && grown.get(s.i) === spec) renderSprig(v, s, spec, 1); }, wait + n * 170);
-                (function wilt(){ setTimeout(() => { if (!s.sp || s.sp.spec !== spec) return; if (s.sp.targeted) return wilt(); fadeSprout(s.sp, false); }, wait + rand(70000, 110000)); })();
+            extendVine(v, side, Math.max(...fresh.concat(upg).map(s => s.d)) + 70);
+            if (window.GardenLog) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
+            const now = performance.now();
+            fresh.forEach(s => {
+                const spec = { level: 1, seed: 1 + Math.floor(Math.random() * 2e9), leafy: Math.random() < 0.12, t: { 1: now } };
+                grown.set(s.i, spec); renderSprig(v, s, spec, 1);
             });
-            upg.forEach((s, n) => {
-                const spec = s.sp.spec; spec.level++;
-                setTimeout(() => { if (VINE[side] === v && grown.get(s.i) === spec) renderSprig(v, s, spec, spec.level); }, wait + 140 + n * 150);
-            });
+            upg.forEach(s => { const spec = s.sp.spec; spec.level++; spec.t[spec.level] = now; renderSprig(v, s, spec, spec.level); });
             return true;
         }
         window.__onVineLayout = buildSlots;
@@ -1007,15 +1085,18 @@ const WorldState = (() => {
                     tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
                 });
                 hit.addEventListener('mouseleave', () => tip.classList.remove('show'));
+                let lastGrow = 0;
                 hit.addEventListener('click', e => {
                     const v = VINE[side]; if (!v) return;
                     /* blooms already on the vine near the click give a happy bounce */
                     v.svg.querySelectorAll('.vine-item.on, .vine-sprout .sprout').forEach(it => { const b = it.getBoundingClientRect(); if (Math.abs(b.top + b.height / 2 - e.clientY) < 90){ it.classList.add('grow'); setTimeout(() => it.classList.remove('grow'), 650); } });
-                    if (!growVine(side, e.clientY)){
-                        tip.innerHTML = 'this stretch is in full bloom ' + FLI; tipHold = Date.now() + 1600; tip.classList.add('show');
-                        tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
-                        setTimeout(() => { if (Date.now() >= tipHold) tip.classList.remove('show'); }, 1700);
-                    }
+                    const quick = Date.now() - lastGrow < 450;   /* rapid clicks only make the plant react, never pile on more growth */
+                    if (!quick && growVine(side, e.clientY)){ lastGrow = Date.now(); return; }
+                    react(v, e.clientX, e.clientY);
+                    if (quick) return;
+                    tip.innerHTML = 'this stretch is in full bloom ' + FLI; tipHold = Date.now() + 1600; tip.classList.add('show');
+                    tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
+                    setTimeout(() => { if (Date.now() >= tipHold) tip.classList.remove('show'); }, 1700);
                 });
             });
             if (window.__vineUpdate) window.__vineUpdate();   /* size the click strips to the drawn vine right away */
@@ -3092,17 +3173,17 @@ const WorldState = (() => {
        The visitor's bouquet: a small, distinct posy in the corner. New
        finds travel to it; tap it to fan out what you have found.
        ------------------------------------------------------------------ */
-    const BOW_PATHS = '<path class="bw-tail" d="M29 19 L17 41 L24 38.5 L28 43.5Z M31 19 L43 41 L36 38.5 L32 43.5Z"/>'
-        + '<path class="bw-loop" d="M30 18 C23 3 5 2 4.5 13 C4.5 24 21 24 30 18Z M30 18 C37 3 55 2 55.5 13 C55.5 24 39 24 30 18Z"/>'
-        + '<path class="bw-fold" d="M26 16 C20 9 12 9 9 13 M34 16 C40 9 48 9 51 13"/>'
-        + '<rect class="bw-knot" x="25" y="12.5" width="10" height="11" rx="4"/>';
+    const BOW_PATHS = '<path class="bw-tail" d="M29 21 C27.5 28 23 33 19.5 40.5 L24 38.5 L26.5 43 C28.5 36.5 31 29.5 31 22Z M31 21 C32.5 28 37 33 40.5 40.5 L36 38.5 L33.5 43 C31.5 36.5 29 29.5 29 22Z"/>'
+        + '<path class="bw-loop" d="M30 20 C26 9 13 5 9 10.5 C6.5 16.5 18 23 30 20Z M30 20 C34 9 47 5 51 10.5 C53.5 16.5 42 23 30 20Z"/>'
+        + '<path class="bw-fold" d="M27.5 18 C22 12.5 15.5 11 12 12.5 M32.5 18 C38 12.5 44.5 11 48 12.5"/>'
+        + '<ellipse class="bw-knot" cx="30" cy="19.6" rx="4.1" ry="4.8"/>';
     const BOW_SVG = '<svg class="bq-bow" viewBox="0 0 60 46" aria-hidden="true">' + BOW_PATHS + '</svg>';
     const bouquet = (function () {
-        const wrap = document.createElement('div'); wrap.className = 'mb-bouquet'; wrap.hidden = true;
+        const wrap = document.createElement('div'); wrap.className = 'mb-bouquet'; wrap.hidden = false;
         wrap.innerHTML =
             '<button type="button" class="bq-btn" aria-expanded="false" aria-controls="bqFan">'
             + '<span class="bq-disc" aria-hidden="true"></span>'
-            + '<svg class="bq-art" viewBox="0 0 80 104" aria-hidden="true"><g class="bq-stems"></g><g class="bq-filler"></g>'
+            + '<svg class="bq-art" viewBox="0 0 80 104" aria-hidden="true"><g class="bq-back"></g><g class="bq-stems"></g><g class="bq-filler"></g>'
             + '<path d="M17 62 L63 62 L45 101 Q40 104 35 101 Z" fill="#f3dcbd" stroke="#c9a06a" stroke-width="1.3" stroke-linejoin="round"/>'
             + '<path d="M17 62 L40 70 L63 62" fill="none" stroke="#c9a06a" stroke-width="1.1" opacity=".7"/>'
             + '<path d="M27 66 L33 92 M53 66 L46 92" stroke="#e8cfa6" stroke-width="1.4" opacity=".8"/>'
@@ -3131,24 +3212,33 @@ const WorldState = (() => {
         tie(WorldState.get().ribbon);
         ribbonBox.addEventListener('click', e => { const b = e.target.closest('[data-ribbon]'); if (!b) return; e.stopPropagation(); WorldState.get().ribbon = b.dataset.ribbon; WorldState.save(); tie(b.dataset.ribbon); bowBtn.classList.remove('wiggle'); void bowBtn.offsetWidth; bowBtn.classList.add('wiggle'); });
         bowBtn.addEventListener('click', e => { e.stopPropagation(); if (!fan.hidden) close(false); pick(!picking(), true); });
-        const btn = $('.bq-btn', wrap), stems = $('.bq-stems', wrap), filler = $('.bq-filler', wrap), fan = $('.bq-fan', wrap), list = $('.bq-list', wrap), label = $('.bq-label', wrap);
+        const btn = $('.bq-btn', wrap), back = $('.bq-back', wrap), stems = $('.bq-stems', wrap), filler = $('.bq-filler', wrap), fan = $('.bq-fan', wrap), list = $('.bq-list', wrap), label = $('.bq-label', wrap);
 
+        /* The posy starts as an empty vase. Each flower you collect takes the next place in a domed arrangement
+           (centre first, then outward), so adding one never shuffles the others. Stems are gathered into the
+           vase neck and curve gently apart; flowers get a little smaller as the bouquet fills so it never crowds. */
+        const SLOTS = [[0, 18, 1], [-15, 27, .95], [15, 26, .95], [-27, 39, .85], [27, 38, .85], [0, 38, .9], [-14, 46, .8], [14, 45, .8], [-30, 26, .72], [30, 25, .72], [-7, 28, .74], [7, 52, .7]];
+        const NECK = 40, BASE = 66, GREEN = '#8db36a';
         function draw(newId) {
-            stems.innerHTML = '';
-            const n = found.length, bx = 40, by = 66;
-            found.forEach((id, i) => {
-                const c = CATS[id]; if (!c) return;
-                const a = (n === 1 ? 0 : -48 + 96 * i / (n - 1)) * Math.PI / 180, L = 36 + (i % 2 ? 9 : 0) + (n > 6 ? (i % 3) * 3 : 0);
-                const tx = bx + Math.sin(a) * L, ty = by - Math.cos(a) * L, s = c.kind === 'Skills' ? 28 : 32;
+            stems.innerHTML = ''; back.innerHTML = '';
+            const n = found.length, shrink = n <= 5 ? 1 : n <= 8 ? 0.9 : 0.8;
+            const slotOf = i => { const b = SLOTS[i % SLOTS.length], r = Math.floor(i / SLOTS.length); return r ? [b[0] + (r % 2 ? 4 : -4), b[1] + 3, b[2]] : b; };
+            found.map((id, i) => ({ id, i })).filter(o => CATS[o.id]).sort((a, b) => slotOf(a.i)[1] - slotOf(b.i)[1]).forEach(({ id, i }) => {
+                const c = CATS[id], [dx, ty, sc] = slotOf(i), s = (c.kind === 'Skills' ? 28 : 32) * 1.2 * sc * shrink;
+                const x0 = NECK + dx * 0.1, tx = NECK + dx, ey = ty + s * 0.25, bow = (i % 2 ? 1 : -1) * 3;
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'bq-stem' + (id === newId && !reduce ? ' new' : ''));
-                g.innerHTML = '<path d="M' + bx + ' ' + by + ' Q' + f1(bx + (tx - bx) * 0.4) + ' ' + f1(by - L * 0.55) + ' ' + f1(tx) + ' ' + f1(ty + s * 0.3) + '" fill="none" stroke="#7fa65c" stroke-width="1.6" stroke-linecap="round"/>'
-                    + '<use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + s + '" height="' + s + '"/>';
+                g.innerHTML = '<path class="bq-s" pathLength="1" d="M' + f1(x0) + ' ' + BASE + ' C' + f1(x0 + dx * 0.05) + ' ' + f1(BASE - (BASE - ey) * 0.5) + ' ' + f1(tx - dx * 0.1 + bow) + ' ' + f1(ey + (BASE - ey) * 0.28) + ' ' + f1(tx) + ' ' + f1(ey) + '" fill="none" stroke="' + GREEN + '" stroke-width="1.4" stroke-linecap="round"/>'
+                    + '<g class="bq-f"><use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + f1(s) + '" height="' + f1(s) + '"/></g>';
                 stems.appendChild(g);
             });
-            /* baby's breath: one tiny bloom for every piece explored (it fills out, never counts) */
-            const R = rng(7), k = Math.min(24, foundItems.length);
+            /* baby's breath: a few tiny sprigs that fill in as you explore pieces (never more than six) */
+            const R = rng(7), k = Math.min(6, Math.ceil(foundItems.length / 2)), ANG = [-44, 38, -22, 24, -6, 8];
             let h = '';
-            for (let i = 0; i < k; i++) { const a = (R() - 0.5) * 1.9, L = 22 + R() * 30; h += '<circle cx="' + f1(40 + Math.sin(a) * L) + '" cy="' + f1(64 - Math.cos(a) * L) + '" r="' + f1(1.3 + R() * 1.1) + '" fill="' + (i % 3 ? '#fff' : '#fde1ea') + '" stroke="#e6d5c3" stroke-width=".5"/>'; }
+            for (let i = 0; i < k; i++) {
+                const a = ANG[i] * Math.PI / 180, L = 52 + (i % 2) * 4, ex = NECK + Math.sin(a) * L, ey = BASE - Math.cos(a) * L;
+                h += '<path d="M' + NECK + ' ' + BASE + ' Q' + f1(NECK + Math.sin(a) * L * 0.3) + ' ' + f1(BASE - L * 0.6) + ' ' + f1(ex) + ' ' + f1(ey) + '" fill="none" stroke="#b7d09c" stroke-width=".7" stroke-linecap="round"/>'
+                    + '<circle cx="' + f1(ex) + '" cy="' + f1(ey) + '" r="1.7" fill="#fff" stroke="#e6d5c3" stroke-width=".5"/><circle cx="' + f1(ex + 2.6) + '" cy="' + f1(ey + 2.2) + '" r="1.2" fill="#fde1ea" stroke="#e6d5c3" stroke-width=".5"/>';
+            }
             filler.innerHTML = h;
             list.innerHTML = '';
             found.forEach((id, k) => {
@@ -3157,7 +3247,7 @@ const WorldState = (() => {
                 li.innerHTML = '<button type="button" data-open="' + id + '"><svg viewBox="' + c.box + '" aria-hidden="true"><use href="#' + c.sym + '"/></svg><span class="bq-name">' + esc(c.name) + '</span><span class="bq-kind">' + c.kind + '</span></button>';
                 list.appendChild(li);
             });
-            wrap.hidden = !n && !foundItems.length;
+            wrap.hidden = false;
             wrap.classList.toggle('is-full', n >= 6);
         }
         let labelT = 0;
@@ -3197,7 +3287,7 @@ const WorldState = (() => {
         function close(restore) { if (fan.hidden) return; fan.hidden = true; btn.setAttribute('aria-expanded', 'false'); wrap.classList.remove('is-open'); if (restore !== false) focusQuiet(btn); }
         btn.addEventListener('click', e => { e.stopPropagation(); isOpen() ? close() : open(); });
         list.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (!b) return; close(false); openById(b.dataset.open); });
-        $('.bq-reset', wrap).addEventListener('click', () => { found = []; foundItems = []; foundStore.clear(); itemStore.clear(); clearMarks(); close(); draw(); wrap.hidden = true; });
+        $('.bq-reset', wrap).addEventListener('click', () => { found = []; foundItems = []; foundStore.clear(); itemStore.clear(); clearMarks(); close(); draw(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && picking()) { e.stopPropagation(); pick(false, true); } else if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); close(); } });
         document.addEventListener('click', e => { if (wrap.contains(e.target)) return; if (isOpen()) close(false); pick(false); });
         return { collect, sprinkle, draw, isOpen: () => isOpen() || picking() };
@@ -4075,6 +4165,7 @@ const WorldState = (() => {
             svg.appendChild(g); update();
         }
         function update() { if (!g || !path) return; const shown = path.getTotalLength() - (parseFloat(path.style.strokeDashoffset) || 0); g.classList.toggle('on', shown > at + 10); }
+        window.__onVineTick = update;
         const prev = window.__onVineLayout; window.__onVineLayout = () => { if (prev) prev(); draw(); };
         new MutationObserver(draw).observe(story, { attributes: true, attributeFilter: ['data-stage'] });
         let q = 0; addEventListener('scroll', () => { if (!q) q = requestAnimationFrame(() => { q = 0; update(); }); }, { passive: true });
