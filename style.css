@@ -2542,37 +2542,20 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
     .eb-wl, .eb-wr, .egg .chick, .egg .eg-cap { transition: none; }
 }
 
-/* Skill names occupy their own rows, clear of the botanical illustrations. */
-.gs-skill .gs-inner { height: auto; min-height: var(--stage-h); align-items: start; }
-.gs-skill .gs-plant { width: 100%; aspect-ratio: auto; padding: 2.8rem 0 1rem; }
-.gs-skill .gs-lines { display: none; }
-.gs-skill .gs-head { position: relative; display: block; inset: auto !important; width: 170px !important; height: 170px !important; margin: 0 auto 1rem; }
-.gs-skill .gs-pieces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
-.gs-skill .gs-bud, .gs-skill .gs-bud.is-minor {
-    position: relative; inset: auto !important; display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: center; gap: 0.55rem;
-    width: 100%; height: auto; min-height: 76px; margin: 0; padding: 0.7rem 0.6rem;
-    border: 1px solid color-mix(in srgb, var(--sk) 24%, transparent); border-radius: 14px;
-    background: rgba(255, 252, 246, 0.68); text-align: left;
-    transform: none !important; transition: background 0.2s, border-color 0.2s, opacity 0.3s;
-}
-.gs-skill .gs-bud .gb-art { width: 40px; height: 40px; justify-self: center; }
+/* Floating specimen labels retain clear space above their petals. */
+.gs-skill .gs-inner { height: auto; min-height: var(--stage-h); }
+.gs-skill .gs-plant { margin-top: var(--label-headroom, 60px); margin-bottom: 1rem; }
 .gs-skill .gs-bud .gs-lab {
-    position: static; inset: auto; width: auto; max-width: none; min-width: 0;
-    font-size: 1.08rem; font-weight: 500; line-height: 1.3; text-align: left; color: var(--ink);
-    translate: none; transform: none; overflow-wrap: anywhere; text-wrap: pretty;
+    inset: auto; left: var(--label-x, 50%); top: var(--label-y, -40px);
+    width: var(--label-width, 120px); max-width: none;
+    translate: none; transform: none; text-align: center;
+    font-size: 1.12rem; font-weight: 500; line-height: 1.25;
+    overflow-wrap: normal; text-wrap: balance;
+    pointer-events: auto; cursor: pointer;
 }
-.gs-skill .gs-bud:is(:hover, :focus-visible, .is-active) { background: var(--paper); border-color: var(--sk); }
-.gs-skill .gs-bud.is-active .gs-lab { color: color-mix(in srgb, var(--sk) 70%, var(--ink)); }
-.gs-skill .gs-bud:is(:hover, :focus-visible, .is-active) .gb-art { transform: scale(1.08); }
-.gs-skill .gs-note { margin-top: 3rem; max-height: none; overflow: visible; rotate: none; }
+.gs-skill .gs-bud.is-active .gs-lab { font-weight: 500; }
+.gs-skill .gs-note { max-height: none; overflow: visible; rotate: none; }
 .gs-skill .gn-title, .gs-skill .gn-text { overflow-wrap: anywhere; }
 @media (max-width: 700px) {
-    .gs-skill .gs-plant { margin-top: 0; }
-    .gs-skill .gs-note { margin-top: 0.5rem; }
-    .gs-skill .gs-bud, .gs-skill .gs-bud.is-minor { grid-template-columns: 36px minmax(0, 1fr); gap: 0.4rem; padding: 0.65rem 0.5rem; }
-    .gs-skill .gs-bud .gb-art { width: 32px; height: 32px; }
     .gs-skill .gs-bud .gs-lab { font-size: 1rem; }
-}
-@media (max-width: 380px) {
-    .gs-skill .gs-pieces { grid-template-columns: 1fr; }
 }

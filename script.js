@@ -2583,7 +2583,7 @@ const WorldState = (() => {
             const a = span[0] + (span[1] - span[0]) * t + (organic ? (R() - 0.5) * 7 : 0);
             const r = r0 + (organic ? (R() - 0.5) * 22 : (i % 2 ? 9 : -6));
             const rad = a * Math.PI / 180;
-            return { x: HC.x + Math.cos(rad) * r, y: HC.y + Math.sin(rad) * r * 0.97, a, rad };
+            return { x: HC.x + Math.cos(rad) * r, y: HC.y + Math.sin(rad) * r * (organic ? 0.97 : 1.45) + (organic ? 0 : 55), a, rad };
         });
     }
     const pct = (v, of) => f1(v / of * 100) + '%';
@@ -2697,7 +2697,50 @@ const WorldState = (() => {
         function measure() {
             const k = plant.clientWidth / VW; if (!k || !S.pos) return;
             $$('.gs-bud', piecesEl).forEach((b, i) => { const p = S.pos[i]; b.style.setProperty('--fx', f1((HC.x - p.x) * k) + 'px'); b.style.setProperty('--fy', f1((HC.y - p.y) * k) + 'px'); });
+            fitLabels();
         }
+        /* Place labels above their pieces, avoiding every illustration and label.
+           Extra headroom grows with the text instead of pushing it onto a petal. */
+        function fitLabels() {
+            if (isExp || !S.pos) return;
+            piecesEl.classList.add('gs-measure');
+            const pr = plant.getBoundingClientRect();
+            const buds = $$('.gs-bud', piecesEl);
+            const box = r => ({ left: r.left - pr.left, right: r.right - pr.left, top: r.top - pr.top, bottom: r.bottom - pr.top });
+            const obstacles = buds.map(b => {
+                const r = box(b.getBoundingClientRect()), pad = 6;
+                return { left: r.left - pad, right: r.right + pad, top: r.top - pad, bottom: r.bottom + pad };
+            });
+            const placed = [], width = Math.min(140, Math.max(94, pr.width * 0.27));
+            const hits = (a, b) => a.left < b.right + 5 && a.right > b.left - 5 && a.top < b.bottom + 5 && a.bottom > b.top - 5;
+            let highest = 0;
+            buds.forEach(b => {
+                const label = $('.gs-lab', b), br = box(b.getBoundingClientRect());
+                label.style.setProperty('--label-width', 'max-content');
+                label.style.maxWidth = width + 'px';
+                const lr = label.getBoundingClientRect(), labelWidth = lr.width, height = lr.height;
+                const baseX = Math.max(4, Math.min(pr.width - labelWidth - 4, (br.left + br.right - labelWidth) / 2));
+                const baseY = br.top - height - 14;
+                let best = null;
+                for (let rise = 0; rise <= 400; rise += 8) {
+                    for (let dx = -64; dx <= 64; dx += 8) {
+                        const x = Math.max(4, Math.min(pr.width - labelWidth - 4, baseX + dx)), y = baseY - rise;
+                        const rect = { left: x, right: x + labelWidth, top: y, bottom: y + height };
+                        const score = (x - baseX) ** 2 + rise ** 2 * 2;
+                        if ((!best || score < best.score) && !obstacles.concat(placed).some(r => hits(rect, r))) best = { rect, score };
+                    }
+                    if (best && rise ** 2 * 2 > best.score) break;
+                }
+                const candidate = best ? best.rect : { left: baseX, right: baseX + labelWidth, top: baseY - 440, bottom: baseY - 440 + height };
+                const x = candidate.left, y = candidate.top;
+                label.style.setProperty('--label-x', (x - br.left) + 'px');
+                label.style.setProperty('--label-y', (y - br.top) + 'px');
+                placed.push(candidate); highest = Math.min(highest, y);
+            });
+            plant.style.setProperty('--label-headroom', Math.max(60, (innerWidth <= 700 ? 80 : 28) - highest) + 'px');
+            piecesEl.classList.remove('gs-measure');
+        }
+        if (document.fonts) document.fonts.ready.then(() => { if (S.cat) measure(); });
         addEventListener('resize', () => { clearTimeout(measure.t); measure.t = setTimeout(measure, 120); });
 
         /* --- the note beside (or under) the plant: one thing at a time --- */
