@@ -106,6 +106,7 @@ const WorldState = (() => {
             const it = e.target.closest('.preview-item[data-art]');
             if (it) openArtwork(it.dataset.art);
         };
+        { const h = document.getElementById('galleryHint'); if (h) h.onclick = () => document.getElementById('galleryPreview').click(); }
         document.getElementById('galleryClose').onclick=()=>{document.getElementById('galleryModal').classList.remove('active');document.body.style.overflow='';};
         document.querySelectorAll('.gallery-modal-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.gallery-modal-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');currentFilter=t.dataset.filter;buildCollage();});
         
@@ -533,27 +534,73 @@ const WorldState = (() => {
                     return [fin(A), fin(B)];
                 } catch (e){ return null; }
             }
-            function preload(file){
+            /* Full-size files are fetched at low priority ahead of time (neighbours, hovered pieces, the first few once the
+               section is near) and only the most recent ones stay decoded in memory. The thumbnail (already cached, ~60KB)
+               is what makes a click instant: it paints immediately and the full file replaces it once decoded. */
+            const keep = new Map(), KEEP_MAX = 14, thumbDone = new Set(), tpending = new Map(), dims = new Map();
+            /* resolves once the file has loaded and (best effort, never longer than 500ms: decode() can stall in background tabs) decoded */
+            const decoded = im => new Promise(res => { if (im.complete) res(); else im.onload = im.onerror = () => res(); })
+                .then(() => im.decode ? Promise.race([im.decode().catch(() => {}), new Promise(r => setTimeout(r, 500))]) : 0);
+            const saveData = !!(navigator.connection && navigator.connection.saveData);
+            function preload(file, urgent){
                 if (ready.has(file)) return Promise.resolve();
                 if (pending.has(file)) return pending.get(file);
-                const im = new Image(); im.decoding = 'async'; im.src = 'images/' + file;
-                const pr = (im.decode ? im.decode() : new Promise((res, rej) => { im.onload = res; im.onerror = rej; }))
-                    .catch(() => {}).then(() => { ready.add(file); pending.delete(file); if (!palette.has(file) && im.naturalWidth) palette.set(file, artPalette(im)); });
+                const im = new Image(); im.decoding = 'async'; if ('fetchPriority' in im) im.fetchPriority = urgent ? 'high' : 'low'; im.src = 'images/' + file;
+                const pr = decoded(im)
+                    .catch(() => {}).then(() => {
+                        pending.delete(file);
+                        if (!im.naturalWidth) return;   /* failed: never mark it ready, the thumbnail simply stays */
+                        ready.add(file); keep.delete(file); keep.set(file, im); while (keep.size > KEEP_MAX) keep.delete(keep.keys().next().value);
+                    });
                 pending.set(file, pr); return pr;
+            }
+            /* a thumbnail already on screen (grid tile, preview piece) counts as ready the moment it has loaded */
+            function noteThumb(file, el){
+                if (thumbDone.has(file) || !el || !el.complete || !el.naturalWidth) return;
+                dims.set(file, el.naturalWidth / el.naturalHeight); if (!palette.has(file)) palette.set(file, artPalette(el)); thumbDone.add(file);
+            }
+            /* thumbnail decoded + its palette and true aspect ratio, so the backdrop and the frame are right before the first paint */
+            function thumbReady(file){
+                if (thumbDone.has(file)) return Promise.resolve();
+                if (tpending.has(file)) return tpending.get(file);
+                const im = new Image(); im.decoding = 'async'; im.src = thumbOf(file);
+                const pr = decoded(im)
+                    .catch(() => {}).then(() => { tpending.delete(file); if (im.naturalWidth){ dims.set(file, im.naturalWidth / im.naturalHeight); if (!palette.has(file)) palette.set(file, artPalette(im)); } thumbDone.add(file); });
+                tpending.set(file, pr); return pr;
             }
 
             /* small copies (about 70KB) for the grid; the full-size file is only fetched for the lightbox */
             const thumbOf = f => 'images/thumbs/' + f.replace(/\.[^.]+$/, '') + '.jpg';
-            const warm = () => { if (warm.done) return; warm.done = true; (artView || artworks).slice(0, 18).forEach(a => { const im = new Image(); im.decoding = 'async'; im.src = thumbOf(a.file); }); };
+            /* "All" is shown as an even blend of the categories (proportional round-robin) instead of 13 mandalas in a row */
+            const mixedArt = (() => {
+                const by = {}; artworks.forEach(a => (by[a.category] = by[a.category] || []).push(a));
+                return Object.values(by).flatMap(list => list.map((a, i) => ({ a, k: (i + 0.5) / list.length }))).sort((x, y) => x.k - y.k).map(o => o.a);
+            })();
+            const idle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 400));
+            /* the gallery is near: thumbnails of every piece in small idle batches, then full files for the first few preview pieces */
+            const warm = () => {
+                if (warm.done) return; warm.done = true;
+                const files = mixedArt.map(a => a.file); let i = 0;
+                const batch = () => { files.slice(i, i + 6).forEach(f => thumbReady(f)); i += 6; if (i < files.length) idle(batch); else if (!saveData) primeFull(); };
+                batch();
+            };
+            function primeFull(){
+                const first = [...document.querySelectorAll('#galleryPreview .preview-item[data-art]')].slice(0, 6).map(el => el.dataset.art);
+                const next = () => { const f = first.shift(); if (f) preload(f).then(() => idle(next)); }; next();
+            }
             const gsec = document.getElementById('gallery');
             if (gsec && 'IntersectionObserver' in window) new IntersectionObserver((es, o) => { if (es.some(e => e.isIntersecting)) { warm(); o.disconnect(); } }, { rootMargin: '1200px 0px' }).observe(gsec); else setTimeout(warm, 2500);
+            /* a hover or touch on a preview piece starts fetching its full file before the click lands */
+            const pv = document.getElementById('galleryPreview');
+            if (pv && !saveData){ const hot = e => { const it = e.target.closest && e.target.closest('.preview-item[data-art]'); if (it){ preload(it.dataset.art, true); noteThumb(it.dataset.art, it.querySelector('img')); thumbReady(it.dataset.art); } }; pv.addEventListener('pointerover', hot, { passive: true }); pv.addEventListener('touchstart', hot, { passive: true }); }
             buildCollage = function(){
                 const g = document.getElementById('galleryCollage'); g.innerHTML = '';
-                const base = artView || artworks; filteredArtworks = currentFilter === 'all' ? base : base.filter(a => a.category === currentFilter);
+                const base = artView || mixedArt; filteredArtworks = currentFilter === 'all' ? base : base.filter(a => a.category === currentFilter);
                 const d = document.createElement('div'); d.className = 'collage-grid';
                 filteredArtworks.forEach((a, i) => {
                     const item = document.createElement('div'); item.className = 'collage-item'; item.style.setProperty('--i', Math.min(i, 30));
                     item.innerHTML = '<img decoding="async" src="' + thumbOf(a.file) + '" onerror="this.onerror=null;this.src=\'images/' + a.file + '\'" alt="' + a.title + '"><div class="collage-item-title">' + a.title + '</div>';
+                    const ti = item.querySelector('img'); if (ti.complete) noteThumb(a.file, ti); else ti.addEventListener('load', () => noteThumb(a.file, ti), { once: true });
                     item.addEventListener('pointerenter', () => preload(a.file), { once: true });
                     item.addEventListener('pointerdown', () => preload(a.file), { once: true });
                     item.onclick = () => openArtwork(a.file); d.appendChild(item);
@@ -581,7 +628,7 @@ const WorldState = (() => {
                 if (file === bgFile) return;
                 bgFile = file; bgFront = 1 - bgFront;
                 const on = bgLayers[bgFront], off = bgLayers[1 - bgFront];
-                on.style.backgroundImage = 'url("images/' + file + '")';
+                on.style.backgroundImage = 'url("' + thumbOf(file) + '")';   /* blurred 60px anyway: the small copy is plenty */
                 on.classList.add('on'); off.classList.remove('on');
             }
             const thumbs = document.createElement('div'); thumbs.className = 'lb-thumbs'; lb.appendChild(thumbs);
@@ -591,8 +638,16 @@ const WorldState = (() => {
             const CAT = { mandala: 'Mandala', digital: 'Digital Art', calligraphy: 'Calligraphy', fineart: 'Fine Art' };
             function buildThumbs(){
                 if (thumbsFor === filteredArtworks) return; thumbsFor = filteredArtworks; thumbs.innerHTML = '';
-                filteredArtworks.forEach((a, k) => { const t = document.createElement('img'); t.src = 'images/' + a.file; t.alt = ''; t.loading = 'lazy'; t.decoding = 'async'; t.onclick = e => { e.stopPropagation(); currentLightboxIndex = k; updateLightbox(); }; thumbs.appendChild(t); });
+                filteredArtworks.forEach((a, k) => { const t = document.createElement('img'); t.src = thumbOf(a.file); t.width = t.height = 48; t.alt = ''; t.decoding = 'async'; t.onerror = () => { t.onerror = null; t.src = 'images/' + a.file; }; t.onclick = e => { e.stopPropagation(); currentLightboxIndex = k; updateLightbox(); }; thumbs.appendChild(t); });
             }
+            /* the frame is sized from the artwork's real aspect ratio before the image paints, so swapping thumbnail -> full file never moves anything */
+            let curAR = 1;
+            function fitImg(ar){
+                if (ar) curAR = ar;
+                const mob = innerWidth <= 768, maxW = innerWidth * (mob ? 0.92 : 0.78), maxH = innerHeight * (mob ? 0.62 : 0.70), w = Math.min(maxW, maxH * curAR);
+                img.style.width = Math.round(w) + 'px'; img.style.height = Math.round(w / curAR) + 'px';
+            }
+            addEventListener('resize', () => { if (lb.classList.contains('active')) fitImg(); });
             updateLightbox = function(){
                 buildThumbs();
                 const idx = currentLightboxIndex, a = filteredArtworks[idx], open = lb.classList.contains('active'), my = ++req;
@@ -602,19 +657,21 @@ const WorldState = (() => {
                 [...thumbs.children].forEach((t, k) => t.classList.toggle('on', k === idx));
                 const on = thumbs.children[idx]; if (on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: open ? 'smooth' : 'auto' });
                 img.classList.remove('zoomed');
-                const cached = ready.has(a.file);
-                if (open) img.classList.add(idx >= lastIdx ? 'swap-r' : 'swap-l');
-                else if (!cached) img.classList.add('loading');
-                lastIdx = idx;
-                const show = () => {
+                const dir = idx >= lastIdx ? 'swap-r' : 'swap-l'; lastIdx = idx;
+                /* everything for this piece lands in one step: frame, picture (full file if decoded, else its thumbnail), backdrop colors */
+                const apply = () => {
                     if (my !== req) return;
-                    img.src = 'images/' + a.file; img.alt = a.title; setBackdrop(a.file);
+                    fitImg(dims.get(a.file));
+                    img.alt = a.title; img.src = ready.has(a.file) ? 'images/' + a.file : thumbOf(a.file);
+                    setBackdrop(a.file);
                     requestAnimationFrame(() => img.classList.remove('swap-l', 'swap-r', 'loading'));
+                    if (!ready.has(a.file)) preload(a.file, true).then(() => { if (my === req && ready.has(a.file)) img.src = 'images/' + a.file; });
                 };
-                if (cached && !open) show();
-                else Promise.all([preload(a.file), new Promise(r => setTimeout(r, open ? 140 : 0))]).then(show);
-                const n = filteredArtworks.length;
-                [1, -1, 2].forEach(k => preload(filteredArtworks[(idx + k + n) % n].file));
+                if (open) img.classList.add(dir); else if (!thumbDone.has(a.file)) img.classList.add('loading');
+                if (open) setTimeout(() => thumbReady(a.file).then(apply), 80);
+                else if (thumbDone.has(a.file)) apply(); else thumbReady(a.file).then(apply);
+                /* next three and previous two, full size, at low priority */
+                if (!saveData){ const n = filteredArtworks.length; [1, 2, -1, 3, -2].forEach(k => { const f = filteredArtworks[(idx + k + n) % n].file; thumbReady(f); preload(f); }); }
                 if (playing){ prog.classList.remove('run'); void prog.offsetWidth; prog.classList.add('run'); }
             };
             function stopPlay(){ clearInterval(playing); playing = null; play.innerHTML = ICON_PLAY + ' Slideshow'; prog.classList.remove('run'); }

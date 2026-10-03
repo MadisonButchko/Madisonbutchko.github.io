@@ -2699,7 +2699,7 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
 @media (max-width: 768px) {
     :root { --nav-h: calc(64px + var(--safe-t)); }
     .nav { display: none !important; }
-    .m-header { display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: var(--nav-h); padding: var(--safe-t) calc(20px + var(--safe-r)) 0 calc(20px + var(--safe-l)); background: linear-gradient(180deg, #fff4e6, #fff8ee); border-bottom: 1px solid rgba(194, 69, 126, 0.14); box-shadow: 0 4px 18px rgba(120, 72, 96, 0.08); }
+    .m-header { display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 190; height: var(--nav-h); padding: var(--safe-t) calc(20px + var(--safe-r)) 0 calc(20px + var(--safe-l)); background: linear-gradient(180deg, #fff4e6, #fff8ee); border-bottom: 1px solid rgba(194, 69, 126, 0.14); box-shadow: 0 4px 18px rgba(120, 72, 96, 0.08); }
     .m-brand { font-family: var(--font-display); font-size: 1.55rem; line-height: 1; color: var(--white); text-decoration: none; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .m-toggle { position: relative; flex: 0 0 auto; width: 44px; height: 44px; margin-right: -6px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .m-toggle span { position: absolute; left: 7px; right: 7px; height: 2px; border-radius: 2px; background: var(--cyan); transition: transform 0.25s ease, opacity 0.2s ease; }
@@ -2715,3 +2715,21 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
     .hero { padding-top: calc(var(--nav-h) + 1.4rem) !important; }
 }
 @media (prefers-reduced-motion: reduce) { .m-menu, .m-toggle span { transition: none !important; } }
+
+
+/* ---------------------------------------------------------------------
+   Gallery: clickable hint, 36-piece preview (8 rows), quick lightbox transitions
+   --------------------------------------------------------------------- */
+.hint-link { font: inherit; color: inherit; background: none; border: 0; padding: 0 0.15em; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(194, 69, 126, 0.35); text-underline-offset: 0.18em; transition: color 0.2s, text-decoration-color 0.2s; }
+.hint-link:hover, .hint-link:focus-visible { color: var(--cyan); text-decoration-color: currentColor; }
+.preview-item { transition-delay: calc(var(--i, 0) * 22ms); }
+#lightbox.lightbox.active { animation-duration: 0.22s; }
+#lightbox img#lightboxImg { transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+#lightbox img#lightboxImg.swap-l { transform: translateX(-28px) scale(0.97); }
+#lightbox img#lightboxImg.swap-r { transform: translateX(28px) scale(0.97); }
+#lightbox img#lightboxImg.loading { opacity: 0; transform: none; }
+#lightbox img#lightboxImg.zoomed { transition: transform 0.25s ease; }
+.lb-backdrop-image { transition: opacity 0.35s ease; }
+.lightbox { transition: --art1 0.35s ease, --art2 0.35s ease; }
+#lightbox .lb-thumbs img { background: rgba(255, 248, 236, 0.12); }
+@media (prefers-reduced-motion: reduce) { #lightbox img#lightboxImg, .lb-backdrop-image { transition: none; } }
