@@ -119,7 +119,7 @@ const WorldState = (() => {
         const COLORS = ['#f2c230','#f7d65e','#f4a7bf','#f9c6d6','#b9a2de','#d6c7f0','#fff4f7','#f8c9a0'];
         const back = document.getElementById('petalsBack'), front = document.getElementById('petalsFront');
         const bctx = back.getContext('2d'), fctx = front.getContext('2d');
-        let W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        let W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, innerWidth < 700 ? 1 : 1.5);
         function resize(){ W = innerWidth; H = innerHeight; [back, front].forEach(c => { c.width = W * dpr; c.height = H * dpr; c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0); }); }
         resize(); addEventListener('resize', () => { const ow = W; resize(); if (ow) for (const p of ambient) p.x = Math.min(p.x * W / ow, W); });
         const rand = (a, b) => a + Math.random() * (b - a);
@@ -144,11 +144,13 @@ const WorldState = (() => {
             ctx.restore();
         }
         /* everything moves in px per SECOND (not per frame) so speed never depends on window width or refresh rate */
-        let t = 0, running = true, last = 0;
+        let t = 0, running = true, last = 0, frontDirty = false;
         function frame(now){
             if (!running) return;
             const dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now; t += dt;
-            bctx.clearRect(0, 0, W, H); fctx.clearRect(0, 0, W, H);
+            bctx.clearRect(0, 0, W, H);
+            /* the front canvas only holds click bursts: leave it alone while it is empty */
+            if (burst.length || frontDirty){ fctx.clearRect(0, 0, W, H); frontDirty = burst.length > 0; }
             for (const p of ambient){
                 p.y += p.vy * dt; p.x += (Math.sin(t * 0.45 + p.phase) * p.sway * 9 + 4) * dt; p.rot += p.vr * dt; p.flip += p.vf * dt;
                 if (p.y > H + 20 || p.x > W + 30) Object.assign(p, makePetal(-20));
@@ -167,12 +169,13 @@ const WorldState = (() => {
         document.addEventListener('visibilitychange', () => { running = !document.hidden; last = 0; if (running) requestAnimationFrame(frame); });
         addEventListener('click', e => {
             /* v10: only celebrate clicks on open page space, never on buttons, links or panels */
-            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav')) return;
+            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece, .gy-bed')) return;
             for (let i = 0; i < 5; i++){
                 const ang = rand(0, Math.PI * 2), sp = rand(1.5, 4.5), p = makePetal(e.clientY);
                 Object.assign(p, { x: e.clientX, y: e.clientY, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 2, r: rand(4, 8), life: rand(55, 90), vr: rand(-0.15, 0.15), vf: rand(0.08, 0.16) });
                 burst.push(p);
             }
+            if (burst.length > 60) burst.splice(0, burst.length - 60);   /* fast clicking never piles up petals */
         });
     })();
 
@@ -224,8 +227,12 @@ const WorldState = (() => {
                 for (let y = -10; y <= H + 10; y += 14) pts.push([45 + Math.sin(y / H * Math.PI * 4.2 + phase) * 20 + Math.sin(y / 37) * 3, y]);
                 const path = document.createElementNS(NS, 'path');
                 path.setAttribute('d', 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1]).join(' L'));
-                path.setAttribute('class', 'vine-path'); svg.appendChild(path);
-                const len = path.getTotalLength(); path.style.strokeDasharray = len; v.path = path; v.len = len; v.items = [];
+                path.setAttribute('class', 'vine-path');
+                /* start fully hidden, with no transition: measuring the path below forces a style pass, and the
+                   dash-offset transition would otherwise animate from "fully drawn" (the flash on page load) */
+                path.style.transition = 'none'; path.style.strokeDasharray = '0 99999';
+                svg.appendChild(path);
+                const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len; v.path = path; v.len = len; v.items = [];
                 let i = 0;
                 for (let d = 50; d < len - 20; d += 46){
                     const pt = path.getPointAtLength(d), isFlower = i % 3 === 2;
@@ -234,19 +241,35 @@ const WorldState = (() => {
                     const u = document.createElementNS(NS, 'use'); const f = FLOWERS[(i + vi * 2) % FLOWERS.length];
                     if (isFlower){ const s = rand(22, 32); u.setAttribute('href', '#' + f[0]); u.setAttribute('x', -s / 2); u.setAttribute('y', -s / 2); u.setAttribute('width', s); u.setAttribute('height', s); inner.style.color = f[1]; inner.style.setProperty('--center', f[2]); }
                     else { const s = 15, dir = i % 2 ? 1 : -1; u.setAttribute('href', '#fl-leaf'); u.setAttribute('x', dir > 0 ? 0 : -s); u.setAttribute('y', -s); u.setAttribute('width', s); u.setAttribute('height', s); if (dir < 0) u.setAttribute('transform', `scale(-1,1) translate(${s},0)`); inner.style.color = i % 4 ? '#7fa65c' : '#a3c47f'; }
-                    inner.appendChild(u); g.appendChild(inner); svg.appendChild(g); v.items.push({ el: inner, d }); i++;
+                    inner.dataset.d = d.toFixed(0); inner.appendChild(u); g.appendChild(inner); svg.appendChild(g); v.items.push({ el: inner, d }); i++;
                 }
             });
             updateScroll();
+            /* transitions come back only after the hidden starting state has been painted */
+            requestAnimationFrame(() => requestAnimationFrame(() => vines.forEach(v => { if (v.path) v.path.style.transition = ''; })));
             if (window.__onVineLayout) window.__onVineLayout();
         }
+        /* the vines wait below the hero: nothing at the top of the page; they begin as the About section
+           comes up and reach the bottom of the screen at the end of the page */
+        let aboutTop = -1;
+        const measureAbout = () => { const a = document.getElementById('about'); aboutTop = a ? a.getBoundingClientRect().top + scrollY : 0; };
+        addEventListener('load', measureAbout); addEventListener('resize', measureAbout);
+        function vineProgress(){
+            if (aboutTop < 0) measureAbout();
+            const h = document.documentElement.scrollHeight - innerHeight, start = Math.max(0, aboutTop - innerHeight * 0.75);
+            return h > start ? Math.max(0, Math.min(1, (scrollY - start) / (h - start))) : progress();
+        }
         function updateScroll(){
-            const p = progress();
+            const p = vineProgress();
             vines.forEach(v => {
                 if (!v.len) return;
-                const shown = Math.max(v.len * (0.06 + p * 0.94), (window.__vineReach || {})[v.side] || 0);
+                const shown = Math.max(p > 0 ? v.len * (0.04 + p * 0.96) : 0, (window.__vineReach || {})[v.side] || 0);
                 v.path.style.strokeDashoffset = v.len - shown;
                 v.items.forEach(it => it.el.classList.toggle('on', it.d <= shown));
+                /* the vine's click strip covers only the part of the vine that is drawn (plus a little past its tip),
+                   so it never sits invisibly over the page edges or over flowers there */
+                const hit = v.hit || (v.hit = document.querySelector('.vine-hit.' + v.side));
+                if (hit){ const hpx = shown > 0 ? Math.min(innerHeight, Math.round(innerHeight * shown / v.len) + 40) : 0; if (hit._h !== hpx){ hit._h = hpx; hit.style.height = hpx + 'px'; hit.style.display = hpx ? '' : 'none'; } }
             });
         }
         window.__vineUpdate = () => updateScroll();
@@ -254,13 +277,17 @@ const WorldState = (() => {
         /* phones resize the viewport as the address bar shows/hides; only rebuild on a real layout change so grown sprigs stay put */
         let lastVW = 0, lastVH = 0;
         const relayout = () => { if (innerWidth === lastVW && Math.abs(innerHeight - lastVH) < 160) return; lastVW = innerWidth; lastVH = innerHeight; layoutVines(); };
-        relayout(); addEventListener('resize', relayout); addEventListener('scroll', updateScroll, { passive: true });
+        relayout(); addEventListener('resize', relayout);
+        let vq = 0; addEventListener('scroll', () => { if (!vq) vq = requestAnimationFrame(() => { vq = 0; updateScroll(); }); }, { passive: true });
 
         if (reduce) return;
 
         /* --- click: a flower blooms where you click --- */
+        let lastBloomClick = 0;
         addEventListener('click', e => {
-            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav')) return;
+            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece, .gy-bed')) return;
+            /* rapid clicking: one burst at a time, so flowers never pile up */
+            if (performance.now() - lastBloomClick < 280) return; lastBloomClick = performance.now();
             const n = 5;
             for (let k = 0; k < n; k++){
                 const size = rand(26, 48), fl = flowerSVG(size), ang = (k / n) * Math.PI * 2 + rand(-0.3, 0.3), dist = rand(60, 140);
@@ -783,8 +810,18 @@ const WorldState = (() => {
         if (!reduce && matchMedia('(hover: hover)').matches){
             let q = false, ev;
             addEventListener('mousemove', e => { ev = e; if (q) return; q = true; requestAnimationFrame(() => { q = false;
-                if (ev.clientX > 130 && ev.clientX < innerWidth - 130) return;
-                document.querySelectorAll('.vine-item.on').forEach(it => { const r = it.getBoundingClientRect(); it.classList.toggle('near', Math.hypot(r.left + r.width / 2 - ev.clientX, r.top + r.height / 2 - ev.clientY) < 60); });
+                if (ev.clientX > 130 && ev.clientX < innerWidth - 130){
+                    /* the cursor left the vines: let any flower it was touching settle back */
+                    document.querySelectorAll('.vine-item.near').forEach(it => { it.classList.remove('near'); if (window.__spin) window.__spin.set(it.firstElementChild, false); });
+                    return;
+                }
+                document.querySelectorAll('.vine-item.on').forEach(it => {
+                    const r = it.getBoundingClientRect(), near = Math.hypot(r.left + r.width / 2 - ev.clientX, r.top + r.height / 2 - ev.clientY) < 60;
+                    if (it.classList.contains('near') === near) return;
+                    it.classList.toggle('near', near);
+                    /* a flower the cursor reaches spins up, and eases back when it leaves */
+                    if (window.__spin && it.classList.contains('spin')) window.__spin.set(it.firstElementChild, near);
+                });
             }); }, { passive: true });
         }
 
@@ -910,6 +947,7 @@ const WorldState = (() => {
         function growVine(side, clientY){
             const v = VINE[side]; if (!v) return false;
             vineClicks++;
+            if (window.GardenLog) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
             const r = v.svg.getBoundingClientRect(), py = (clientY - r.top) / v.k, win = 320 / v.k, grown = GROWN[side];
             const near = v.slots.filter(s => Math.abs(s.y - py) < win);
             const adj = s => grown.has(s.i - 1) || grown.has(s.i + 1) ? 1 : 0;
@@ -958,12 +996,16 @@ const WorldState = (() => {
                     }
                 });
             });
+            if (window.__vineUpdate) window.__vineUpdate();   /* size the click strips to the drawn vine right away */
             /* phones have no hover, so show the hint once, next to the vine, a few seconds in */
-            if (!hoverable) setTimeout(() => {
+            /* (the vine stays hidden until the visitor scrolls past the hero, so wait until there is a vine to tap) */
+            if (!hoverable) (function hint(tries){ setTimeout(() => {
                 if (vineClicks || !VINE.left) return;
+                const hit = document.querySelector('.vine-hit.left');
+                if (!hit || hit.style.display === 'none' || (hit._h || 0) < innerHeight * 0.5){ if (tries < 12) hint(tries + 1); return; }
                 tip.innerHTML = TIP; tip.style.transform = `translate(24px, ${Math.round(innerHeight - 70)}px)`; tip.classList.add('show');
                 setTimeout(() => tip.classList.remove('show'), 3800);
-            }, 6000);
+            }, 6000); })(0);
 
             /* a bird drops by now and then to snack on a vine flower; click it to scare it off (wide screens) */
             function vineBird(){
@@ -1010,45 +1052,74 @@ const WorldState = (() => {
             }
             setTimeout(vineBird, 14000);
 
-            /* a caterpillar inches along a vine to a flower and eats it; click/tap it and it drops off */
+            /* a caterpillar inches along a vine to a flower (or a leaf) and eats it; click/tap it and it drops off.
+               It moves like one: slowly (about 15px a second on screen), one way for the whole trip, a stretch at a
+               time with small rests in between. It belongs to the story (WorldState): once it has made its
+               chrysalis it no longer appears. */
             function vineCaterpillar(){
                 if (Life.busy() && !Life.claim('cat-ask', 1, 'preempt')) { setTimeout(vineCaterpillar, 7000); return; }
                 Life.release('cat-ask');
-                setTimeout(vineCaterpillar, rand(24000, 42000));
-                if (document.hidden || document.querySelector('.vine-cat')) return;
+                setTimeout(vineCaterpillar, rand(30000, 50000));
+                if (document.hidden || document.querySelector('.vine-cat') || (WorldState.get().story || 0) > 0) return;
                 const all = [];
-                ['left', 'right'].forEach(side => { const v = VINE[side]; if (!v) return; const r = v.svg.getBoundingClientRect();
-                    v.slots.forEach(s => { const sy = r.top + s.y * v.k; if (s.sp && !s.sp.gone && !s.sp.leafy && sy > 110 && sy < innerHeight - 70) all.push({ v, s }); }); });
-                if (all.length < 2) return;
-                const { v, s } = pick(all), sp = s.sp, dir = Math.random() < 0.5 ? 1 : -1;
-                const d0 = Math.max(10, Math.min(v.len - 10, s.d + dir * rand(120, 170) / v.k));
-                if (!Life.claim('caterpillar', 20000)) return;
+                ['left', 'right'].forEach(side => { const v = VINE[side]; if (!v) return; const r = v.svg.getBoundingClientRect(), shown = vineShown(v);
+                    v.slots.forEach(s => { const sy = r.top + s.y * v.k; if (s.sp && !s.sp.gone && !s.sp.leafy && sy > 110 && sy < innerHeight - 70) all.push({ v, s, sp: s.sp }); });
+                    /* the vine's own flowers count too, so the caterpillar comes whether or not anyone has grown the vine */
+                    v.svg.querySelectorAll('.vine-item.spin.on:not(.eaten)').forEach(it => {
+                        const b = it.getBoundingClientRect(), cy = b.top + b.height / 2; if (!b.width || cy < 110 || cy > innerHeight - 70) return;
+                        const d = parseFloat(it.dataset.d); if (d > 0 && d < shown - 20) all.push({ v, s: { d }, item: it });
+                    }); });
+                if (!all.length) return;
+                const target = pick(all), v = target.v, goal = target.s.d, sp = target.sp, dir = Math.random() < 0.5 ? 1 : -1;
+                const d0 = Math.max(10, Math.min(vineShown(v) - 10, goal + dir * rand(140, 200) / v.k));
+                if (Math.abs(goal - d0) < 30 / v.k || !Life.claim('caterpillar', 60000)) return;
                 const el = document.createElement('div'); el.className = 'vine-cat'; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Shoo the caterpillar');
                 el.innerHTML = `<div class="vc-flip">${SVG.caterpillar}</div>`; document.body.appendChild(el);
+                const back = goal < d0, speed = 15 / v.k;   /* path units per second, ~15px/s on screen */
                 let d = d0, state = 'crawl', tok = null, timer = 0;
+                el.classList.toggle('rev', back);
                 const place = () => {
                     const r = v.svg.getBoundingClientRect(), p = v.path.getPointAtLength(d), q = v.path.getPointAtLength(Math.min(v.len, d + 2));
-                    let a = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI; const back = (s.d - d0) < 0;
-                    el.classList.toggle('rev', back);
+                    const a = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI;
                     el.style.transform = `translate(${(r.left + p.x * v.k).toFixed(1)}px, ${(r.top + p.y * v.k).toFixed(1)}px) rotate(${(back ? a + 180 : a).toFixed(1)}deg)`;
                 };
-                const crawl = (to, speed, done) => { const from = d; if (tok) tok.stop = true; tok = tween(Math.abs(to - from) / speed * 1000, t => { d = from + (to - from) * t; place(); }, done); };
+                /* crawl to `to` a stretch at a time (about 35-70px), resting a moment between stretches */
+                function crawl(to, done){
+                    if (state === 'drop') return;
+                    const left = to - d; if (Math.abs(left) < 0.5) { done && done(); return; }
+                    const step = Math.sign(left) * Math.min(Math.abs(left), rand(35, 70) / v.k), from = d, end = from + step;
+                    el.classList.remove('resting'); if (tok) tok.stop = true;
+                    tok = tween(Math.abs(step) / speed * 1000, t => { d = from + step * t; place(); }, () => {
+                        if (state === 'drop') return;
+                        if (Math.abs(to - end) < 0.5) { done && done(); return; }
+                        el.classList.add('resting'); timer = setTimeout(() => crawl(to, done), rand(700, 1900));
+                    });
+                }
                 place(); requestAnimationFrame(() => el.classList.add('on'));
-                crawl(s.d, 26, () => {
+                crawl(goal, () => {
                     if (state !== 'crawl') return;
-                    if (sp.gone) return away(false);
+                    if (sp && sp.gone) return away();
                     state = 'eat'; el.classList.add('eating');
-                    timer = setTimeout(() => { if (state === 'eat'){ fadeSprout(sp, true); away(false); } }, 2800);
+                    timer = setTimeout(() => {
+                        if (state !== 'eat') return;
+                        if (sp) fadeSprout(sp, true);
+                        else if (target.item){ target.item.classList.add('eaten'); setTimeout(() => target.item.classList.remove('eaten'), rand(45000, 80000)); }
+                        away();
+                    }, 3200);
                 });
-                function away(){ state = 'away'; el.classList.remove('eating'); crawl(Math.max(5, Math.min(v.len - 5, d + (s.d - d0 > 0 ? 1 : -1) * 90 / v.k)), 30, () => { el.classList.remove('on'); setTimeout(() => { el.remove(); Life.release('caterpillar'); }, 600); }); }
+                function away(){
+                    state = 'away'; el.classList.remove('eating');
+                    crawl(Math.max(5, Math.min(v.len - 5, d + (back ? -1 : 1) * 110 / v.k)), () => { el.classList.remove('on'); setTimeout(() => { el.remove(); Life.release('caterpillar'); }, 700); });
+                }
                 el.addEventListener('click', e => {
                     e.stopPropagation(); if (state === 'drop') return;
                     state = 'drop'; clearTimeout(timer); if (tok) tok.stop = true;
-                    if (!sp.gone){ const h = sp.g.querySelector('.sprout.main'); if (h){ h.classList.add('grow'); setTimeout(() => h.classList.remove('grow'), 650); } }
+                    if (sp && !sp.gone){ const h = sp.g.querySelector('.sprout.main'); if (h){ h.classList.add('grow'); setTimeout(() => h.classList.remove('grow'), 650); } }
                     el.classList.remove('eating'); el.classList.add('drop'); setTimeout(() => { el.remove(); Life.release('caterpillar'); }, 900);
                 });
             }
             setTimeout(vineCaterpillar, 16000);
+            if (/[?&]v11debug\b/.test(location.search)) window.__vineDebug = { caterpillar: vineCaterpillar, bird: vineBird, VINE, flyby: () => flyby };
 
             /* now and then a bird (or a pair) flies across the page on a varied path */
             const TINTS = [['#a9d8ea', '#8fc3dc', '#7fb3cc'], ['#f9c6d6', '#f4a7bf', '#e98fb0'], ['#fbe7a1', '#f6d36b', '#e8b923'], ['#d9cbf3', '#c9b2ec', '#b39ddc']];
@@ -1063,16 +1134,20 @@ const WorldState = (() => {
                     const t = pick(TINTS), el = document.createElement('div'); el.className = 'flyby-bird' + (ltr ? '' : ' left-facing'); el.setAttribute('aria-hidden', 'true');
                     el.innerHTML = `<div class="c-flip"><div class="c-body">${BIRD_SVG.replace(/#a9d8ea/g, t[0]).replace(/#8fc3dc/g, t[1]).replace(/#7fb3cc/g, t[2])}</div></div>`;
                     el.style.setProperty('--fs', (rand(0.6, 0.8) * (W < 600 ? 0.8 : 1)).toFixed(2));
+                    /* now and then the first bird carries something home for its nest: a twig, a strand of grass, a bit of fluff */
+                    const carries = k === 0 && window.World && World.gather && (World.nestStage ? World.nestStage() < 5 : true) && Math.random() < 0.4;
+                    if (carries){ const it = document.createElement('i'); it.className = 'w-twig is-' + pick(['twig', 'grass', 'fluff']); el.querySelector('.c-body').appendChild(it); el.__carry = true; }
                     document.body.appendChild(el);
                     const yy = y0 + k * 22, lag = k * 0.06;
                     tween(dur * (1 + lag), q => {
                         const u = Math.max(0, q * (1 + lag) - lag), x = ltr ? -70 + (W + 140) * u : W + 70 - (W + 140) * u;
                         const y = kind === 'glide' ? yy - u * H * 0.08 + Math.sin(u * 7) * 6 : kind === 'swoop' ? yy + Math.sin(Math.PI * u) * H * 0.16 : yy + Math.sin(u * Math.PI * 3) * 26;
                         el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-                    }, () => el.remove());
+                    }, () => { if (el.__carry) World.gather(); el.remove(); });
                 }
             }
             setTimeout(flyby, 30000);
+            if (window.__vineDebug) window.__vineDebug.flyby = flyby;
         }
 
         /* =========================================================
@@ -1954,7 +2029,8 @@ const WorldState = (() => {
                 else if (p.state === 'thirsty' && !p.targeted){ if (++p.thirst > 60) removePlant(p, 'withered'); }
             });
             /* deer: one visit at a time, only during active play, only when there is something to eat */
-            if (Date.now() - lastTouch < 90000) play++;
+            /* the deer's clock runs during play, and at half speed while someone is simply watching the garden */
+            if (Date.now() - lastTouch < 90000 || tick % 2 === 0) play++;
             if (!deer && play >= deerAt && count() >= 2) spawnDeer();
             if (!reduce){
                 const n = count();
@@ -2282,7 +2358,7 @@ const WorldState = (() => {
         const sel = 'main p, main li, main h3, main h4, main h5, main strong, main .hero-tag, main .gallery-deviant a, main .hero-label, main .contact-text, .gallery-modal-title, .gallery-modal-tab, .surprise-btn, .lightbox-title, .lightbox-cat, .lightbox-counter, .collage-item-title, footer p, footer span, .garden-tip, .gt-text, .g-stats, .nav a, .gb-bubble';
         let i = 0;
         const tag = el => {
-            if (el.classList.contains('hc-text') || el.closest('.about-text, .section-title, .contact-title, .hero h1, .rotator')) return;
+            if (el.classList.contains('hc-text') || el.closest('.about-text, .section-title, .contact-title, .hero h1, .rotator, .rb-text, .rb-host, .xl-list')) return;
             if (!el.textContent.trim()) return;
             el.classList.add('hc-text'); el.style.setProperty('--hc', HC[i++ % HC.length]);
             const td = getComputedStyle(el).transitionDuration;
@@ -2290,8 +2366,13 @@ const WorldState = (() => {
         };
         const run = () => document.querySelectorAll(sel).forEach(tag);
         run(); setTimeout(run, 1500);
-        /* gallery tiles and garden text are built later, so tag new text as it appears */
-        new MutationObserver(() => { clearTimeout(run.t); run.t = setTimeout(run, 200); }).observe(document.body, { childList: true, subtree: true });
+        /* gallery tiles and garden text are built later, so tag new text as it appears. Only the places that
+           actually receive text are watched: watching the whole body re-scanned the page after every petal,
+           seed and bird that the decorations add. */
+        const later = () => { clearTimeout(run.t); run.t = setTimeout(run, 200); };
+        const mo = new MutationObserver(later);
+        const watch = () => ['#galleryCollage', '#lightbox', '.garden-tip', '#xpStage', '#skStage', '.mb-bouquet', '#grown'].forEach(s => { const el = document.querySelector(s); if (el && !el.__hcWatched){ el.__hcWatched = true; mo.observe(el, { childList: true, subtree: true }); } });
+        watch(); setTimeout(watch, 0);   /* the bouquet and the final garden are built by later scripts */
         document.querySelectorAll('.hero h1 .ltr').forEach((l, k) => l.style.setProperty('--hc', HC[k % HC.length]));
         document.querySelectorAll('.section-title .t-ch, .contact-title .t-ch').forEach((c, k) => { if (!c.style.getPropertyValue('--hc')) c.style.setProperty('--hc', HC[k % HC.length]); });
     })();
@@ -2402,6 +2483,8 @@ const WorldState = (() => {
         if (!CATS[id] || found.includes(id)) return;
         found.push(id); foundStore.set(found); setMark(id, true);
         bouquet.collect(id, fromEl);
+        /* the garden at the bottom keeps a sprig of every branch the visitor opened */
+        if (window.GardenLog) GardenLog.add({ id: 'cat:' + id, kind: 'cluster', sym: CATS[id].sym, box: CATS[id].box });
         if (window.World) World.note(2);
     }
     function discoverItem(id, fromEl) {
@@ -2631,8 +2714,41 @@ const WorldState = (() => {
             if (!reduce) { note.classList.remove('swap'); void note.offsetWidth; note.classList.add('swap'); }
             body.innerHTML = html;
         }
+        /* Experience: every role and where it was, visible at once (one row per bud); a row or its bud opens
+           that item's field note in place, with dates and details */
+        function detailHTML(it) {
+            let h = (it.date ? '<p class="xl-date">' + it.date + '</p>' : '') + '<p class="gn-text">' + it.lead + '</p>';
+            if (it.notes.length) h += '<ul class="gn-notes">' + it.notes.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+            if (it.chips.length) h += '<ul class="gn-chips">' + it.chips.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+            let acts = '';
+            it.links.forEach(l => { acts += '<a class="gn-link" href="' + esc(l.href) + '" target="_blank" rel="noopener">' + esc(l.text) + ' <span aria-hidden="true">&#8599;&#xFE0E;</span><span class="vh"> (opens in a new tab)</span></a>'; });
+            it.related.forEach(r => { acts += '<a class="gn-link" href="#' + esc(r.goto.split(':')[1]) + '" data-goto="' + esc(r.goto) + '">' + esc(r.text) + '</a>'; });
+            if (it.skills.length) acts += '<span class="gn-sprigs"><span class="vh">Skills used: </span>' + it.skills.map(x => '<a href="#sk-' + esc(x.key) + '" data-skill="' + esc(x.key) + '">' + esc(x.text) + '</a>').join('') + '</span>';
+            return h + (acts ? '<div class="gn-acts">' + acts + '</div>' : '');
+        }
+        function listHTML(d) {
+            const row = i => {
+                const it = d.items[i];
+                return '<li class="xl-item' + (it.minor ? ' is-minor' : '') + '" data-i="' + i + '" style="--i:' + i + '">'
+                    + '<button type="button" class="xl-row" aria-expanded="false" aria-controls="xl-' + esc(it.id) + '">'
+                    + '<svg class="xl-mark" viewBox="-10 -10 20 20" aria-hidden="true"><use href="#mk" x="-10" y="-10" width="20" height="20"/></svg>'
+                    + '<span class="xl-text"><span class="xl-role">' + it.role + '</span><span class="xl-org">' + it.org + '</span></span>'
+                    + '<span class="xl-chev" aria-hidden="true"></span></button>'
+                    + '<div class="xl-detail" id="xl-' + esc(it.id) + '" hidden>' + detailHTML(it) + '</div></li>';
+            };
+            const idx = d.items.map((_, i) => i), main = idx.filter(i => !d.items[i].minor), minor = idx.filter(i => d.items[i].minor);
+            return '<p class="gn-kicker xl-cat">' + esc(d.name) + '</p><h3 class="gn-title" tabindex="-1">' + esc(d.note) + '</h3>'
+                + '<ol class="xl-list">' + main.map(row).join('') + '</ol>'
+                + (minor.length ? '<p class="xl-also">also</p><ol class="xl-list xl-list--quiet">' + minor.map(row).join('') + '</ol>' : '');
+        }
         function showIntro(d) {
             const word = isExp ? 'bloom' : (PIECE_WORD[d.plant] || 'piece');
+            if (isExp) {
+                swapNote(listHTML(d));
+                if (window.__rainbow) window.__rainbow($('.xl-cat', body));
+                count.textContent = ''; prevB.disabled = nextB.disabled = true;
+                return;
+            }
             swapNote(isExp
                 ? '<p class="gn-kicker">' + esc(d.name) + '</p><h3 class="gn-title" tabindex="-1">' + esc(d.note) + '</h3><p class="gn-text gn-quiet">' + d.items.length + ' ' + word + 's on this branch. Choose one to read its field note.</p>'
                 : '<p class="gn-kicker">' + esc(d.no) + ' &middot; pressed specimen</p><h3 class="gn-title" tabindex="-1">' + esc(d.name) + '</h3>'
@@ -2663,11 +2779,19 @@ const WorldState = (() => {
             more.setAttribute('aria-expanded', String(open)); more.textContent = open ? 'summary' : 'field notes';
         });
 
+        function setRows(i) {
+            $$('.xl-item', body).forEach(li => {
+                const on = +li.dataset.i === i, row = $('.xl-row', li), det = $('.xl-detail', li);
+                li.classList.toggle('is-open', on); row.setAttribute('aria-expanded', String(on)); det.hidden = !on;
+            });
+        }
         function select(i, opts) {
             opts = opts || {};
             const d = data[S.cat]; if (!d) return;
             const buds = $$('.gs-bud', piecesEl);
-            if (i == null || i < 0 || i >= buds.length) { S.active = -1; buds.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false'); b.style.removeProperty('--px'); b.style.removeProperty('--py'); }); showIntro(d); return; }
+            /* Experience: choosing the open item again folds it back */
+            if (isExp && opts.toggle && i === S.active) i = -1;
+            if (i == null || i < 0 || i >= buds.length) { S.active = -1; buds.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false'); b.style.removeProperty('--px'); b.style.removeProperty('--py'); }); if (isExp) setRows(-1); else showIntro(d); return; }
             S.active = i;
             buds.forEach((b, k) => {
                 const on = k === i; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on));
@@ -2676,13 +2800,20 @@ const WorldState = (() => {
                 b.style.setProperty('--px', f1(-Math.sin(p.rad) * push) + 'px'); b.style.setProperty('--py', f1(Math.cos(p.rad) * push) + 'px');
             });
             const it = d.items[i], bud = buds[i];
-            swapNote(itemNote(d, it, i));
-            count.textContent = (i + 1) + ' / ' + buds.length;
-            prevB.disabled = false; nextB.disabled = i >= buds.length - 1;
+            if (isExp) {
+                setRows(i);
+                const li = $('.xl-item[data-i="' + i + '"]', body);
+                if (li && (opts.reveal || opts.scroll)) setTimeout(() => bringIntoView(li, 16), 30);
+                if (li && opts.focus) focusQuiet($('.xl-row', li));
+            } else {
+                swapNote(itemNote(d, it, i));
+                count.textContent = (i + 1) + ' / ' + buds.length;
+                prevB.disabled = false; nextB.disabled = i >= buds.length - 1;
+            }
             const first = !visits[it.id]; visit(it.id); bud.classList.add('is-seen');
             discoverItem(it.id, bud);
-            if (opts.focus) focusQuiet(bud);
-            if (opts.scroll) bringIntoView(inner);
+            if (opts.focus && !isExp) focusQuiet(bud);
+            if (opts.scroll && !isExp) bringIntoView(inner);
             /* sometimes a visitor comes to see what you opened (a butterfly on a bloom, a ladybug on a specimen piece) */
             if (first && !opts.quiet && shouldVisit(foundItems.length, isExp)) {
                 if (isExp) visitFlower(bud, 'butterfly'); else ladybugOn(bud);
@@ -2690,7 +2821,22 @@ const WorldState = (() => {
         }
         prevB.addEventListener('click', () => select(S.active - 1));
         nextB.addEventListener('click', () => select(S.active + 1));
-        piecesEl.addEventListener('click', e => { const b = e.target.closest('.gs-bud'); if (b) select(+b.dataset.i); });
+        piecesEl.addEventListener('click', e => { const b = e.target.closest('.gs-bud'); if (b) select(+b.dataset.i, { toggle: true, reveal: true }); });
+        if (isExp) {
+            /* the list and the buds answer each other: hover (or focus) one and its partner lights up */
+            const hot = (i, on) => {
+                const b = piecesEl.children[i], li = $('.xl-item[data-i="' + i + '"]', body);
+                if (b) b.classList.toggle('is-hot', on); if (li) li.classList.toggle('is-hot', on);
+                if (b && window.__spin && on && fine) { const art = $('.gb-art', b); if (art) art.animate([{ rotate: '0deg' }, { rotate: '72deg' }], { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', composite: 'add' }); }
+            };
+            body.addEventListener('click', e => { const r = e.target.closest('.xl-row'); if (r) select(+r.parentElement.dataset.i, { toggle: true }); });
+            body.addEventListener('pointerover', e => { const r = e.target.closest('.xl-item'); if (r && !r.contains(e.relatedTarget)) hot(+r.dataset.i, true); });
+            body.addEventListener('pointerout', e => { const r = e.target.closest('.xl-item'); if (r && !r.contains(e.relatedTarget)) hot(+r.dataset.i, false); });
+            body.addEventListener('focusin', e => { const r = e.target.closest('.xl-row'); if (r) hot(+r.parentElement.dataset.i, true); });
+            body.addEventListener('focusout', e => { const r = e.target.closest('.xl-row'); if (r) hot(+r.parentElement.dataset.i, false); });
+            piecesEl.addEventListener('pointerover', e => { const b = e.target.closest('.gs-bud'); if (b && !b.contains(e.relatedTarget)) hot(+b.dataset.i, true); });
+            piecesEl.addEventListener('pointerout', e => { const b = e.target.closest('.gs-bud'); if (b && !b.contains(e.relatedTarget)) hot(+b.dataset.i, false); });
+        }
         piecesEl.addEventListener('keydown', e => {
             const b = e.target.closest('.gs-bud'); if (!b) return;
             const k = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key], buds = $$('.gs-bud', piecesEl);
@@ -2701,7 +2847,7 @@ const WorldState = (() => {
         /* swipe the note on touch screens to move between pieces */
         let sx = null;
         note.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
-        note.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) select(clamp(S.active + (dx < 0 ? 1 : -1), 0, S.n - 1)); }, { passive: true });
+        note.addEventListener('touchend', e => { if (sx == null || isExp) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) select(clamp(S.active + (dx < 0 ? 1 : -1), 0, S.n - 1)); }, { passive: true });
 
         /* hover: buds lean toward the cursor, the head follows a little; a short label appears (Experience) */
         if (fine && !reduce) {
@@ -2717,20 +2863,6 @@ const WorldState = (() => {
             }); });
             plant.addEventListener('pointerleave', () => { $$('.gs-bud', piecesEl).forEach(b => b.style.setProperty('--lean', '0deg')); head.style.setProperty('--lean', '0deg'); tip.classList.remove('on'); });
         }
-        if (isExp) {
-            const showTip = b => {
-                const it = data[S.cat].items[+b.dataset.i]; tip.textContent = plain(it.role);
-                const pr = plant.getBoundingClientRect(), br = b.getBoundingClientRect();
-                tip.classList.add('on');
-                const w = tip.offsetWidth, x = clamp(br.left + br.width / 2 - pr.left - w / 2, -20, pr.width - w + 20), above = br.top - pr.top > 50;
-                tip.style.transform = 'translate(' + f1(x) + 'px,' + f1(above ? br.top - pr.top - 30 : br.bottom - pr.top + 6) + 'px)';
-            };
-            piecesEl.addEventListener('pointerover', e => { const b = e.target.closest('.gs-bud'); if (b && fine) showTip(b); });
-            piecesEl.addEventListener('pointerout', e => { if (e.target.closest('.gs-bud')) tip.classList.remove('on'); });
-            piecesEl.addEventListener('focusin', e => { const b = e.target.closest('.gs-bud'); if (b && b.matches(':focus-visible')) showTip(b); });
-            piecesEl.addEventListener('focusout', () => tip.classList.remove('on'));
-        }
-
         /* skills: the specimen can be nudged and tilted very slightly, and springs back */
         if (!isExp) {
             let drag = null;
@@ -2782,20 +2914,24 @@ const WorldState = (() => {
             plant.classList.remove('grown', 'folding'); head.classList.add('is-landing');
             await frame();
             measure();
-            bringIntoView(garden, 8);
-            const n = visit((isExp ? 'exp:' : 'skill:') + cat);
-            const clone = await flight(from, docRect(headArt), d, false);
+            /* quiet: opened for the visitor before they choose anything (no flight, no scrolling, no focus, not a
+               "discovery"); the branch grows the first time it is actually on screen */
+            const quiet = !!opts.quiet;
+            if (!quiet) bringIntoView(garden, 8);
+            const n = quiet ? (visits[(isExp ? 'exp:' : 'skill:') + cat] || 0) : visit((isExp ? 'exp:' : 'skill:') + cat);
+            const clone = quiet ? null : await flight(from, docRect(headArt), d, false);
             head.classList.remove('is-landing');
             if (clone) clone.remove();
-            plant.classList.add('grown');
-            setTimeout(() => { if (S.cat === cat) plant.classList.add('settled'); }, reduce ? 0 : 1100 + S.n * 75);
+            const grow = () => { if (S.cat !== cat) return; plant.classList.add('grown'); setTimeout(() => { if (S.cat === cat) plant.classList.add('settled'); }, reduce ? 0 : 1100 + S.n * 75); };
+            if (quiet && !reduce) { const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); grow(); } }, { threshold: 0.3 }); io.observe(plant); }
+            else grow();
             if (n > 1 && !reduce) head.classList.add('regrow');
-            discover((isExp ? 'exp:' : 'skill:') + cat, head);
+            if (!quiet) discover((isExp ? 'exp:' : 'skill:') + cat, head);
             S.busy = false;
-            if (opts.select != null) select(opts.select, { focus: opts.focus !== false, quiet: true });
-            else if (opts.focus !== false) focusQuiet($('.gn-title', note));
+            if (opts.select != null) select(opts.select, { focus: opts.focus !== false, quiet: true, scroll: true });
+            else if (opts.focus !== false && !quiet) focusQuiet($('.gn-title', note));
             /* a visitor comes to the flower you just opened, now and then */
-            if (!reduce && n === 1 && Math.random() < (isExp ? 0.5 : 0.4)) setTimeout(() => { if (S.cat === cat) visitFlower(headArt, isExp ? 'butterfly' : 'bee'); }, 1400);
+            if (!reduce && !quiet && n === 1 && Math.random() < (isExp ? 0.5 : 0.4)) setTimeout(() => { if (S.cat === cat) visitFlower(headArt, isExp ? 'butterfly' : 'bee'); }, 1400);
             if (S.next) { const [c2, o2] = S.next; S.next = null; if (c2 !== cat || o2.select != null) open(c2, o2); }
         }
 
@@ -2852,6 +2988,7 @@ const WorldState = (() => {
     const xpStage = xpGarden && Stage({ kind: 'exp', garden: xpGarden, row: $('.g-row', xpGarden), root: $('#xpStage'), data: EXP });
     const skStage = skGarden && Stage({ kind: 'skill', garden: skGarden, row: $('.h-row', skGarden), root: $('#skStage'), data: SK });
     let lastOpened = null;
+    if (xpStage && EXP.research) xpStage.open('research', { quiet: true, focus: false });
     if (xpStage) { const o = xpStage.open; xpStage.open = (c, x) => { lastOpened = xpStage; return o(c, x); }; }
     if (skStage) { const o = skStage.open; skStage.open = (c, x) => { lastOpened = skStage; return o(c, x); }; }
 
@@ -2874,22 +3011,26 @@ const WorldState = (() => {
     /* a fawn wanders past the garden once per visit, nibbles, and leaves */
     (function () {
         const row = xpGarden && $('.g-row', xpGarden); if (!row || reduce || !window.__deerSVG) return;
-        const seen = mem('mb-fawn-v1', false); if (seen.get()) return;
+        const seen = mem('mb-fawn-v2', { n: 0, at: 0 }), log = seen.get();
+        if (log.n >= 2) return;
         let timer = 0, done = false;
         const lane = document.createElement('div'); lane.className = 'g-lane'; lane.setAttribute('aria-hidden', 'true'); xpGarden.appendChild(lane);
         function walk() {
-            if (done || document.hidden || (xpStage && xpStage.cat) || !Life.claim('fawn', 16000)) { timer = setTimeout(walk, 6000); return; }
-            done = true; seen.set(true);
+            if (done || document.hidden || Date.now() - log.at < 240000 || !Life.claim('fawn', 30000)) { timer = setTimeout(walk, 6000); return; }
+            done = true; log.n++; log.at = Date.now(); seen.set(log);
             const deer = document.createElement('div'); deer.className = 'g-fawn left-facing'; deer.innerHTML = window.__deerSVG; lane.appendChild(deer);
             const cats = $$('.g-cat', row), last = cats[cats.length - 1], lr = lane.getBoundingClientRect(), tr = $('svg', last).getBoundingClientRect();
             const W = lr.width, stopX = Math.min(W - 70, tr.right - lr.left + 8);
-            deer.style.setProperty('--x', W + 20 + 'px');
-            requestAnimationFrame(() => { deer.classList.add('walking'); deer.style.setProperty('--x', stopX + 'px'); });
-            setTimeout(() => { deer.classList.remove('walking'); deer.classList.add('nibbling'); last.classList.add('is-nibbled'); }, 3600);
-            setTimeout(() => { deer.classList.remove('nibbling'); last.classList.remove('is-nibbled'); deer.classList.remove('left-facing'); deer.classList.add('walking'); deer.style.setProperty('--x', W + 40 + 'px'); }, 6400);
-            setTimeout(() => { deer.remove(); Life.release('fawn'); }, 10200);
+            /* a fawn's pace (about 55px a second), whatever the screen width; it pauses to look around before nibbling */
+            const inMs = Math.max(2400, (W + 20 - stopX) / 55 * 1000), outMs = Math.max(2000, (W + 40 - stopX) / 70 * 1000);
+            deer.style.setProperty('--x', W + 20 + 'px'); deer.style.transitionDuration = (inMs / 1000).toFixed(2) + 's';
+            requestAnimationFrame(() => requestAnimationFrame(() => { deer.classList.add('walking'); deer.style.setProperty('--x', stopX + 'px'); }));
+            setTimeout(() => { deer.classList.remove('walking'); }, inMs + 50);
+            setTimeout(() => { deer.classList.add('nibbling'); last.classList.add('is-nibbled'); }, inMs + 900);
+            setTimeout(() => { deer.classList.remove('nibbling'); last.classList.remove('is-nibbled'); deer.classList.remove('left-facing'); deer.style.transitionDuration = (outMs / 1000).toFixed(2) + 's'; deer.classList.add('walking'); deer.style.setProperty('--x', W + 40 + 'px'); }, inMs + 3900);
+            setTimeout(() => { deer.remove(); Life.release('fawn'); done = false; }, inMs + 4000 + outMs);
         }
-        new IntersectionObserver(es => es.forEach(e => { clearTimeout(timer); if (e.isIntersecting && !done) timer = setTimeout(walk, 7000); }), { threshold: 0.6 }).observe(row);
+        new IntersectionObserver(es => es.forEach(e => { clearTimeout(timer); if (e.isIntersecting && !done && log.n < 2) timer = setTimeout(walk, 7000); }), { threshold: 0.6 }).observe(row);
     })();
 
     /* ------------------------------------------------------------------
@@ -3186,7 +3327,7 @@ const WorldState = (() => {
        the sunflower in the corner turns its face to follow, slowly.
        ------------------------------------------------------------------ */
     if (fine && !reduce) {
-        const SEL = '.hero-flowers .bloom, .about-bloom, .title-bloom, .sc-bloom, .g-art, .h-art, .footer-flowers svg, .hello-flower, .w-dandelion';
+        const SEL = '.g-art, .h-art, .hello-flower, .w-dandelion:not([hidden]), .page-posy, .w-sprout, .v11-bud, .gy-flower';   /* flowers with stems: a tilt reads on them (on a turning bloom it would not) */
         let items = [], dirty = true, q = 0, px = -1e4, py = -1e4;
         const sun = $('.to-top .sf-sway'), sunHost = $('.to-top');
         const refresh = () => { items = $$(SEL).map(el => ({ el, r: el.getBoundingClientRect() })).filter(o => o.r.width && o.r.bottom > -50 && o.r.top < innerHeight + 50); dirty = false; };
@@ -3204,7 +3345,7 @@ const WorldState = (() => {
                 });
                 if (sun) {
                     const r = sunHost.getBoundingClientRect(), dx = px - (r.left + r.width / 2), d = Math.hypot(dx, py - r.top);
-                    sun.style.setProperty('--face', f1(d < 900 ? clamp(dx / 28, -16, 16) : 0) + 'deg');
+                    sun.style.setProperty('--face', f1(d < 1100 ? clamp(dx / 22, -24, 24) : 0) + 'deg');   /* the one flower that follows noticeably, still within a gentle range */
                 }
             });
         }, { passive: true });
@@ -3267,9 +3408,9 @@ const WorldState = (() => {
             Life.claim('fed-bird', 9000, true);
             visitingBird(() => docPos(), { stay: 1300, arrive: b => eat(b), done: () => Life.release('fed-bird') });
         }
-        function spawn() {
+        function spawn(at) {
             if (el || shownThisVisit >= 3 || reduce) return false;
-            const spot = openSpot(18); if (!spot) return false;
+            const spot = at && clearAt(at.x, at.y, 14) ? at : openSpot(18); if (!spot) return false;
             shownThisVisit++;
             el = document.createElement('div'); el.className = 'w-seed w-piece'; el.innerHTML = SVG;
             el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); el.setAttribute('aria-label', 'A seed. Drag it to a bird, or press Enter to scatter it for the birds');
@@ -3427,7 +3568,7 @@ const WorldState = (() => {
     const SECTIONS = ['home', 'about', 'experience', 'skills', 'gallery', 'contact'];
     /* what a reader actually sees in a section: text lines, images and controls (not the empty width of their boxes) */
     function contentRects(sec) {
-        const rects = $$('img, button, a, input, svg.g-art, svg.h-art, .collage, .gallery-frame, .contact-photo, .about-photo, .seed-art, .page-posy, .scatter, .w-sprout, .gs-inner, .title-bloom', sec).map(e => e.getBoundingClientRect());
+        const rects = $$('img, button, a, input, svg.g-art, svg.h-art, .collage, .gallery-frame, .contact-photo, .about-photo, .seed-art, .page-posy, .scatter, .w-sprout, .gs-inner, .title-bloom, .w-dandelion:not([hidden]), .v11-bud, .gy-bed', sec).map(e => e.getBoundingClientRect());
         const tw = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, { acceptNode: n => n.textContent.trim() && !n.parentElement.closest('template, .vh') ? 1 : 2 });
         const range = document.createRange();
         for (let n = tw.nextNode(); n; n = tw.nextNode()) { range.selectNodeContents(n); rects.push(...range.getClientRects()); }
@@ -3435,7 +3576,7 @@ const WorldState = (() => {
     }
     function placeIn(sec, w, h) {
         const sr = sec.getBoundingClientRect(), blocks = contentRects(sec), W2 = document.documentElement.clientWidth, m = 12;
-        for (const fy of [0.97, 0.9, 0.8, 0.68, 0.55, 0.4]) for (const fx of [0.025, 0.975, 0.06, 0.94, 0.12, 0.88]) {
+        for (const fy of [0.995, 0.97, 0.9, 0.8, 0.68, 0.55, 0.4]) for (const fx of [0.025, 0.975, 0.06, 0.94, 0.12, 0.88, 0.2, 0.8]) {
             const cx = sr.left + sr.width * fx, by = sr.top + sr.height * fy, box = { l: cx - w / 2, r: cx + w / 2, t: by - h, b: by };
             if (box.l < 6 || box.r > W2 - 6 || box.t < sr.top + 4 || box.b > sr.bottom - 2) continue;
             if (blocks.some(r => r.left < box.r + m && r.right > box.l - m && r.top < box.b + m && r.bottom > box.t - m)) continue;
@@ -3443,63 +3584,7 @@ const WorldState = (() => {
         }
         return null;
     }
-    (function () {
-        const order = ['about', 'skills', 'experience', 'gallery'];
-        const el = document.createElement('div'); el.className = 'w-dandelion w-piece'; el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); el.setAttribute('aria-label', 'A dandelion. Press to blow its seeds');
-        let puff = '';
-        for (let k = 0; k < 14; k++) { const a = -Math.PI / 2 + (k - 6.5) * 0.36, x = 22 + Math.cos(a) * 15, y = 20 + Math.sin(a) * 15; puff += '<g class="wd-seed" data-k="' + k + '"><path d="M22 20 L' + f1(x) + ' ' + f1(y) + '" stroke="#d8d2c4" stroke-width=".6"/><circle cx="' + f1(x) + '" cy="' + f1(y) + '" r="2.2" fill="#fffdf6" stroke="#e4ddcd" stroke-width=".5"/></g>'; }
-        el.innerHTML = '<svg viewBox="0 0 44 84"><path d="M22 84 C21 66 24 46 22 22" stroke="#8db36a" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M22 70 C14 66 10 58 9 52 C16 56 20 62 22 70Z" fill="#9fbe88"/><g class="wd-puff">' + puff + '</g><circle cx="22" cy="21" r="2.6" fill="#c9b98a"/></svg>';
-        const regrown = !W.blownAt || Date.now() - W.blownAt > 10 * 60000;
-        if (!regrown) el.classList.add('blown');
-        let placed = false;
-        function place() {
-            for (const id of order) {
-                const sec = document.getElementById(id); if (!sec) continue;
-                const small = innerWidth < 700, p = placeIn(sec, small ? 32 : 44, small ? 61 : 84);
-                el.classList.toggle('small', small);
-                if (p) { if (el.parentElement !== sec) sec.appendChild(el); el.style.left = f1(p.left) + 'px'; el.style.top = f1(p.top) + 'px'; el.hidden = false; placed = true; return; }
-            }
-            el.hidden = true;
-        }
-        setTimeout(place, 2200); addEventListener('load', () => setTimeout(place, 600));
-        let lw = innerWidth; addEventListener('resize', () => { if (innerWidth !== lw) { lw = innerWidth; setTimeout(place, 400); } });
-        function blow(dir) {
-            if (el.classList.contains('blown')) { el.classList.remove('nod'); void el.offsetWidth; el.classList.add('nod'); return; }
-            el.classList.add('blown'); W.blownAt = Date.now(); save();
-            if (window.World) World.note(1);
-            const seeds = $$('.wd-seed circle', el).map(c => c.getBoundingClientRect());
-            if (reduce) return;
-            const parts = seeds.map((r, k) => {
-                const d = document.createElement('i'); d.className = 'w-fluff'; d.setAttribute('aria-hidden', 'true'); document.body.appendChild(d);
-                return { d, x: r.left + r.width / 2, y: r.top + r.height / 2, vx: (dir || 1) * rand(8, 22), vy: rand(-26, -8), ph: rand(0, 6), life: rand(9, 14), age: 0, k };
-            });
-            /* a few seeds may take root in the next section down (shown on a later visit, or once out of sight) */
-            const here = SECTIONS.indexOf(el.parentElement && el.parentElement.id), next = SECTIONS[Math.min(SECTIONS.length - 1, here + 2)];
-            parts.forEach(() => { if (Math.random() < 0.07 && W.sprouts.length < 3) W.sprouts.push({ sec: next, fx: rand(0.06, 0.94), shown: false }); });
-            save();
-            let last = performance.now();
-            (function drift(now) {
-                const dt = Math.min(0.05, (now - last) / 1000); last = now;
-                const wind = 14 + Math.sin(now / 2400) * 10;
-                let alive = 0;
-                parts.forEach(p => {
-                    if (p.age > p.life) return; alive++;
-                    p.age += dt; p.vx += ((dir || 1) * wind - p.vx) * 0.3 * dt; p.vy += (6 - p.vy) * 0.15 * dt;
-                    p.x += (p.vx + Math.sin(p.age * 1.7 + p.ph) * 12) * dt; p.y += p.vy * dt;
-                    const o = Math.min(1, p.age * 2, (p.life - p.age) / 2);
-                    p.d.style.transform = 'translate(' + f1(p.x) + 'px,' + f1(p.y) + 'px) rotate(' + f1(Math.sin(p.age * 2 + p.ph) * 25) + 'deg)'; p.d.style.opacity = f1(o);
-                    if (p.age > p.life || p.x > innerWidth + 20 || p.y < -30) { p.age = p.life + 1; p.d.remove(); }
-                });
-                if (alive) requestAnimationFrame(drift);
-            })(last);
-        }
-        el.addEventListener('click', e => blow(e.clientX < el.getBoundingClientRect().left + 22 ? 1 : -1));
-        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); blow(1); } });
-        /* brushing quickly across it also sends the seeds off, in the direction of the swipe */
-        let lx = null, lt = 0;
-        el.addEventListener('pointermove', e => { const now = performance.now(); if (lx != null && now - lt < 60) { const v = (e.clientX - lx) / Math.max(1, now - lt); if (Math.abs(v) > 0.9) blow(Math.sign(v)); } lx = e.clientX; lt = now; });
-        el.addEventListener('pointerleave', () => { lx = null; });
-    })();
+    /* (the dandelions themselves live in the v11 pass below: several of them, sharing one drift loop) */
     /* seeds that took root: small flowers along the bottom of a later section */
     function sprouts() {
         W.sprouts.forEach((sp, k) => {
@@ -3508,8 +3593,12 @@ const WorldState = (() => {
             const reveal = () => {
                 if (f) return;
                 f = document.createElement('div'); f.className = 'w-sprout'; f.dataset.k = k; f.setAttribute('aria-hidden', 'true');
-                const col = ['#fbe7a1', '#f9c6d6', '#d9cbf3'][k % 3];
-                f.innerHTML = '<svg viewBox="0 0 24 40"><path d="M12 40 C11 32 13 24 12 14" stroke="#8db36a" stroke-width="1.4" fill="none"/><path d="M12 30 C7 28 5 24 5 21 C9 23 11 26 12 30Z" fill="#9fbe88"/><use href="#fl-daisy" x="2" y="4" width="20" height="20" style="color:' + col + ';--center:#f2c230"/></svg>';
+                const col = ['#fbe7a1', '#f9c6d6', '#d9cbf3'][k % 3], kind = sp.type || 'daisy';
+                const stem = '<path d="M12 40 C11 32 13 24 12 14" stroke="#8db36a" stroke-width="1.4" fill="none"/><path d="M12 30 C7 28 5 24 5 21 C9 23 11 26 12 30Z" fill="#9fbe88"/>';
+                f.innerHTML = '<svg viewBox="0 0 24 40">' + (kind === 'sprout' ? '<path d="M12 40 C11 34 13 30 12 26" stroke="#8db36a" stroke-width="1.4" fill="none"/><path d="M12 27 C6 26 3 21 4 17 C9 18 12 22 12 27Z" fill="#9fbe88"/><path d="M12 28 C17 26 20 22 20 18 C15 19 12 23 12 28Z" fill="#8db36a"/>'
+                    : kind === 'dandelion' ? stem + '<use href="#fl-daisy" x="4" y="6" width="16" height="16" style="color:#f6cf3a;--center:#e0a020"/>'
+                    : stem + '<use href="#fl-daisy" x="2" y="4" width="20" height="20" style="color:' + col + ';--center:#f2c230"/>') + '</svg>';
+                if (window.GardenLog) GardenLog.add({ id: 'sprout:' + k + ':' + sp.sec, kind: 'sprout', sym: kind === 'sprout' ? 'fl-leaf' : 'fl-daisy', color: kind === 'dandelion' ? '#f6cf3a' : kind === 'sprout' ? '#8db36a' : col, center: '#f2c230' });
                 f.style.left = (sp.fx * 100).toFixed(1) + '%';
                 sec.appendChild(f); sp.shown = true; save();
             };
@@ -3517,6 +3606,14 @@ const WorldState = (() => {
         });
     }
     setTimeout(sprouts, 1500);
+    /* a dandelion seed that took root: it shows up later, further down, while that spot is out of sight */
+    function plantSeed(fromId) {
+        if (W.sprouts.length >= 4) return false;
+        const here = SECTIONS.indexOf(fromId), next = SECTIONS[Math.min(SECTIONS.length - 1, Math.max(1, here + 1 + (Math.random() < 0.5 ? 1 : 0)))];
+        W.sprouts.push({ sec: next, fx: rand(0.06, 0.94), shown: false, type: ['daisy', 'sprout', 'dandelion'][Math.floor(Math.random() * 3)] });
+        save(); sprouts(); return true;
+    }
+    const beatFns = [];
 
     /* ------------------------------------------------------------------
        A small rain cloud, rarely, over a row of flowers. Tap it: a gentle,
@@ -3531,7 +3628,8 @@ const WorldState = (() => {
         const sec = row.closest('section'), sr = sec.getBoundingClientRect(), rr = row.getBoundingClientRect();
         const cloud = document.createElement('div'); cloud.className = 'w-cloud'; cloud.innerHTML = window.__cloudSVG;
         cloud.setAttribute('role', 'button'); cloud.setAttribute('tabindex', '0'); cloud.setAttribute('aria-label', 'A small rain cloud. Press to make it rain');
-        const cx = rand(rr.left + 60, rr.right - 60) - sr.left, top = rr.top - sr.top - 90;
+        /* over one end of the row, never over the centred section title */
+        const cx = (Math.random() < 0.5 ? rand(rr.left + 60, rr.left + rr.width * 0.3) : rand(rr.right - rr.width * 0.3, rr.right - 60)) - sr.left, top = rr.top - sr.top - 90;
         cloud.style.left = f1(cx - 55) + 'px'; cloud.style.top = f1(Math.max(10, top)) + 'px';
         sec.appendChild(cloud);
         requestAnimationFrame(() => cloud.classList.add('on'));
@@ -3546,6 +3644,11 @@ const WorldState = (() => {
             cloud.appendChild(sheet); cloud.classList.add('raining');
             const wet = $$('.g-cat, .h-spec', row).filter(c => { const r = c.getBoundingClientRect(); return r.right > cr.left - 20 && r.left < cr.right + 20; });
             wet.forEach(c => c.classList.add('w-rained'));
+            /* dandelions and posies under the shower sway harder while it rains, and the posies perk up after */
+            const under = el => { const r = el.getBoundingClientRect(); return r.width && r.right > cr.left - 30 && r.left < cr.right + 30 && r.top > cr.top && r.top < cr.bottom + fall + 40; };
+            const swayers = $$('.v11-dand:not([hidden]), .page-posy', sec).filter(under);
+            swayers.forEach(el => { if (window.__spin) (el.classList.contains('page-posy') ? $$('.pp-stem', el) : [el]).forEach(x => window.__spin.set(x, true, 6200)); });
+            setTimeout(() => swayers.forEach(el => { if (el.classList.contains('page-posy')) { el.classList.remove('boing'); void el.offsetWidth; el.classList.add('boing'); } }), 6700);
             setTimeout(() => {
                 sheet.classList.add('stop'); cloud.classList.remove('raining');
                 wet.forEach(c => { c.classList.remove('w-rained'); c.classList.add('w-refreshed'); setTimeout(() => c.classList.remove('w-refreshed'), 1500); });
@@ -3575,6 +3678,7 @@ const WorldState = (() => {
         checkWaiting();
         if (window.__story) window.__story.advance();
         nest.render();
+        beatFns.forEach(fn => { try { fn(beats); } catch (e) { } });
         if (beats > 6 && !seed.el && W.explored >= 2 && Math.random() < 0.06) seed.spawn();
         if (!Life.calm(40000)) return;                  /* quiet stretch first */
         const r = Math.random();
@@ -3584,8 +3688,598 @@ const WorldState = (() => {
     }, 6000);
 
     window.World = {
-        note(n) { W.explored += n || 1; save(); if (window.__story) window.__story.advance(); }
+        note(n) { W.explored += n || 1; save(); if (window.__story) window.__story.advance(); },
+        /* shared with the v11 pass below, so it reuses these instead of making its own */
+        sparkle, gather, placeIn, openSpot, clearAt, inView, whenUnseen, contentRects,
+        seedAt: at => seed.spawn(at), hasSeed: () => !!seed.el, nestStage: () => W.nest,
+        plantSeed, onBeat: fn => beatFns.push(fn), calm: ms => Life.calm(ms)
     };
     /* test hook, only when the page is opened with ?worlddebug */
     if (/[?&]worlddebug\b/.test(location.search)) window.__world = { seed: () => seed.spawn(), steal, rain: rainCloud, nestVisit: () => nest.visit(), state: W, sprouts };
+})();
+
+/* =====================================================================
+   v11 polish pass. Runs last, so it can reuse everything above: the Life
+   director, WorldState and the World helpers.
+   ===================================================================== */
+(function () {
+    'use strict';
+    /* sections far off screen pause their CSS animations (see .is-off in style.css) */
+    const offIO = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('is-off', !e.isIntersecting)), { rootMargin: '300px 0px' });
+    document.querySelectorAll('main > section, footer').forEach(s => offIO.observe(s));
+
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const $ = (sel, root) => (root || document).querySelector(sel);
+    const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
+
+    /* ------------------------------------------------------------------
+       Rainbow letters: the same effect the section titles use ("Experience"):
+       on hover each letter eases into its own colour from the shared
+       palette, one after another. Used only on headings and labels that
+       already feel interactive, never on body text. Screen readers get the
+       plain words (the letters are aria-hidden beside a hidden copy).
+       ------------------------------------------------------------------ */
+    const HC = ['#c2457e', '#8a63b8', '#4f7a34', '#c98a06', '#d96b93', '#3f8fb0'];
+    function rainbow(el, host) {
+        if (!el || el.__rb) return; el.__rb = true;
+        let k = 0;
+        const walk = node => [...node.childNodes].forEach(n => {
+            if (n.nodeType === 1) { if (!n.matches('svg, .vh, .mark-slot, .mark-text')) walk(n); return; }
+            if (n.nodeType !== 3 || !n.textContent.trim()) return;
+            const frag = document.createDocumentFragment(), txt = n.textContent;
+            const sr = document.createElement('span'); sr.className = 'vh'; sr.textContent = txt; frag.appendChild(sr);
+            const vis = document.createElement('span'); vis.className = 'rb-vis'; vis.setAttribute('aria-hidden', 'true');
+            for (const ch of txt) {
+                if (/\s/.test(ch)) { vis.appendChild(document.createTextNode(ch)); continue; }
+                const c = document.createElement('span'); c.className = 'rb-ch'; c.textContent = ch;
+                c.style.setProperty('--i', k); c.style.setProperty('--hc', HC[k++ % HC.length]); vis.appendChild(c);
+            }
+            frag.appendChild(vis); n.replaceWith(frag);
+        });
+        walk(el);
+        el.classList.add('rb-text');
+        const h = host || el; h.classList.add('rb-host'); h.classList.remove('hc-text');
+    }
+    window.__rainbow = rainbow;
+    rainbow($('.about-hello .hello-ink'), $('.about-hello'));
+    $$('.nav a').forEach(a => rainbow(a));
+    $$('.g-cat').forEach(b => rainbow($('.g-name', b), b));
+    $$('.h-spec').forEach(b => rainbow($('.h-name', b), b));
+    $$('.hero-tag').forEach(a => rainbow(a));
+    /* the hero name already has its own letters (.ltr): the whole name washes into colour too */
+    const h1 = $('.hero h1'); if (h1) h1.classList.add('rb-host', 'rb-h1');
+    /* ------------------------------------------------------------------
+       Turning flowers. Each decorative flower turns slowly on its own
+       (a CSS animation, so it costs nothing while left alone). Hover
+       ramps that animation's playback rate up, and leaving lets it ease
+       back down: the angle never jumps because the rate, not the
+       duration, changes. One small rAF loop runs only while some flower
+       is still changing speed.
+       ------------------------------------------------------------------ */
+    const Spin = (() => {
+        const st = new WeakMap(), active = new Set();
+        const NAMES = ['flSpin', 'flSpinRev', 'ppSway', 'leafSway', 'dandSway'];
+        let raf = 0, last = 0;
+        const find = el => el.getAnimations ? el.getAnimations().find(a => NAMES.includes(a.animationName)) : null;
+        function set(el, boost, hold) {
+            if (reduce || !el) return;
+            const a = find(el); if (!a) return;
+            let s = st.get(el); if (!s) { s = { rate: 1, target: 1 }; st.set(el, s); }
+            s.a = a;
+            const dur = a.effect && a.effect.getTiming().duration, sway = a.animationName === 'ppSway' || a.animationName === 'leafSway' || a.animationName === 'dandSway';
+            /* hovered: about 280 degrees a second whatever the flower's resting pace (sways just quicken 3x) */
+            s.target = boost ? (sway ? 3 : Math.max(2, 280 / (360000 / (dur || 40000)))) : 1;
+            if (typeof boost === 'number') s.target *= boost;
+            clearTimeout(s.hold); if (hold) s.hold = setTimeout(() => set(el, false), hold);
+            active.add(el);
+            if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+        }
+        function tick(now) {
+            const dt = Math.min(0.05, (now - last) / 1000); last = now;
+            active.forEach(el => {
+                const s = st.get(el);
+                if (!s || !s.a || !el.isConnected) { active.delete(el); return; }
+                /* speeds up briskly, settles back gently */
+                s.rate += (s.target - s.rate) * (1 - Math.exp(-dt * (s.target > s.rate ? 2.6 : 1.3)));
+                if (Math.abs(s.target - s.rate) < 0.03) { s.rate = s.target; if (s.target === 1) active.delete(el); }
+                try { s.a.playbackRate = s.rate; } catch (e) { active.delete(el); }
+            });
+            raf = active.size ? requestAnimationFrame(tick) : 0;
+        }
+        return { set, spinning: el => { const s = st.get(el); return !!s && s.rate > 1.5; } };
+    })();
+    window.__spin = Spin;
+
+    /* ------------------------------------------------------------------
+       Small shared pieces: a particle budget (petals, seeds, sparkles and
+       raindrops all draw from it, so repeated clicking can never pile up
+       hundreds of them) and the session log of what the visitor touched,
+       found and grew, which the garden at the bottom is made from.
+       ------------------------------------------------------------------ */
+    const FX = (() => {
+        let live = 0; const MAX = innerWidth < 700 ? 28 : 48;
+        return {
+            room: n => Math.max(0, Math.min(n, MAX - live)),
+            /* el is removed (and its slot returned) when its animation ends, or after ms at the latest */
+            track(el, anim, ms) {
+                live++; let done = false;
+                const end = () => { if (done) return; done = true; live--; el.remove(); };
+                if (anim) anim.onfinish = end; setTimeout(end, ms || 4000);
+            },
+            /* for particles moved by a script loop instead of an animation */
+            claim: n => { const k = Math.max(0, Math.min(n, MAX - live)); live += k; return k; },
+            free: k => { live = Math.max(0, live - k); },
+            get live() { return live; }
+        };
+    })();
+    window.__fx = FX;
+    const GardenLog = (() => {
+        const KEY = 'mb-grown-v1', LIMIT = 30;
+        let st = { items: [], pos: {}, ribbon: '' };
+        try { Object.assign(st, JSON.parse(sessionStorage.getItem(KEY)) || {}); } catch (e) { }
+        const listeners = new Set();
+        const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
+        return {
+            /* one entry per thing (by id); entries are small: what kind of flower, its colours, where it came from */
+            add(entry) {
+                if (!entry || !entry.id || st.items.some(x => x.id === entry.id)) return false;
+                st.items.push(Object.assign({ t: Date.now() }, entry));
+                if (st.items.length > LIMIT) st.items.splice(0, st.items.length - LIMIT);
+                save(); listeners.forEach(f => f(entry)); return true;
+            },
+            items: () => st.items.slice(),
+            pos: () => st.pos, setPos(id, p) { st.pos[id] = p; save(); },
+            ribbon: () => st.ribbon, setRibbon(r) { st.ribbon = r; save(); },
+            clear() { st = { items: [], pos: {}, ribbon: '' }; save(); listeners.forEach(f => f(null)); },
+            on: f => listeners.add(f)
+        };
+    })();
+    window.GardenLog = GardenLog;
+
+    /* ------------------------------------------------------------------
+       Touching a flower. Each decorative flower has its own little
+       response (a quick spin, a bloom, a few petals, a hop, a blush of
+       colour, a sparkle, a nod toward you), and now and then a small
+       discovery: a ladybug, a tiny butterfly, a seed for the birds, or a
+       bud that opens beside it. One response at a time per flower, so
+       fast clicking never stacks animations.
+       ------------------------------------------------------------------ */
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const strHash = str => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+    const centre = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height }; };
+    const colourOf = el => { const c = getComputedStyle(el).color; return c && c !== 'rgba(0, 0, 0, 0)' ? c : '#f4a7bf'; };
+    function petals(el, n) {
+        const c = centre(el), col = colourOf(el); n = FX.room(n);
+        for (let k = 0; k < n; k++) {
+            const p = document.createElement('i'); p.className = 'v11-petal'; p.style.background = col;
+            p.style.left = c.x + 'px'; p.style.top = c.y + 'px'; document.body.appendChild(p);
+            const dx = rnd(-40, 40), dy = rnd(40, 90), rot = rnd(-260, 260);
+            FX.track(p, p.animate([
+                { transform: 'translate(-50%,-50%) rotate(0deg) scale(.6)', opacity: 0 },
+                { transform: `translate(calc(-50% + ${(dx * 0.3).toFixed(0)}px), calc(-50% + ${(dy * 0.2).toFixed(0)}px)) rotate(${(rot * 0.3).toFixed(0)}deg) scale(1)`, opacity: 0.95, offset: 0.18 },
+                { transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${dy.toFixed(0)}px)) rotate(${rot.toFixed(0)}deg) scale(.8)`, opacity: 0 }
+            ], { duration: rnd(1500, 2300), delay: k * 90, easing: 'cubic-bezier(.3,.1,.5,1)', fill: 'backwards' }), 3000);
+        }
+    }
+    const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+    const REACT = {
+        spin: el => { if (Spin.spinning(el)) return 500; Spin.set(el, 1.4, 700); return 1600; },
+        bloom: el => { el.animate([{ scale: 1 }, { scale: 1.32, offset: 0.35 }, { scale: 0.96, offset: 0.7 }, { scale: 1 }], { duration: 950, easing: 'ease-out' }); return 950; },
+        petals: el => { petals(el, 1 + Math.floor(Math.random() * 3)); el.animate([{ scale: 1 }, { scale: 1.08 }, { scale: 1 }], { duration: 500 }); return 900; },
+        bounce: el => { el.animate([{ translate: '0 0' }, { translate: '0 -9px', offset: 0.3 }, { translate: '0 0', offset: 0.6 }, { translate: '0 -3px', offset: 0.8 }, { translate: '0 0' }], { duration: 800, easing: 'ease-in-out', composite: 'add' }); return 800; },
+        blush: el => { el.animate([{ filter: 'none' }, { filter: 'hue-rotate(' + (Math.random() < 0.5 ? 38 : -42) + 'deg) saturate(1.25)', offset: 0.25 }, { filter: 'hue-rotate(0deg)', offset: 0.85 }, { filter: 'none' }], { duration: 2200, easing: 'ease-in-out' }); return 1400; },
+        sparkle: el => { const c = centre(el); if (World.sparkle && FX.room(4) >= 4) World.sparkle(c.x, c.y - c.h * 0.3); el.animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 600 }); return 900; },
+        nod: (el, e) => { const c = centre(el), dir = e && e.clientX < c.x ? -1 : 1; el.animate([{ rotate: '0deg' }, { rotate: (14 * dir) + 'deg', offset: 0.3 }, { rotate: (-6 * dir) + 'deg', offset: 0.65 }, { rotate: '0deg' }], { duration: 1100, easing: 'ease-in-out', composite: 'add' }); return 1100; },
+        wiggle: el => { el.animate([{ rotate: '0deg' }, { rotate: '-14deg', offset: 0.25 }, { rotate: '10deg', offset: 0.5 }, { rotate: '-5deg', offset: 0.75 }, { rotate: '0deg' }], { duration: 900, easing: 'ease-in-out', composite: 'add' }); return 900; }
+    };
+    const ORDER = ['spin', 'bloom', 'petals', 'bounce', 'blush', 'sparkle', 'nod'];
+    const LADY = '<svg viewBox="-10 -9 20 18" aria-hidden="true"><circle cx="7" cy="0" r="3.6" fill="#3a2b33"/><ellipse rx="7.4" ry="6.6" fill="#e2483d"/><path d="M-7.4 0 H7.4" stroke="#3a2b33" stroke-width=".9"/><circle cx="-3" cy="-3" r="1.3" fill="#3a2b33"/><circle cx="2" cy="-3.4" r="1.1" fill="#3a2b33"/><circle cx="-2.4" cy="3.2" r="1.2" fill="#3a2b33"/><circle cx="2.6" cy="3" r="1.3" fill="#3a2b33"/></svg>';
+    const TINY_BF = '<svg viewBox="-24 -20 48 40" aria-hidden="true"><g class="bf-wing-l"><path d="M-1 -2 C-10 -20 -26 -16 -21 -3 C-18 4 -8 3 -1 0Z" fill="#cdb8f2"/><path d="M-1 1 C-9 3 -18 10 -13 16 C-8 19 -3 10 -1 3Z" fill="#fbdc84"/></g><g class="bf-wing-r"><path d="M1 -2 C10 -20 26 -16 21 -3 C18 4 8 3 1 0Z" fill="#cdb8f2"/><path d="M1 1 C9 3 18 10 13 16 C8 19 3 10 1 3Z" fill="#fbdc84"/></g><rect x="-1.5" y="-8" width="3" height="20" rx="1.5" fill="#5a4366"/></svg>';
+    let lastFind = 0;
+    const FINDS = {
+        ladybug: el => {
+            const c = centre(el), b = document.createElement('span'); b.className = 'v11-ladybug'; b.innerHTML = LADY; b.setAttribute('aria-hidden', 'true');
+            b.style.left = (c.x - c.w * 0.3) + 'px'; b.style.top = (c.y - 4) + 'px'; document.body.appendChild(b);
+            FX.track(b, b.animate([{ transform: 'translate(0,0) rotate(-10deg)', opacity: 0 }, { opacity: 1, offset: 0.1 }, { transform: `translate(${(c.w * 0.3).toFixed(0)}px,-6px) rotate(8deg)`, offset: 0.5 }, { transform: `translate(${(c.w * 0.6).toFixed(0)}px,2px) rotate(-4deg)`, opacity: 1, offset: 0.9 }, { transform: `translate(${(c.w * 0.65).toFixed(0)}px,2px)`, opacity: 0 }], { duration: 4200, easing: 'ease-in-out' }), 4500);
+            return true;
+        },
+        butterfly: el => {
+            if (!Life.claim('tiny-butterfly', 3500)) return false;
+            const c = centre(el), b = document.createElement('span'); b.className = 'v11-tinybf'; b.innerHTML = TINY_BF; b.setAttribute('aria-hidden', 'true');
+            b.style.left = c.x + 'px'; b.style.top = c.y + 'px'; document.body.appendChild(b);
+            const dir = c.x > innerWidth / 2 ? -1 : 1;
+            const a = b.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.12 }, { transform: `translate(calc(-50% + ${dir * 30}px), calc(-50% - 40px)) rotate(${dir * 10}deg)`, offset: 0.4 }, { transform: `translate(calc(-50% + ${dir * 10}px), calc(-50% - 85px)) rotate(${-dir * 8}deg)`, offset: 0.7 }, { transform: `translate(calc(-50% + ${dir * 70}px), calc(-50% - 150px))`, opacity: 0 }], { duration: 3200, easing: 'ease-in-out' });
+            FX.track(b, a, 3600); a.addEventListener('finish', () => Life.release('tiny-butterfly'));
+            return true;
+        },
+        seed: el => { if (!World.seedAt || World.hasSeed()) return false; const c = centre(el); return World.seedAt({ x: c.x + (c.x > innerWidth / 2 ? -34 : 34), y: c.y + 20 }); },
+        bud: el => {
+            const host = el.closest('section') || el.closest('footer'); if (!host || $$('.v11-bud', host).length >= 2) return false;
+            const c = centre(el), hr = host.getBoundingClientRect(), side = c.x > hr.left + hr.width / 2 ? -1 : 1;
+            const x = c.x + side * (c.w * 0.5 + 12), y = c.y + c.h * 0.35;
+            if (World.clearAt && !World.clearAt(x, y, 10)) return false;
+            const b = document.createElement('span'); b.className = 'v11-bud'; b.setAttribute('aria-hidden', 'true');
+            b.innerHTML = '<svg viewBox="-12 -12 24 30"><path d="M0 18 C-1 12 1 6 0 2" stroke="#8db36a" stroke-width="1.4" fill="none"/><g class="vb-head" style="color:' + colourOf(el) + '"><use href="#fl-bloom" x="-9" y="-9" width="18" height="18"/></g><g class="vb-cap"><path d="M0 4 C-6 2 -5 -7 0 -9 C5 -7 6 2 0 4Z" fill="#8db36a"/></g></svg>';
+            b.style.left = (x - hr.left) + 'px'; b.style.top = (y - hr.top) + 'px'; host.appendChild(b);
+            requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add('open')));
+            GardenLog.add({ id: 'bud:' + (el.dataset.gk || Math.random()), kind: 'bud', sym: 'fl-bloom', color: colourOf(el), center: '#f2c230' });
+            return true;
+        }
+    };
+    function react(el, e) {
+        if (el.__busy && performance.now() < el.__busy) return;
+        const key = el.dataset.gk || '';
+        /* a flower usually answers the same way (its own personality), sometimes differently */
+        const own = el.__own || ORDER[strHash(key) % ORDER.length];
+        let name = el.dataset.react || (Math.random() < 0.7 ? own : ORDER[Math.floor(Math.random() * ORDER.length)]);
+        if (reduce) name = name === 'spin' || name === 'bounce' || name === 'nod' ? 'blush' : name;
+        let ms = (REACT[name] || REACT.bloom)(el, e) || 800;
+        /* leaves sometimes have a ladybug living on them */
+        if (el.dataset.find && !reduce && Math.random() < 0.3 && FINDS[el.dataset.find](el)) ms = Math.max(ms, 1500);
+        /* a small discovery now and then: rare, and never twice in quick succession */
+        if (!reduce && performance.now() - lastFind > 20000 && Math.random() < 0.14) {
+            const opts = Object.keys(FINDS).sort(() => Math.random() - 0.5);
+            for (const f of opts) if (FINDS[f](el)) { lastFind = performance.now(); ms = Math.max(ms, 1200); break; }
+        }
+        el.__busy = performance.now() + ms;
+        /* everything touched leaves something for the garden at the bottom */
+        if (!el.__logged) {
+            el.__logged = true;
+            const use = el.querySelector && el.querySelector('use'), sym = use ? (use.getAttribute('href') || '').slice(1) : 'fl-bloom';
+            if (sym !== 'fl-leaf' && GardenLog.add({ id: 'fl:' + key, kind: 'flower', sym: sym || 'fl-bloom', color: colourOf(el), center: getComputedStyle(el).getPropertyValue('--center').trim() || '#f2c230' })) { if (window.World) World.note(1); }
+        }
+    }
+    if (/[?&]v11debug\b/.test(location.search)) window.__v11 = { REACT, FINDS, react, Spin, FX, GardenLog };
+    let gkN = 0;
+    function interactive(el, opts) {
+        if (!el || el.__int) return; el.__int = true;
+        opts = opts || {};
+        el.classList.add('fl-int'); el.dataset.gk = el.dataset.gk || (opts.key || 'f' + (gkN++));
+        if (opts.react) el.dataset.react = opts.react;
+        const target = opts.target || el;
+        target.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); react(el, e); });
+    }
+
+    /* which flowers turn, how fast (seconds per turn, from the original site) and which element hovering speeds them up */
+    const seeded = (k => () => (k = (k * 16807) % 2147483647) / 2147483647)(7);
+    function turning(el, spd, opts) {
+        opts = opts || {};
+        el.classList.add('fl-spin'); if (opts.rev) el.classList.add('fl-rev');
+        el.style.setProperty('--spd', spd + 's');
+        el.style.setProperty('--sdl', '-' + (seeded() * spd).toFixed(1) + 's');
+        el.style.setProperty('--fl', (5 + seeded() * 3).toFixed(1) + 's');
+        el.style.setProperty('--fdl', '-' + (seeded() * 6).toFixed(1) + 's');
+        if (opts.bdl != null) el.style.setProperty('--bdl', opts.bdl + 's');
+        const host = opts.host || el;
+        if (!opts.noHover) {
+            host.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Spin.set(el, true); });
+            host.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') Spin.set(el, false); });
+        }
+        return el;
+    }
+    const HERO = { f1: [40, 0.4], f2: [30, 0.7], f3: [40, 1], f4: [50, 1.2], f6: [34, 1.4], f7: [40, 1.6] };
+    $$('.hero-flowers .bloom').forEach((b, i) => {
+        const k = Object.keys(HERO).find(c => b.classList.contains(c));
+        if (k) turning(b, HERO[k][0], { bdl: HERO[k][1], rev: k === 'f3' });
+        interactive(b, { key: 'hero' + i, react: k ? null : 'wiggle' });   /* f5 and f8 are leaves: they wiggle */
+    });
+    $$('.about-bloom').forEach((b, i) => { turning(b, b.classList.contains('ab2') ? 22 : 30, { rev: b.classList.contains('ab3') }); interactive(b, { key: 'about' + i }); });
+    $$('.title-bloom').forEach((b, i) => { turning(b, 24, { host: b.closest('.section-head') || b }); interactive(b, { key: 'title' + i }); });
+    const hf = $('.hello-flower'); if (hf) { turning(hf, 12, { host: $('.about-hello') }); interactive(hf, { key: 'hello', react: 'spin' }); }
+    $$('.nav a').forEach(a => { const f = $('.nav-fl', a); if (f) turning(f, 8, { host: a }); });
+    /* scattered blooms and posies are placed by earlier scripts after layout settles: pick them up as they appear */
+    function adoptLate() {
+        $$('.sc-bloom svg:not(.fl-spin)').forEach(sv => { const s = parseFloat(sv.parentElement.style.getPropertyValue('--spin')) || 40; turning(sv, Math.round(s), { host: sv.parentElement, rev: seeded() < 0.4 }); });
+        $$('.scatter').forEach((sc, i) => { const sv = $('svg', sc); if (sv) interactive(sv, { key: 'sc' + (sc.style.left + sc.style.top), target: sc, react: sc.classList.contains('sc-leaf') ? 'wiggle' : null }); if (sc.classList.contains('sc-leaf') && sv) sv.dataset.find = 'ladybug'; });
+        $$('.page-posy:not(.fl-adopted)').forEach(p => {
+            p.classList.add('fl-adopted');
+            /* a posy already bounces when touched (its own script); it also goes in the visitor's garden */
+            p.addEventListener('click', () => { const f = $('.pp-pop', p); if (f && GardenLog.add({ id: 'posy:' + p.style.left + p.style.top, kind: 'posy', sym: ($('use', f).getAttribute('href') || '#fl-bloom').slice(1), color: getComputedStyle(f).color, center: f.style.getPropertyValue('--center') || '#f2c230' })) World.note(1); });
+            $$('.pp-pop > use', p).forEach(u => { const spd = 18 + seeded() * 14; u.style.setProperty('--spd', spd.toFixed(1) + 's'); u.style.setProperty('--sdl', '-' + (seeded() * spd).toFixed(1) + 's'); });
+            p.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { $$('.pp-pop > use, .pp-stem', p).forEach(u => Spin.set(u, true)); } });
+            p.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { $$('.pp-pop > use, .pp-stem', p).forEach(u => Spin.set(u, false)); } });
+        });
+    }
+    adoptLate(); setTimeout(adoptLate, 2500); addEventListener('load', () => setTimeout(adoptLate, 1500));
+    document.addEventListener('click', () => setTimeout(adoptLate, 1000));
+    window.__adoptFlowers = adoptLate;
+
+    /* ------------------------------------------------------------------
+       The chrysalis hangs on the left vine (the caterpillar's own vine)
+       rather than on the twig by the photo, whenever vines are showing.
+       It appears only once that stretch of vine has grown in, so it is
+       found, not announced. Same jade and gold as the butterfly later.
+       ------------------------------------------------------------------ */
+    (function () {
+        const story = $('.w-story'); if (!story) return;
+        const NSV = 'http://www.w3.org/2000/svg';
+        let g = null, at = 0, path = null;
+        function draw() {
+            if (g) { g.remove(); g = null; }
+            const svg = $('.vine-left'); path = svg && $('.vine-path', svg);
+            story.classList.toggle('on-vine', !!path);
+            if (!path || (WorldState.get().story || 0) !== 1) return;
+            const len = path.getTotalLength(), k = (svg.clientWidth || 90) / 90;
+            at = len * 0.38; const p = path.getPointAtLength(at), z = 1 / Math.max(0.5, k);
+            g = document.createElementNS(NSV, 'g'); g.setAttribute('class', 'v11-chrys'); g.setAttribute('transform', 'translate(' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ') scale(' + z.toFixed(2) + ')');
+            g.innerHTML = '<g class="vc-hang"><path d="M0 0 V5" stroke="#8a6a3a" stroke-width="1.2"/><path d="M0 5 C6 9 6 23 0 29 C-6 23 -6 9 0 5Z" fill="#a8d5a2" stroke="#6f9f6a" stroke-width=".8"/><path d="M-3.5 13 H3.5" stroke="#e8b923" stroke-width="1" stroke-dasharray="1 1.6"/><circle cx="-2" cy="18" r=".9" fill="#e8b923"/><circle cx="2" cy="18" r=".9" fill="#e8b923"/></g>';
+            svg.appendChild(g); update();
+        }
+        function update() { if (!g || !path) return; const shown = path.getTotalLength() - (parseFloat(path.style.strokeDashoffset) || 0); g.classList.toggle('on', shown > at + 10); }
+        const prev = window.__onVineLayout; window.__onVineLayout = () => { if (prev) prev(); draw(); };
+        new MutationObserver(draw).observe(story, { attributes: true, attributeFilter: ['data-stage'] });
+        let q = 0; addEventListener('scroll', () => { if (!q) q = requestAnimationFrame(() => { q = 0; update(); }); }, { passive: true });
+        draw();
+    })();
+
+    /* ------------------------------------------------------------------
+       Dandelions, here and there down the page: fluffy clocks, half-blown
+       ones and a few yellow flowers. Tap a clock and a few seeds let go;
+       tap again and more do; brush or swipe across it and many go at once.
+       The head really loses the seeds that flew (and ends as a bare head).
+       Seeds drift slowly, each on its own path, on a shared breeze; now and
+       then one leaves on its own. Rarely, one takes root further down.
+       ------------------------------------------------------------------ */
+    const Dandelions = (() => {
+        const NSV = 'http://www.w3.org/2000/svg';
+        const narrow = () => innerWidth < 700;
+        const PLAN = [['home', 'puff'], ['about', 'yellow'], ['experience', 'partial'], ['skills', 'puff'], ['gallery', 'yellow'], ['contact', 'puff'], ['grown', 'partial']];
+        const list = [];
+        /* one loop moves every loose seed; it only runs while seeds are in the air */
+        const air = []; let raf = 0, last = 0;
+        function fly(now) {
+            const dt = Math.min(0.05, (now - last) / 1000); last = now;
+            const wind = 12 + Math.sin(now / 2600) * 8 + Math.sin(now / 900) * 3;
+            for (let i = air.length - 1; i >= 0; i--) {
+                const p = air[i]; p.age += dt;
+                p.vx += (p.dir * wind * p.catch - p.vx) * 0.35 * dt; p.vy += (p.sink - p.vy) * 0.18 * dt;
+                p.x += (p.vx + Math.sin(p.age * p.wf + p.ph) * p.sway) * dt; p.y += (p.vy + Math.cos(p.age * p.wf * 0.7 + p.ph) * 4) * dt;
+                const o = Math.min(1, p.age * 2.5, (p.life - p.age) / 1.8);
+                p.d.style.transform = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px) rotate(' + (Math.sin(p.age * 1.9 + p.ph) * 28).toFixed(0) + 'deg)';
+                p.d.style.opacity = Math.max(0, o).toFixed(2);
+                if (p.age > p.life || p.x < -30 || p.x > innerWidth + 30 || p.y < -40) { p.d.remove(); air.splice(i, 1); FX.free(1); }
+            }
+            raf = air.length ? requestAnimationFrame(fly) : 0;
+        }
+        function launch(x, y, dir, strength) {
+            if (!FX.claim(1)) return false;
+            const d = document.createElement('i'); d.className = 'w-fluff'; d.setAttribute('aria-hidden', 'true'); document.body.appendChild(d);
+            d.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'; d.style.opacity = '0';
+            air.push({ d, x, y, dir, age: 0, life: rnd(7, 13), ph: rnd(0, 6.3), wf: rnd(1.2, 2.2), sway: rnd(6, 15), catch: rnd(0.55, 1.15),
+                vx: dir * rnd(6, 16) * (0.6 + strength * 0.6), vy: rnd(-26, -8) * (0.7 + strength * 0.4), sink: rnd(2, 8) });
+            if (!raf) { last = performance.now(); raf = requestAnimationFrame(fly); }
+            return true;
+        }
+        function build(kind, i) {
+            const el = document.createElement('div');
+            el.className = 'w-dandelion w-piece v11-dand is-' + kind; el.setAttribute('tabindex', '0');
+            el.dataset.sec = PLAN[i][0];
+            const stemBend = (seeded() - 0.5) * 6, leafSide = seeded() < 0.5 ? -1 : 1;
+            let h = '<svg viewBox="0 0 44 84" aria-hidden="true"><path d="M22 84 C' + (21 + stemBend).toFixed(1) + ' 66 ' + (24 - stemBend).toFixed(1) + ' 46 22 22" stroke="#8db36a" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
+                + '<path d="M22 70 C' + (22 - 8 * leafSide) + ' 66 ' + (22 - 12 * leafSide) + ' 58 ' + (22 - 13 * leafSide) + ' 52 C' + (22 - 6 * leafSide) + ' 56 ' + (22 - 2 * leafSide) + ' 62 22 70Z" fill="#9fbe88"/>';
+            if (kind === 'yellow') {
+                el.setAttribute('aria-label', 'A yellow dandelion');
+                h += '<g class="wd-flower"><use href="#fl-daisy" x="9" y="8" width="26" height="26" style="color:#f6cf3a;--center:#e0a020"/><circle cx="22" cy="21" r="3.2" fill="#e8a91a"/></g>';
+            } else {
+                el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'A dandelion. Press to blow some of its seeds');
+                const n = reduce ? 10 : narrow() ? 14 : 18;
+                h += '<g class="wd-puff">';
+                for (let k = 0; k < n; k++) {
+                    const a = (k / n) * Math.PI * 2 + seeded() * 0.25, r = 13 + seeded() * 3, x = 22 + Math.cos(a) * r, y = 21 + Math.sin(a) * r;
+                    const tx = Math.cos(a), ty = Math.sin(a), px = -ty, py = tx;
+                    h += '<g class="wd-seed" data-k="' + k + '"><path d="M22 21 L' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="#d8d2c4" stroke-width=".55"/>'
+                        + '<path d="M' + (x + px * 2.6).toFixed(1) + ' ' + (y + py * 2.6).toFixed(1) + ' Q' + (x + tx * 2.4).toFixed(1) + ' ' + (y + ty * 2.4).toFixed(1) + ' ' + (x - px * 2.6).toFixed(1) + ' ' + (y - py * 2.6).toFixed(1) + '" stroke="#efe9db" stroke-width=".9" fill="none"/>'
+                        + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.5" fill="#fffdf6" stroke="#e4ddcd" stroke-width=".4"/></g>';
+                }
+                h += '</g><g class="wd-bare"><circle cx="22" cy="21" r="3.4" fill="#c9b98a"/><circle cx="21" cy="20" r=".6" fill="#a8956a"/><circle cx="23.2" cy="21.6" r=".6" fill="#a8956a"/><circle cx="21.6" cy="22.4" r=".5" fill="#a8956a"/></g>'
+                    + '<circle class="wd-core" cx="22" cy="21" r="2.4" fill="#c9b98a"/>';
+            }
+            el.innerHTML = h + '</svg>';
+            el.style.setProperty('--sw', (4.5 + seeded() * 3).toFixed(1) + 's'); el.style.setProperty('--swd', '-' + (seeded() * 5).toFixed(1) + 's');
+            const d = { el, kind, i, sec: PLAN[i][0], taps: 0, lastRelease: 0, logged: false };
+            if (kind === 'partial') $$('.wd-seed', el).forEach((sd, k) => { if (k % 2 === 0 || seeded() < 0.25) sd.classList.add('gone'); });
+            wire(d); list.push(d);
+            return d;
+        }
+        /* let `n` seeds go, from the side the push comes from; returns how many went */
+        function release(d, n, dir, strength) {
+            const now = performance.now();
+            if (now - d.lastRelease < 240) return 0; d.lastRelease = now;
+            const left = $$('.wd-seed:not(.gone)', d.el); if (!left.length) { REACT.nod(d.el); return 0; }
+            if (left.length - n <= 2) n = left.length;   /* never leave one or two lonely seeds */
+            const box = d.el.getBoundingClientRect(), cx = box.left + box.width / 2;
+            left.sort((a, b) => dir * (a.getBoundingClientRect().left - b.getBoundingClientRect().left) + (Math.random() - 0.5) * 8);
+            let went = 0;
+            left.slice(0, n).forEach((sd, k) => {
+                const c = $('circle', sd).getBoundingClientRect();
+                sd.classList.add('gone'); went++;
+                if (reduce) return;
+                setTimeout(() => launch(c.left + c.width / 2, c.top + c.height / 2, dir || (c.left < cx ? -1 : 1), strength), k * rnd(30, 90));
+            });
+            if (!$$('.wd-seed:not(.gone)', d.el).length) d.el.classList.add('bare');
+            d.el.classList.remove('puffed'); void d.el.offsetWidth; d.el.classList.add('puffed');
+            /* a seed or two may take root later, further down the page */
+            for (let k = 0; k < went; k++) if (Math.random() < 0.035 && World.plantSeed) { World.plantSeed(d.sec); break; }
+            if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:' + d.sec, kind: 'dandelion', sym: 'dandelion', color: '#fffdf6', center: '#c9b98a' }); if (window.World) World.note(1); }
+            return went;
+        }
+        function wire(d) {
+            const el = d.el;
+            if (d.kind === 'yellow') {
+                el.classList.add('fl-int');
+                el.addEventListener('click', e => { e.stopPropagation(); REACT.nod(el, e); if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:y:' + d.sec, kind: 'flower', sym: 'fl-daisy', color: '#f6cf3a', center: '#e0a020' }); } });
+                return;
+            }
+            const tapCount = () => (d.taps++ === 0 ? 3 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 3));
+            el.addEventListener('click', e => {
+                e.stopPropagation();
+                if (e.detail === 0) return;   /* keyboard activation is handled below */
+                const r = el.getBoundingClientRect();
+                release(d, tapCount(), e.clientX < r.left + r.width / 2 ? 1 : -1, 0.6);
+            });
+            el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); release(d, tapCount(), 1, 0.6); } });
+            /* brushing or swiping across it: the faster the stroke, the more seeds go */
+            let lx = null, lt = 0;
+            el.addEventListener('pointermove', e => {
+                const now = performance.now();
+                if (lx != null && now - lt < 80) {
+                    const v = (e.clientX - lx) / Math.max(1, now - lt);
+                    if (Math.abs(v) > 0.7) release(d, Math.round(Math.min(12, 3 + Math.abs(v) * 5)), Math.sign(v), Math.min(1.6, Math.abs(v)));
+                }
+                lx = e.clientX; lt = now;
+            });
+            el.addEventListener('pointerleave', () => { lx = null; });
+            el.addEventListener('pointercancel', () => { lx = null; });
+        }
+        function place() {
+            const small = narrow(), w = small ? 32 : 44, h = small ? 61 : 84, max = small ? 4 : PLAN.length;
+            let shown = 0;
+            PLAN.forEach(([id, kind], i) => {
+                const sec = document.getElementById(id);
+                let d = list.find(x => x.i === i);
+                if (!sec || shown >= max || (small && kind === 'yellow' && i > 2)) { if (d) d.el.hidden = true; return; }
+                if (!d) { d = build(kind, i); sec.appendChild(d.el); }
+                d.el.hidden = true;   /* measure the section without this one */
+                d.el.classList.toggle('small', small);
+                const p = World.placeIn && World.placeIn(sec, w, h);
+                if (!p) return;
+                d.el.style.left = p.left.toFixed(1) + 'px'; d.el.style.top = p.top.toFixed(1) + 'px'; d.el.hidden = false; shown++;
+            });
+        }
+        let pt = 0; const later = ms => { clearTimeout(pt); pt = setTimeout(place, ms); };
+        later(2200); addEventListener('load', () => later(700));
+        let lw = innerWidth; addEventListener('resize', () => { if (innerWidth !== lw) { lw = innerWidth; later(400); } });
+        document.addEventListener('click', e => { if (!e.target.closest('.v11-dand')) later(900); });
+        /* now and then, in a breeze, a single seed lets go by itself (only from a dandelion someone can see) */
+        if (World.onBeat && !reduce) World.onBeat(() => {
+            if (Math.random() > 0.22 || FX.live > 10) return;
+            const seen = list.filter(d => d.kind !== 'yellow' && !d.el.hidden && World.inView(d.el) && $$('.wd-seed:not(.gone)', d.el).length > 6);
+            if (!seen.length) return;
+            const d = seen[Math.floor(Math.random() * seen.length)], left = $$('.wd-seed:not(.gone)', d.el), sd = left[Math.floor(Math.random() * left.length)];
+            const c = $('circle', sd).getBoundingClientRect(); sd.classList.add('gone'); launch(c.left + 1, c.top + 1, 1, 0.3);
+        });
+        return { place, list, release };
+    })();
+    if (/[?&]v11debug\b/.test(location.search)) window.__dand = Dandelions;
+
+    /* ------------------------------------------------------------------
+       The garden you grew. Everything the visitor touched, found or grew
+       on the way down (the session log above) comes up here as a small
+       flower. They can drag the flowers into their own arrangement (mouse,
+       touch or arrow keys), tie it with a ribbon once there are a few, or
+       scatter it and start again (which clears only this garden).
+       ------------------------------------------------------------------ */
+    (function () {
+        const sec = $('#grown'), bed = $('#gyBed'); if (!sec || !bed) return;
+        const box = $('.gy-flowers', bed), empty = $('.gy-empty', bed), ribbons = $('.gy-ribbons', sec), scatterB = $('.gy-scatter', sec);
+        rainbow($('.gy-title', sec), $('.gy-title', sec));
+        const RIB = [['cream', '#fbf1dc', '#c9a06a'], ['soft yellow', '#f6d36b', '#c99a1a'], ['sage', '#b7cfa0', '#7f9f6a'], ['blush', '#f4a7bf', '#d9789e'], ['lavender', '#cdb8f2', '#9d7fd0']];
+        ribbons.innerHTML = RIB.map(([n, c, e]) => '<button type="button" role="radio" aria-checked="false" aria-label="' + n + ' ribbon" data-ribbon="' + n + '" style="--rc:' + c + ';--re:' + e + '"></button>').join('');
+        const bow = document.createElement('div'); bow.className = 'gy-bow'; bow.setAttribute('aria-hidden', 'true');
+        bow.innerHTML = '<svg viewBox="0 0 60 36"><path class="gb-tail" d="M30 16 L19 34 M30 16 L41 33"/><path class="gb-loop" d="M30 16 C20 4 8 8 12 16 C15 23 25 20 30 16 C35 20 45 23 48 16 C52 8 40 4 30 16Z"/><circle class="gb-knot" cx="30" cy="16" r="3.4"/></svg>';
+        bed.appendChild(bow);
+        const R = (k => () => (k = (k * 16807) % 2147483647) / 2147483647);
+        /* what each kind of find looks like: a stem and a head in the site's own flower shapes */
+        function art(it, r) {
+            const stemH = 46 + r() * 44, bend = (r() - 0.5) * 14, lean = (r() - 0.5) * 12;
+            let head = '';
+            if (it.kind === 'cluster') head = '<svg class="gy-bloom" viewBox="' + (it.box || '0 0 120 110') + '" style="width:74px;height:68px;margin:-58px 0 0 -37px"><use href="#' + it.sym + '"/></svg>';
+            else if (it.sym === 'dandelion') { let p = ''; for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, x = 12 + Math.cos(a) * 9, y = 12 + Math.sin(a) * 9; p += '<path d="M12 12 L' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="#d8d2c4" stroke-width=".5"/><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.3" fill="#fffdf6" stroke="#e4ddcd" stroke-width=".35"/>'; } head = '<svg class="gy-bloom" viewBox="0 0 24 24" style="width:42px;height:42px;margin:-21px 0 0 -21px">' + p + '<circle cx="12" cy="12" r="1.8" fill="#c9b98a"/></svg>'; }
+            else { const sz = it.kind === 'bud' || it.kind === 'sprout' ? 30 : 38 + r() * 12; head = '<svg class="gy-bloom" viewBox="-50 -50 100 100" style="width:' + sz.toFixed(0) + 'px;height:' + sz.toFixed(0) + 'px;margin:' + (-sz / 2).toFixed(0) + 'px 0 0 ' + (-sz / 2).toFixed(0) + 'px;color:' + (it.color || '#f4a7bf') + ';--center:' + (it.center || '#f2c230') + '"><use href="#' + (it.sym || 'fl-bloom') + '" x="-50" y="-50" width="100" height="100"/></svg>'; }
+            const leafY = stemH * (0.45 + r() * 0.2), side = r() < 0.5 ? -1 : 1;
+            return '<svg class="gy-stem" viewBox="-20 0 40 ' + stemH.toFixed(0) + '" style="height:' + stemH.toFixed(0) + 'px"><path d="M0 ' + stemH.toFixed(0) + ' Q' + bend.toFixed(1) + ' ' + (stemH * 0.5).toFixed(0) + ' ' + lean.toFixed(1) + ' 0" stroke="#7fa65c" stroke-width="2" fill="none" stroke-linecap="round"/>'
+                + '<path d="M' + (bend * 0.5).toFixed(1) + ' ' + leafY.toFixed(0) + ' c' + (side * 6) + ' -6 ' + (side * 13) + ' -6 ' + (side * 16) + ' -2 c' + (-side * 5) + ' 5 ' + (-side * 11) + ' 6 ' + (-side * 16) + ' 2Z" fill="#9fbe88"/></svg>'
+                + '<span class="gy-headwrap" style="left:' + lean.toFixed(1) + 'px">' + head + '</span>';
+        }
+        /* new finds settle into a loose bunch around the middle; each keeps its spot once placed or moved */
+        function spotFor(it, i, n) {
+            const r = R(strHash(it.id) || 1);
+            const spread = Math.min(40, 12 + n * 3), a = (i % 2 ? 1 : -1) * Math.ceil(i / 2) / Math.max(1, n / 2);
+            return { x: Math.max(6, Math.min(94, 50 + a * spread + (r() - 0.5) * 6)), y: 84 + (r() - 0.5) * 16 };
+        }
+        const els = new Map();
+        function render(fresh) {
+            const items = GardenLog.items(), pos = GardenLog.pos();
+            empty.hidden = items.length > 0;
+            scatterB.hidden = !items.length;
+            ribbons.hidden = items.length < 5;
+            bed.classList.toggle('has-bow', items.length >= 5 && !!GardenLog.ribbon());
+            els.forEach((el, id) => { if (!items.some(x => x.id === id)) { el.remove(); els.delete(id); } });
+            items.forEach((it, i) => {
+                if (els.has(it.id)) return;
+                const r = R(strHash(it.id) || 7), p = pos[it.id] || spotFor(it, i, items.length);
+                const el = document.createElement('div'); el.className = 'gy-flower' + (fresh === it.id && !reduce ? ' is-new' : ''); el.tabIndex = 0;
+                el.setAttribute('role', 'img'); el.setAttribute('aria-label', ({ cluster: 'a sprig from a branch you opened', dandelion: 'a dandelion you blew', sprout: 'a sprout from a seed that took root', bud: 'a bud you found' })[it.kind] || 'a flower you touched');
+                el.innerHTML = art(it, r); el.dataset.id = it.id;
+                el.style.left = p.x.toFixed(2) + '%'; el.style.top = p.y.toFixed(2) + '%'; el.style.setProperty('--tilt', ((r() - 0.5) * 14).toFixed(1) + 'deg'); el.style.setProperty('--sd', (4 + r() * 3).toFixed(1) + 's');
+                el.style.zIndex = String(10 + Math.round(p.y));
+                box.appendChild(el); els.set(it.id, el); drag(el);
+            });
+        }
+        /* arranging: pick a flower up and set it down anywhere in the bed; it sways as it is carried */
+        function drag(el) {
+            let st = null;
+            el.addEventListener('pointerdown', e => {
+                if (e.button) return; e.preventDefault();
+                const b = bed.getBoundingClientRect(), r = el.getBoundingClientRect();
+                st = { id: e.pointerId, ox: e.clientX - (r.left + r.width / 2), oy: e.clientY - r.bottom, lx: e.clientX, b };
+                try { el.setPointerCapture(e.pointerId); } catch (_) { }
+                el.classList.add('held'); el.style.zIndex = '200';
+            });
+            el.addEventListener('pointermove', e => {
+                if (!st || e.pointerId !== st.id) return;
+                const b = st.b, x = (e.clientX - st.ox - b.left) / b.width * 100, y = (e.clientY - st.oy - b.top) / b.height * 100;
+                el.style.left = Math.max(4, Math.min(96, x)).toFixed(2) + '%'; el.style.top = Math.max(38, Math.min(97, y)).toFixed(2) + '%';
+                el.style.setProperty('--carry', Math.max(-16, Math.min(16, (e.clientX - st.lx) * 1.4)).toFixed(1) + 'deg'); st.lx = e.clientX;
+            });
+            const drop = e => {
+                if (!st || e.pointerId !== st.id) return; st = null;
+                el.classList.remove('held'); el.style.removeProperty('--carry');
+                const y = parseFloat(el.style.top); el.style.zIndex = String(10 + Math.round(y));
+                GardenLog.setPos(el.dataset.id, { x: parseFloat(el.style.left), y });
+            };
+            el.addEventListener('pointerup', drop); el.addEventListener('pointercancel', drop);
+            el.addEventListener('keydown', e => {
+                const k = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -3], ArrowDown: [0, 3] }[e.key]; if (!k) return;
+                e.preventDefault();
+                const x = Math.max(4, Math.min(96, parseFloat(el.style.left) + k[0])), y = Math.max(38, Math.min(97, parseFloat(el.style.top) + k[1]));
+                el.style.left = x + '%'; el.style.top = y + '%'; el.style.zIndex = String(10 + Math.round(y)); GardenLog.setPos(el.dataset.id, { x, y });
+            });
+        }
+        function tie(name) {
+            const r = RIB.find(x => x[0] === name);
+            $$('[data-ribbon]', ribbons).forEach(b => b.setAttribute('aria-checked', String(!!r && b.dataset.ribbon === r[0])));
+            if (r) { bed.style.setProperty('--ribbon', r[1]); bed.style.setProperty('--ribbon-edge', r[2]); }
+            bed.classList.toggle('has-bow', !!r && GardenLog.items().length >= 5);
+        }
+        ribbons.addEventListener('click', e => { const b = e.target.closest('[data-ribbon]'); if (!b) return; GardenLog.setRibbon(b.dataset.ribbon); tie(b.dataset.ribbon); if (!reduce) bow.animate([{ scale: 0.6 }, { scale: 1.12 }, { scale: 1 }], { duration: 600, easing: 'ease-out' }); });
+        /* scatter: the flowers loosen and drift out, shed a few petals, and the bed is bare again */
+        scatterB.addEventListener('click', () => {
+            const list = [...els.values()];
+            if (reduce || !list.length) { GardenLog.clear(); return; }
+            scatterB.disabled = true;
+            const b = bed.getBoundingClientRect(), cx = b.left + b.width / 2;
+            list.forEach((el, k) => {
+                const r = el.getBoundingClientRect(), dir = r.left + r.width / 2 < cx ? -1 : 1;
+                if (k % 2 === 0) petals($('.gy-bloom', el) || el, 1 + (k % 3));
+                const tilt = el.style.getPropertyValue('--tilt') || '0deg';
+                el.animate([{ transform: 'translate(-50%, -100%) rotate(' + tilt + ')', opacity: 1 },
+                    { transform: 'translate(calc(-50% + ' + (dir * rnd(10, 30)).toFixed(0) + 'px), calc(-100% - ' + rnd(6, 20).toFixed(0) + 'px)) rotate(' + (dir * rnd(10, 30)).toFixed(0) + 'deg)', opacity: 1, offset: 0.35 },
+                    { transform: 'translate(calc(-50% + ' + (dir * rnd(60, 140)).toFixed(0) + 'px), calc(-100% + ' + rnd(10, 50).toFixed(0) + 'px)) rotate(' + (dir * rnd(60, 160)).toFixed(0) + 'deg)', opacity: 0 }],
+                    { duration: rnd(1300, 1900), delay: k * 40, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+            });
+            setTimeout(() => { GardenLog.clear(); scatterB.disabled = false; }, 1900 + list.length * 40);
+        });
+        GardenLog.on(entry => { render(entry && entry.id); if (!entry) tie(''); });
+        render(); tie(GardenLog.ribbon());
+        if (Dandelions) setTimeout(() => Dandelions.place(), 2400);
+    })();
+
+    /* touch screens have no hover: a tap on a heading gives the same colour change for a moment */
+    document.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse') return;
+        const h = e.target.closest && e.target.closest('.rb-host'); if (!h) return;
+        h.classList.add('is-tapped'); clearTimeout(h.__tap); h.__tap = setTimeout(() => h.classList.remove('is-tapped'), 1600);
+    }, { passive: true });
 })();
