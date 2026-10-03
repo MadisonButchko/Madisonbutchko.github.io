@@ -67,5 +67,89 @@
         });
     })();
 
+    /* ================================================================
+       3. Living plants: breeze from fast cursor passes, a tactile click
+          before content opens, a few grains of pollen, quiet off-screen,
+          and a very rare visitor. One shared pointer listener for all.
+       ================================================================ */
+    (function alive() {
+        const arts = $$('.g-art, .h-art');
+        if (!arts.length) return;
+        const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+        /* plants that are off-screen stop animating (and cost nothing) */
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver(es => es.forEach(en => en.target.style.setProperty('--ps', en.isIntersecting ? 'running' : 'paused')), { rootMargin: '120px' });
+            arts.forEach(a => io.observe(a));
+        }
+
+        /* pollen: 3-6 tiny pastel dots that drift up and fade; never repeated quickly from the same flower */
+        const PAL = ['#f6d36b', '#f9c6d6', '#fff1cc', '#cbb9ea', '#f4a7bf'];
+        function pollen(art) {
+            if (reduce || !art || performance.now() - (art._pol || 0) < 1400) return;
+            art._pol = performance.now();
+            const r = art.getBoundingClientRect(); if (!r.width) return;
+            const n = 3 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < n; i++) {
+                const d = document.createElement('i'), sz = rnd(2, 3.4), x = r.left + r.width * rnd(0.3, 0.7), y = r.top + r.height * rnd(0.18, 0.42);
+                d.setAttribute('aria-hidden', 'true');
+                d.style.cssText = 'position:fixed;left:' + f1(x) + 'px;top:' + f1(y) + 'px;width:' + f1(sz) + 'px;height:' + f1(sz) + 'px;border-radius:50%;background:' + PAL[i % PAL.length] + ';pointer-events:none;z-index:60;opacity:0';
+                document.body.appendChild(d);
+                const dx = rnd(-18, 18), dy = rnd(-26, -8), dur = rnd(520, 780);
+                d.animate([{ transform: 'translate(0,0)', opacity: 0.9 }, { transform: 'translate(' + f1(dx) + 'px,' + f1(dy) + 'px)', opacity: 0.8, offset: 0.55 }, { transform: 'translate(' + f1(dx * 1.25) + 'px,' + f1(dy + 8) + 'px)', opacity: 0 }],
+                    { duration: dur, delay: i * 40, easing: 'cubic-bezier(0.22,1,0.36,1)' }).onfinish = () => d.remove();
+            }
+        }
+
+        /* click / tap: the flower reacts first (about 230ms), then the content opens */
+        let go = null;
+        document.addEventListener('click', e => {
+            const b = e.target.closest && e.target.closest('.g-cat, .h-spec'); if (!b) return;
+            if (b._go) return;                      /* this is the replayed click: let it through */
+            const art = $('.g-art, .h-art', b);
+            b.classList.add('is-bloom'); clearTimeout(b._bt); b._bt = setTimeout(() => b.classList.remove('is-bloom'), 700);
+            pollen(art);
+            if (reduce || !e.isTrusted) return;     /* reduced motion: no delay at all; scripted clicks pass straight through */
+            e.stopImmediatePropagation(); e.preventDefault();
+            if (b._pend) return; b._pend = true;
+            setTimeout(() => { b._pend = false; b._go = true; try { b.click(); } finally { b._go = false; } }, 230);
+        }, true);
+
+        /* fast cursor passes make a few plants bend away in a tiny breeze; slow ones are left to the "sun" lean */
+        if (fine && !reduce) {
+            const seeded = (k => () => (k = (k * 16807) % 2147483647) / 2147483647)(23);
+            const windy = new Set(arts.filter(() => seeded() < 0.6));
+            let lx = 0, ly = 0, lt = 0, q = 0, ev = null;
+            addEventListener('pointermove', e => {
+                ev = e; if (q) return;
+                q = requestAnimationFrame(() => {
+                    q = 0; const now = performance.now(), dt = Math.max(8, now - lt);
+                    const vx = (ev.clientX - lx) / dt * 1000, vy = (ev.clientY - ly) / dt * 1000, sp = Math.hypot(vx, vy);
+                    lx = ev.clientX; ly = ev.clientY; lt = now;
+                    if (sp < 1300) return;
+                    windy.forEach(a => {
+                        if (now - (a._wt || 0) < 1500) return;
+                        const r = a.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+                        const cx = r.left + r.width / 2, cy = r.top + r.height * 0.45;
+                        if (Math.hypot(ev.clientX - cx, ev.clientY - cy) > 170) return;
+                        a._wt = now;
+                        a.style.setProperty('--wd', f1(clamp((cx - ev.clientX) / 120, -1, 1) * clamp(sp / 3200, 0.45, 1)));
+                        setTimeout(() => a.style.setProperty('--wd', '0'), 200);   /* the property's own transition eases it home */
+                    });
+                });
+            }, { passive: true });
+        }
+
+        /* very rarely, a butterfly (or bee) drops by one of the flowers */
+        if (!reduce) (function rare() {
+            setTimeout(function () {
+                const cats = $$('.g-cat .g-art').filter(a => { const r = a.getBoundingClientRect(); return r.width && r.top > 80 && r.bottom < innerHeight - 40; });
+                if (!document.hidden && cats.length && window.__visitFlower && Math.random() < 0.7) window.__visitFlower(cats[Math.floor(Math.random() * cats.length)], 'butterfly');
+                rare();
+            }, rnd(90000, 170000));
+        })();
+    })();
+
     window.__eco = { pour };
 })();

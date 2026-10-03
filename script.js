@@ -1,3 +1,6 @@
+/* Every load starts fresh: the bouquet, the garden and the world's small memory are cleared before anything reads them. */
+try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* storage may be blocked: nothing to clear */ }
+
 /* =====================================================================
    Life: one director for every wandering creature. Only one moves at a
    time, so the page keeps returning to calm. A creature asks with
@@ -2611,6 +2614,7 @@ const WorldState = (() => {
     const BEE = '<svg viewBox="-16 -14 32 28" aria-hidden="true"><g class="bee-wings"><ellipse cx="-4" cy="-8" rx="5" ry="7" fill="#eaf6ff" stroke="#a9cbe0" stroke-width=".8" transform="rotate(-25 -4 -8)"/><ellipse cx="4" cy="-8" rx="5" ry="7" fill="#eaf6ff" stroke="#a9cbe0" stroke-width=".8" transform="rotate(25 4 -8)"/></g><ellipse rx="10" ry="7.2" fill="#f6cf4a" stroke="#c9961a" stroke-width=".8"/><path d="M-4 -6.6 V6.6 M2 -7 V7" stroke="#4a3a2a" stroke-width="2.6"/><circle cx="10" cy="-1" r="4.4" fill="#4a3a2a"/><circle cx="11.6" cy="-2.2" r="1" fill="#fff"/><path d="M-10 0 L-13.5 0" stroke="#4a3a2a" stroke-width="1.4" stroke-linecap="round"/></svg>';
     const LADYBUG = '<svg viewBox="-10 -9 20 18" aria-hidden="true"><circle cx="7" cy="0" r="3.6" fill="#3a2b33"/><ellipse rx="7.4" ry="6.6" fill="#e2483d"/><path d="M-7.4 0 H7.4" stroke="#3a2b33" stroke-width=".9"/><circle cx="-3" cy="-3" r="1.3" fill="#3a2b33"/><circle cx="2" cy="-3.4" r="1.1" fill="#3a2b33"/><circle cx="-2.4" cy="3.2" r="1.2" fill="#3a2b33"/><circle cx="2.6" cy="3" r="1.3" fill="#3a2b33"/><circle cx="-5" cy="-1.8" r=".9" fill="#fff" opacity=".55"/></svg>';
     let lastVisit = 0;
+    window.__visitFlower = (t, k) => visitFlower(t, k);   /* ecosystem.js sends the rare ambient visitor */
     /* a butterfly (or bee) flies to `target`, settles on it for a moment, then leaves */
     function visitFlower(target, kind) {
         if (reduce || document.hidden || !target || performance.now() - lastVisit < 9000) return;
@@ -3144,31 +3148,6 @@ const WorldState = (() => {
         b.addEventListener('pointerleave', () => clearTimeout(t));
     });
 
-    /* a fawn wanders past the garden once per visit, nibbles, and leaves */
-    (function () {
-        const row = xpGarden && $('.g-row', xpGarden); if (!row || reduce || !window.__deerSVG) return;
-        const seen = mem('mb-fawn-v2', { n: 0, at: 0 }), log = seen.get();
-        if (log.n >= 2) return;
-        let timer = 0, done = false;
-        const lane = document.createElement('div'); lane.className = 'g-lane'; lane.setAttribute('aria-hidden', 'true'); xpGarden.appendChild(lane);
-        function walk() {
-            if (done || document.hidden || Date.now() - log.at < 240000 || !Life.claim('fawn', 30000)) { timer = setTimeout(walk, 6000); return; }
-            done = true; log.n++; log.at = Date.now(); seen.set(log);
-            const deer = document.createElement('div'); deer.className = 'g-fawn left-facing'; deer.innerHTML = window.__deerSVG; lane.appendChild(deer);
-            const cats = $$('.g-cat', row), last = cats[cats.length - 1], lr = lane.getBoundingClientRect(), tr = $('svg', last).getBoundingClientRect();
-            const W = lr.width, stopX = Math.min(W - 70, tr.right - lr.left + 8);
-            /* a fawn's pace (about 55px a second), whatever the screen width; it pauses to look around before nibbling */
-            const inMs = Math.max(2400, (W + 20 - stopX) / 55 * 1000), outMs = Math.max(2000, (W + 40 - stopX) / 70 * 1000);
-            deer.style.setProperty('--x', W + 20 + 'px'); deer.style.transitionDuration = (inMs / 1000).toFixed(2) + 's';
-            requestAnimationFrame(() => requestAnimationFrame(() => { deer.classList.add('walking'); deer.style.setProperty('--x', stopX + 'px'); }));
-            setTimeout(() => { deer.classList.remove('walking'); }, inMs + 50);
-            setTimeout(() => { deer.classList.add('nibbling'); last.classList.add('is-nibbled'); }, inMs + 900);
-            setTimeout(() => { deer.classList.remove('nibbling'); last.classList.remove('is-nibbled'); deer.classList.remove('left-facing'); deer.style.transitionDuration = (outMs / 1000).toFixed(2) + 's'; deer.classList.add('walking'); deer.style.setProperty('--x', W + 40 + 'px'); }, inMs + 3900);
-            setTimeout(() => { deer.remove(); Life.release('fawn'); done = false; }, inMs + 4000 + outMs);
-        }
-        new IntersectionObserver(es => es.forEach(e => { clearTimeout(timer); if (e.isIntersecting && !done && log.n < 2) timer = setTimeout(walk, 7000); }), { threshold: 0.6 }).observe(row);
-    })();
-
     /* ------------------------------------------------------------------
        The visitor's bouquet: a small, distinct posy in the corner. New
        finds travel to it; tap it to fan out what you have found.
@@ -3179,7 +3158,7 @@ const WorldState = (() => {
         + '<ellipse class="bw-knot" cx="30" cy="19.6" rx="4.1" ry="4.8"/>';
     const BOW_SVG = '<svg class="bq-bow" viewBox="0 0 60 46" aria-hidden="true">' + BOW_PATHS + '</svg>';
     const bouquet = (function () {
-        const wrap = document.createElement('div'); wrap.className = 'mb-bouquet'; wrap.hidden = false;
+        const wrap = document.createElement('div'); wrap.className = 'mb-bouquet'; wrap.hidden = true;
         wrap.innerHTML =
             '<button type="button" class="bq-btn" aria-expanded="false" aria-controls="bqFan">'
             + '<span class="bq-disc" aria-hidden="true"></span>'
@@ -3219,16 +3198,27 @@ const WorldState = (() => {
            vase neck and curve gently apart; flowers get a little smaller as the bouquet fills so it never crowds. */
         const SLOTS = [[0, 18, 1], [-15, 27, .95], [15, 26, .95], [-27, 39, .85], [27, 38, .85], [0, 38, .9], [-14, 46, .8], [14, 45, .8], [-30, 26, .72], [30, 25, .72], [-7, 28, .74], [7, 52, .7]];
         const NECK = 40, BASE = 66, GREEN = '#8db36a';
+        /* Writing: the pressed specimen leans and does not sit on a bouquet stem, so the bouquet gets its own small upright ear of wheat */
+        function wheatEar(x, y, s, dx) {
+            const u = s / 34; let h = '';
+            for (let k = 0; k < 6; k++) {
+                const gy = -4.4 * k - 1, w = 2.7 - k * 0.12, fill = k % 2 ? '#c99a4a' : '#d8b46a';
+                h += '<ellipse cx="' + f1(-w) + '" cy="' + f1(gy) + '" rx="2" ry="3.3" transform="rotate(-26 ' + f1(-w) + ' ' + f1(gy) + ')" fill="' + fill + '" stroke="#9a7a3a" stroke-width=".4"/>'
+                    + '<ellipse cx="' + f1(w) + '" cy="' + f1(gy) + '" rx="2" ry="3.3" transform="rotate(26 ' + f1(w) + ' ' + f1(gy) + ')" fill="' + (k % 2 ? '#d8b46a' : '#c99a4a') + '" stroke="#9a7a3a" stroke-width=".4"/>';
+            }
+            h += '<ellipse cx="0" cy="-27" rx="1.9" ry="3.2" fill="#d8b46a" stroke="#9a7a3a" stroke-width=".4"/><path d="M0 -29 L-2.4 -37 M0 -29 L0 -38 M0 -29 L2.4 -37" stroke="#b99a4e" stroke-width=".6" stroke-linecap="round" fill="none"/>';
+            return '<g transform="translate(' + f1(x) + ' ' + f1(y) + ') rotate(' + f1(dx * 0.3) + ') scale(' + f1(u) + ')">' + h + '</g>';
+        }
         function draw(newId) {
             stems.innerHTML = ''; back.innerHTML = '';
             const n = found.length, shrink = n <= 5 ? 1 : n <= 8 ? 0.9 : 0.8;
             const slotOf = i => { const b = SLOTS[i % SLOTS.length], r = Math.floor(i / SLOTS.length); return r ? [b[0] + (r % 2 ? 4 : -4), b[1] + 3, b[2]] : b; };
             found.map((id, i) => ({ id, i })).filter(o => CATS[o.id]).sort((a, b) => slotOf(a.i)[1] - slotOf(b.i)[1]).forEach(({ id, i }) => {
                 const c = CATS[id], [dx, ty, sc] = slotOf(i), s = (c.kind === 'Skills' ? 28 : 32) * 1.2 * sc * shrink;
-                const x0 = NECK + dx * 0.1, tx = NECK + dx, ey = ty + s * 0.25, bow = (i % 2 ? 1 : -1) * 3;
+                const wheat = c.sym === 'pf-writing', x0 = NECK + dx * 0.1, tx = NECK + dx, ey = ty + s * (wheat ? 0.42 : 0.25), bow = (i % 2 ? 1 : -1) * 3;
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'bq-stem' + (id === newId && !reduce ? ' new' : ''));
-                g.innerHTML = '<path class="bq-s" pathLength="1" d="M' + f1(x0) + ' ' + BASE + ' C' + f1(x0 + dx * 0.05) + ' ' + f1(BASE - (BASE - ey) * 0.5) + ' ' + f1(tx - dx * 0.1 + bow) + ' ' + f1(ey + (BASE - ey) * 0.28) + ' ' + f1(tx) + ' ' + f1(ey) + '" fill="none" stroke="' + GREEN + '" stroke-width="1.4" stroke-linecap="round"/>'
-                    + '<g class="bq-f"><use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + f1(s) + '" height="' + f1(s) + '"/></g>';
+                g.innerHTML = '<path class="bq-s" pathLength="1" d="M' + f1(x0) + ' ' + BASE + ' C' + f1(x0 + dx * 0.05) + ' ' + f1(BASE - (BASE - ey) * 0.5) + ' ' + f1(tx - dx * 0.1 + bow) + ' ' + f1(ey + (BASE - ey) * 0.28) + ' ' + f1(tx) + ' ' + f1(ey) + '" fill="none" stroke="' + (wheat ? '#c4a257' : GREEN) + '" stroke-width="1.4" stroke-linecap="round"/>'
+                    + '<g class="bq-f">' + (wheat ? wheatEar(tx, ey, s, dx) : '<use href="#' + c.sym + '" x="' + f1(tx - s / 2) + '" y="' + f1(ty - s / 2) + '" width="' + f1(s) + '" height="' + f1(s) + '"/>') + '</g>';
                 stems.appendChild(g);
             });
             /* baby's breath: a few tiny sprigs that fill in as you explore pieces (never more than six) */
@@ -3247,7 +3237,7 @@ const WorldState = (() => {
                 li.innerHTML = '<button type="button" data-open="' + id + '"><svg viewBox="' + c.box + '" aria-hidden="true"><use href="#' + c.sym + '"/></svg><span class="bq-name">' + esc(c.name) + '</span><span class="bq-kind">' + c.kind + '</span></button>';
                 list.appendChild(li);
             });
-            wrap.hidden = false;
+            wrap.hidden = !n && !foundItems.length;   /* nothing in the corner until a flower has been opened */
             wrap.classList.toggle('is-full', n >= 6);
         }
         let labelT = 0;
@@ -3287,7 +3277,7 @@ const WorldState = (() => {
         function close(restore) { if (fan.hidden) return; fan.hidden = true; btn.setAttribute('aria-expanded', 'false'); wrap.classList.remove('is-open'); if (restore !== false) focusQuiet(btn); }
         btn.addEventListener('click', e => { e.stopPropagation(); isOpen() ? close() : open(); });
         list.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (!b) return; close(false); openById(b.dataset.open); });
-        $('.bq-reset', wrap).addEventListener('click', () => { found = []; foundItems = []; foundStore.clear(); itemStore.clear(); clearMarks(); close(); draw(); });
+        $('.bq-reset', wrap).addEventListener('click', () => { found = []; foundItems = []; foundStore.clear(); itemStore.clear(); clearMarks(); close(); draw(); wrap.hidden = true; });
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && picking()) { e.stopPropagation(); pick(false, true); } else if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); close(); } });
         document.addEventListener('click', e => { if (wrap.contains(e.target)) return; if (isOpen()) close(false); pick(false); });
         return { collect, sprinkle, draw, isOpen: () => isOpen() || picking() };

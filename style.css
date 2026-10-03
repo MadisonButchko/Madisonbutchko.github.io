@@ -1753,18 +1753,6 @@ main > section, footer { overflow: visible; }
 .g-cat.is-visited-by .g-art, .g-art.is-visited-by { animation: visitedBob 2.8s ease-in-out; }
 @keyframes visitedBob { 30% { transform: rotate(-2deg); } 60% { transform: rotate(1.5deg); } }
 
-/* a fawn's walking lane along the bottom of the flower row */
-.g-lane { position: absolute; left: 0; right: 0; top: 0; height: 240px; overflow: hidden; pointer-events: none; z-index: 1; }
-.g-fawn { position: absolute; left: 0; bottom: 42px; width: 66px; height: 59px; transform: translateX(var(--x, 110%)); transition: transform 3.4s linear; }
-.g-fawn svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.16)); }
-.g-fawn.left-facing svg { transform: scaleX(-1); }
-.g-fawn .leg { transform-box: view-box; }
-.g-fawn.walking .leg.la { animation: fawnLeg 0.42s ease-in-out infinite alternate; }
-.g-fawn.walking .leg.lb { animation: fawnLeg 0.42s ease-in-out infinite alternate-reverse; }
-@keyframes fawnLeg { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
-.g-fawn .deer-head { transform-box: view-box; transform-origin: 62px 46px; transition: transform 0.5s ease; }
-.g-fawn.nibbling .deer-head { transform: rotate(32deg); animation: fawnNibble 0.5s ease-in-out 0.5s infinite alternate; }
-@keyframes fawnNibble { to { transform: rotate(38deg) translateY(1px); } }
 
 /* ---------------------------------------------------------------------
    Skills: a pressed collection laid out on the page, no boxes
@@ -1948,8 +1936,6 @@ main > section, footer { overflow: visible; }
     .gs-bud { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
     .gs-bud.is-minor { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
     .gs-skill .gs-bud { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
-    .g-lane { height: 200px; }
-    .g-fawn { width: 52px; height: 47px; bottom: 40px; }
 }
 
 /* ---------------------------------------------------------------------
@@ -2331,8 +2317,6 @@ html body .rb-host:hover .rb-vis .rb-ch, html body .rb-host:focus-visible .rb-vi
 @media (prefers-reduced-motion: reduce) { .xl-item, .xl-detail:not([hidden]) { animation: none; } }
 
 /* --- the fawn: with a branch open it walks along the small row of flowers, never across the list --- */
-.garden.is-open .g-lane { height: 132px; }
-.g-fawn { transition-timing-function: cubic-bezier(0.3, 0, 0.7, 1); }
 
 /* --- the chrysalis on the vine (the twig keeps the caterpillar; the chrysalis moves to the vine when vines show) --- */
 .w-story.on-vine .ws-chrysalis { display: none; }
@@ -2614,3 +2598,95 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
 @keyframes bqBloom { from { transform: scale(0) rotate(-40deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .bq-list:empty::before { content: 'open a flower in Experience or Skills to add it here'; display: block; font-family: var(--font-hand); font-size: 1.05rem; color: #9a5a2a; padding: 0.2rem 0 0.4rem; }
 @media (prefers-reduced-motion: reduce) { .bq-stem.new .bq-s, .bq-stem.new .bq-f { animation: none !important; stroke-dashoffset: 0; } }
+
+/* ==========================================================================
+   v13: living Experience / Skills plants.
+   Each illustration is split into small parts (heads, leaves, stalks, leaflets) that move on their own clock.
+   Host variables (set on .g-art / .h-art): --hv hover bloom 0..1, --wd breeze from fast cursor passes -1..1,
+   --a overall intensity, --ps play state (paused while off-screen). Per-part: --t --d --s --k --ox --oy.
+   Only individual transform properties are animated: nothing here touches layout.
+   ========================================================================== */
+@property --hv { syntax: '<number>'; inherits: true; initial-value: 0; }
+@property --wd { syntax: '<number>'; inherits: true; initial-value: 0; }
+.g-art, .h-art { --a: 1; transition: max-width 0.5s var(--glide), transform 0.9s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.4s ease, --hv 0.9s cubic-bezier(0.22, 1, 0.36, 1), --wd 1.8s cubic-bezier(0.22, 1, 0.36, 1); }
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art, .g-cat.is-tapped .g-art, .h-spec:hover .h-art, .h-spec:focus-visible .h-art, .h-spec.is-tapped .h-art { --hv: 1; }
+/* a gentler lift than before: ~4% larger, a few pixels up */
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art, .g-cat.is-tapped .g-art { transform: translateY(-4px) rotate(calc(var(--sun, 0deg) - 2deg)) scale(1.04); }
+.h-spec:hover .h-art, .h-spec:focus-visible .h-art, .h-spec.is-tapped .h-art { transform: translateY(-4px) rotate(calc(var(--sun, 0deg) - 2deg)) scale(1.035); }
+/* the click reaction: a quick bloom and lift before the content opens */
+.g-cat.is-bloom .g-art, .h-spec.is-bloom .h-art { --hv: 2; transform: translateY(-8px) rotate(calc(var(--sun, 0deg) - 1deg)) scale(1.06); transition: max-width 0.5s var(--glide), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease, --hv 0.28s ease-out, --wd 1.8s ease-out; }
+
+.pt { --k2: calc(var(--k, 1) * var(--a, 1)); transform-box: view-box; transform-origin: var(--ox, 50%) var(--oy, 50%); animation-duration: var(--t, 6s); animation-delay: var(--d, 0s); animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-play-state: var(--ps, running); }
+/* small flowers bob and tip (Research, Exploration, bud heads) */
+.hd.bob { animation-name: hdBob; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes hdBob {
+    0%, 100% { translate: 0 calc(var(--hv) * -1.2px); rotate: calc(var(--s, 1) * var(--k2) * -1.8deg + var(--wd) * var(--k2) * 4deg); }
+    50% { translate: 0 calc(var(--k2) * -1.4px + var(--hv) * -1.2px); rotate: calc(var(--s, 1) * var(--k2) * 1.9deg + var(--wd) * var(--k2) * 4deg); }
+}
+/* leaves swing from their base, each its own way */
+.lf { animation-name: lfSway; animation-direction: alternate; }
+@keyframes lfSway {
+    from { rotate: calc(var(--s, 1) * var(--k2) * -2.6deg + var(--hv) * var(--s, 1) * -4deg + var(--wd) * var(--k2) * 3deg); }
+    to { rotate: calc(var(--s, 1) * var(--k2) * 2.2deg + var(--hv) * var(--s, 1) * -4deg + var(--wd) * var(--k2) * 3deg); }
+}
+/* Teaching: the three pink blooms open outward one after another */
+.hd.open { animation-name: bloomOpen; }
+@keyframes bloomOpen {
+    0%, 55%, 100% { scale: calc(1 + var(--hv) * 0.05); rotate: calc(var(--wd) * var(--a, 1) * 3deg); }
+    28% { scale: calc(1 + 0.045 * var(--a, 1) + var(--hv) * 0.05); rotate: calc(var(--s, 1) * var(--a, 1) * 2.4deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* Writing: a ripple travels through the lavender stalks */
+.stk { animation-name: stalkWave; scale: calc(1 + var(--hv) * 0.025); }
+@keyframes stalkWave {
+    0%, 100% { rotate: calc(var(--a, 1) * -1.5deg + var(--wd) * var(--a, 1) * 3deg); }
+    50% { rotate: calc(var(--a, 1) * 1.7deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* Programming: leaflets ripple up the fern */
+.rip { animation-name: leafRipple; animation-direction: normal; }
+@keyframes leafRipple {
+    0%, 100% { rotate: calc(var(--a, 1) * -2.8deg + var(--wd) * var(--a, 1) * 2deg); scale: calc(1 + var(--hv) * 0.05); }
+    50% { rotate: calc(var(--a, 1) * 3.2deg + var(--wd) * var(--a, 1) * 2deg); scale: calc(1 + 0.04 * var(--a, 1) + var(--hv) * 0.05); }
+}
+/* Machine Learning: little flowers bloom in turn, from the centre outward */
+.hd.bl { animation-name: bloomPulse; }
+@keyframes bloomPulse {
+    0%, 70%, 100% { scale: calc(1 + var(--hv) * 0.05); }
+    36% { scale: calc(1 + 0.13 * var(--a, 1) + var(--hv) * 0.05); }
+}
+/* Languages: the purple flowers lean in alternating directions */
+.hd.lean { animation-name: leanSway; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes leanSway {
+    0%, 100% { rotate: calc(var(--s, 1) * var(--a, 1) * -3.4deg + var(--wd) * var(--a, 1) * 4deg); }
+    50% { rotate: calc(var(--s, 1) * var(--a, 1) * 3.2deg + var(--wd) * var(--a, 1) * 4deg); }
+}
+/* CAD: the geometric flower never spins; it turns a few degrees on hover and settles back */
+.geo { animation: none; rotate: calc(var(--hv) * 4deg); }
+/* Artwork: petals open a touch, the bud drifts */
+.hd.pet { animation-name: petalBreathe; }
+@keyframes petalBreathe {
+    0%, 100% { scale: calc(1 + var(--hv) * 0.07); rotate: calc(var(--wd) * var(--a, 1) * 2deg); }
+    50% { scale: calc(1 + 0.03 * var(--a, 1) + var(--hv) * 0.07); rotate: calc(var(--a, 1) * 2deg + var(--wd) * var(--a, 1) * 2deg); }
+}
+/* Writing (wheat): grains ripple along the ear */
+.gr { animation-name: grainRipple; }
+@keyframes grainRipple {
+    0%, 100% { rotate: calc(var(--a, 1) * -2.2deg + var(--wd) * var(--a, 1) * 2deg); }
+    50% { rotate: calc(var(--a, 1) * 2.6deg + var(--wd) * var(--a, 1) * 2deg); }
+}
+/* Hobbies: the yellow cluster bounces and sways on its own */
+.hd.bounce { animation-name: bounceSway; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes bounceSway {
+    0%, 100% { translate: 0 0; rotate: calc(var(--s, 1) * var(--a, 1) * -2deg + var(--wd) * var(--a, 1) * 3deg); }
+    50% { translate: 0 calc(var(--a, 1) * -1.8px); rotate: calc(var(--s, 1) * var(--a, 1) * 2deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* smaller screens move a little less; the bouquet copies stay still */
+@media (max-width: 700px) { .g-art, .h-art { --a: 0.65; } }
+.bq-art, .bq-traveler, .gb-art { --a: 0; --ps: paused; }
+@media (prefers-reduced-motion: reduce) {
+    .pt { animation: none !important; }
+    .g-art, .h-art { --hv: 0 !important; --wd: 0 !important; }
+    .g-cat.is-bloom .g-art, .h-spec.is-bloom .h-art { transform: scale(1.03); }
+}
+
+.mb-bouquet:not([hidden]) { animation: bqAppear 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes bqAppear { from { opacity: 0; transform: translateY(12px) scale(0.92); } }
