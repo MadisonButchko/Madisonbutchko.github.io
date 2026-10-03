@@ -1642,7 +1642,8 @@ html body .sky-shift i { animation-duration: 60s !important; }
 
 main > section:not(.hero) { padding-top: 3.25rem; padding-bottom: 3rem; }
 /* decorations near the edges can never push the page sideways (clip, unlike hidden, keeps sticky controls working) */
-main > section, footer { overflow-x: clip; }
+/* Decorations may cross section edges; photo and gallery crops stay local. */
+main > section, footer { overflow: visible; }
 .section-head { margin-bottom: 0.35rem !important; }
 .section-hint { margin-top: 0.7rem; margin-bottom: 1.1rem !important; font-size: 1.2rem; }
 
@@ -2559,3 +2560,6 @@ body.is-watering .about-bloom, body.is-watering .title-bloom, body.is-watering .
 @media (max-width: 700px) {
     .gs-skill .gs-bud .gs-lab { font-size: 1rem; }
 }
+
+/* Let the existing trunk finish beneath the tapered flower stalks. */
+.gs-exp .settled .gs-stem { stroke-dasharray: none; }

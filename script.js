@@ -237,11 +237,22 @@ const WorldState = (() => {
                 const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len; v.path = path; v.len = len; v.items = [];
                 let i = 0;
                 for (let d = 50; d < len - 20; d += 46){
-                    const pt = path.getPointAtLength(d), isFlower = i % 3 === 2;
+                    const pt = path.getPointAtLength(d), isFlower = i % 3 === 2 && pt.y > 78 + 8 / k && pt.y < H - 78 - 8 / k;
                     const g = document.createElementNS(NS, 'g'); g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
                     const inner = document.createElementNS(NS, 'g'); inner.setAttribute('class', 'vine-item' + (isFlower ? ' spin' : ''));
                     const u = document.createElementNS(NS, 'use'); const f = FLOWERS[(i + vi * 2) % FLOWERS.length];
-                    if (isFlower){ const s = rand(22, 32); u.setAttribute('href', '#' + f[0]); u.setAttribute('x', -s / 2); u.setAttribute('y', -s / 2); u.setAttribute('width', s); u.setAttribute('height', s); inner.style.color = f[1]; inner.style.setProperty('--center', f[2]); }
+                    if (isFlower){ const s = rand(22, 32);
+                        // Reserve the rotated diagonal at maximum hover + interaction scale.
+                        const clearance = s * 1.9 * 1.32 * Math.SQRT1_2 * 1.15 + 8 / k;
+                        const bx = v.side === 'left' ? Math.max(pt.x, clearance) : Math.min(pt.x, 90 - clearance);
+                        g.setAttribute('transform', `translate(${bx},${pt.y})`);
+                        if (bx !== pt.x) {
+                            const stem = document.createElementNS(NS, 'path');
+                            stem.setAttribute('d', `M${pt.x - bx} 0 Q${(pt.x - bx) / 2} 5 0 0`);
+                            stem.setAttribute('fill', 'none'); stem.setAttribute('stroke', '#8db36a'); stem.setAttribute('stroke-width', '1.4');
+                            stem.classList.add('vine-attachment'); g.appendChild(stem);
+                        }
+                        u.setAttribute('href', '#' + f[0]); u.setAttribute('x', -s / 2); u.setAttribute('y', -s / 2); u.setAttribute('width', s); u.setAttribute('height', s); inner.style.color = f[1]; inner.style.setProperty('--center', f[2]); }
                     else { const s = 15, dir = i % 2 ? 1 : -1; u.setAttribute('href', '#fl-leaf'); u.setAttribute('x', dir > 0 ? 0 : -s); u.setAttribute('y', -s); u.setAttribute('width', s); u.setAttribute('height', s); if (dir < 0) u.setAttribute('transform', `scale(-1,1) translate(${s},0)`); inner.style.color = i % 4 ? '#7fa65c' : '#a3c47f'; }
                     inner.dataset.d = d.toFixed(0); inner.appendChild(u); g.appendChild(inner); svg.appendChild(g); v.items.push({ el: inner, d }); i++;
                 }
@@ -267,7 +278,7 @@ const WorldState = (() => {
                 if (!v.len) return;
                 const shown = Math.max(p > 0 ? v.len * (0.04 + p * 0.96) : 0, (window.__vineReach || {})[v.side] || 0);
                 v.path.style.strokeDashoffset = v.len - shown;
-                v.items.forEach(it => it.el.classList.toggle('on', it.d <= shown));
+                v.items.forEach(it => { const on = it.d <= shown; it.el.classList.toggle('on', on); const stem = it.el.parentNode.querySelector('.vine-attachment'); if (stem) stem.style.opacity = on ? '1' : '0'; });
                 /* the vine's click strip covers only the part of the vine that is drawn (plus a little past its tip),
                    so it never sits invisibly over the page edges or over flowers there */
                 const hit = v.hit || (v.hit = document.querySelector('.vine-hit.' + v.side));
@@ -888,7 +899,7 @@ const WorldState = (() => {
                 for (let d = 73; d < len - 12; d += 46, j++){
                     const p = path.getPointAtLength(d), a = path.getPointAtLength(Math.max(0, d - 3)), b = path.getPointAtLength(Math.min(len, d + 3));
                     let tx = b.x - a.x, ty = b.y - a.y; const m = Math.hypot(tx, ty) || 1; tx /= m; ty /= m;
-                    const s = j % 2 ? 1 : -1; let nx = -ty * s, ny = tx * s - 0.45;
+                    const s = j % 2 ? 1 : -1; let nx = (side === 'left' ? 1 : -1) * Math.abs(ty), ny = tx * s - 0.45;
                     /* phones: the vine lives in the page gutter, so sprigs hang along it instead of reaching into the text */
                     if (narrow){ nx = (side === 'left' ? 0.35 : -0.35) * (j % 2 ? 1 : 0.4); ny = j % 3 ? 0.9 : -0.9; }
                     const nm = Math.hypot(nx, ny) || 1;
@@ -907,7 +918,14 @@ const WorldState = (() => {
         function renderSprig(v, s, spec, fresh){
             if (s.sp && s.sp.g) s.sp.g.remove();
             const R = rng(spec.seed), z = v.narrow ? 1.7 : 1.15;
-            const L = (17 + R() * 6) * z, ex = s.nx * L, ey = s.ny * L, bend = (R() - 0.5) * 10 * z;
+            const L = (17 + R() * 6) * z, bend = (R() - 0.5) * 10 * z;
+            // Clamp the bloom, then draw its stem to that same anchor.
+            const safeBloom = (x, y, size) => {
+                const margin = size * 1.25 + 8 / v.k, H = v.svg.viewBox.baseVal.height;
+                const bx = v.side === 'left' ? Math.max(x, margin - s.x) : Math.min(x, 90 - margin - s.x);
+                return [bx, Math.max(margin - s.y, Math.min(H - margin - s.y, y))];
+            };
+            const [ex, ey] = safeBloom(s.nx * L, s.ny * L, 25 * z);
             const cx = ex * 0.5 + s.ny * bend * 0.5, cy = ey * 0.5 - s.nx * bend * 0.5, ang = Math.atan2(ey, ex) * 180 / Math.PI;
             const f = BLOOMS[Math.floor(R() * BLOOMS.length)], f2 = BLOOMS[Math.floor(R() * BLOOMS.length)], f3 = BLOOMS[Math.floor(R() * BLOOMS.length)];
             const lv = n => `sp-lv${fresh > n ? ' still' : ''}`;
@@ -916,11 +934,13 @@ const WorldState = (() => {
             h += '</g>';
             const side = R() < 0.5 ? 1 : -1, px = -s.ny * side, py = s.nx * side; /* perpendicular to the sprig */
             if (spec.level >= 2){
-                const mx = ex * 0.55, my = ey * 0.55, tl = 11 * z, bx = mx + (px * 0.85 + s.nx * 0.5) * tl, by = my + (py * 0.85 + s.ny * 0.5) * tl;
+                const mx = ex * 0.55, my = ey * 0.55, tl = 11 * z;
+                const [bx, by] = safeBloom(mx + (px * 0.85 + s.nx * 0.5) * tl, my + (py * 0.85 + s.ny * 0.5) * tl, 12 * z);
                 h += `<g class="${lv(2)}"><path class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2 + s.nx * 3)} ${vf((my + by) / 2 + s.ny * 3)} ${vf(bx)} ${vf(by)}"/>${leafAt(mx, my, ang + 70 * side, 9 * z, '#7fa65c')}${bloomAt(bx, by, 12 * z, f2)}</g>`;
             }
             if (spec.level >= 3){
-                const mx = ex * 0.3, my = ey * 0.3, tl = 12 * z, bx = mx - (px * 0.9 - s.nx * 0.4) * tl, by = my - (py * 0.9 - s.ny * 0.4) * tl;
+                const mx = ex * 0.3, my = ey * 0.3, tl = 12 * z;
+                const [bx, by] = safeBloom(mx - (px * 0.9 - s.nx * 0.4) * tl, my - (py * 0.9 - s.ny * 0.4) * tl, 11 * z);
                 h += `<g class="${lv(3)}"><path class="sprout-stem" d="M${vf(mx)} ${vf(my)} Q ${vf((mx + bx) / 2)} ${vf((my + by) / 2 + 3)} ${vf(bx)} ${vf(by)}"/>${bloomAt(bx, by, 14 * z, ['fl-daisy', f3[1] === '#ffffff' ? '#fde1ea' : '#ffffff', '#f2c230'])}`
                     + `<path class="sprout-stem tendril" d="M${vf(ex)} ${vf(ey)} q ${vf(s.nx * 6 * z)} ${vf(s.ny * 6 * z)} ${vf((s.nx * 4 + px * 4) * z)} ${vf((s.ny * 4 + py * 4) * z)} q ${vf(-px * 3 * z)} ${vf(-py * 3 * z)} ${vf(-s.nx * 2 * z)} ${vf(-s.ny * 2 * z)}"/></g>`;
             }
@@ -1204,7 +1224,8 @@ const WorldState = (() => {
                     let inSec = 0;
                     SPOTS[id].forEach(([fx, fy]) => {
                         const key = id + fx + fy; let p = patches.find(q => q.key === key);
-                        const cx = sr.left + sr.width * fx, by = sr.top + sr.height * fy, box = { l: cx - size / 2, r: cx + size / 2, t: by - size, b: by };
+                        const room = size * 1.15 + 12;
+                        const cx = Math.max(room + 8, Math.min(W - room - 8, sr.left + sr.width * fx)), by = sr.top + sr.height * fy, box = { l: cx - room, r: cx + room, t: by - size * 1.5, b: by + size * 0.3 };
                         const m = 14, clear = used < maxAll && inSec < 2 && box.l >= 6 && box.r <= W - 6 && cx > xMin && cx < xMax && box.t > sr.top && box.b < sr.bottom
                             && !blocks.some(r => r.left < box.r + m && r.right > box.l - m && r.top < box.b + m && r.bottom > box.t - m)
                             && !placed.some(q => Math.abs(q.cx - cx) < size && Math.abs(q.by - by) < size);
@@ -1264,8 +1285,9 @@ const WorldState = (() => {
                     cand.forEach(cd => {
                         const key = id + ':' + cd.i, leafy = cd.o > 0.62, size = leafy ? 22 + cd.o * 14 : 28 + (1 - cd.o) * 22;
                         let item = made.get(key);
-                        const cx = sr.left + sr.width * cd.fx, cy = sr.top + sr.height * cd.fy, m = 14, h = size / 2;
-                        const box = { l: cx - h, r: cx + h, t: cy - h, b: cy + h };
+                        const radius = size * 1.32 * Math.SQRT1_2 + 12;
+                        const cx = Math.max(radius + 8, Math.min(W - radius - 8, sr.left + sr.width * cd.fx)), cy = sr.top + sr.height * cd.fy, m = 14, h = size / 2;
+                        const box = { l: cx - radius, r: cx + radius, t: cy - radius, b: cy + radius };
                         const ok = n < perSec && box.l >= 8 && box.r <= W - 8 && cx > xMin && cx < W - xMin && box.t > sr.top + 4 && box.b < sr.bottom - 4
                             && !blocks.some(r => r.left < box.r + m && r.right > box.l - m && r.top < box.b + m && r.bottom > box.t - m)
                             && !taken.some(r => r.left < box.r + 10 && r.right > box.l - 10 && r.top < box.b + 10 && r.bottom > box.t - 10)
