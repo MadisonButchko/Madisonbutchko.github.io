@@ -885,8 +885,14 @@ const WorldState = (() => {
 
         /* ---------- flower nav ---------- */
         const NAVFL = [['fl-bloom','#f4a7bf','#f2c230'],['fl-daisy','#b9a2de','#fbe7a1'],['fl-forsythia','#f2c230','#d99a12'],['fl-bloom','#8db36a','#fff1cc'],['fl-daisy','#e9789f','#f2c230']];
-        function navFlower(k){ const f = NAVFL[k % NAVFL.length]; const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'nav-fl'); s.setAttribute('viewBox', '-50 -50 100 100'); s.style.color = f[1]; s.style.setProperty('--center', f[2]); s.innerHTML = '<use href="#' + f[0] + '" x="-50" y="-50" width="100" height="100"/>'; return s; }
-        document.querySelectorAll('.nav a').forEach((a, k, all) => { const idx = [...a.parentElement.querySelectorAll('a')].indexOf(a); a.prepend(navFlower(idx)); });
+        function navFlower(k){ const f = NAVFL[k % NAVFL.length]; const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'nav-fl'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false'); s.setAttribute('viewBox', '-50 -50 100 100'); s.style.color = f[1]; s.style.setProperty('--center', f[2]); s.innerHTML = '<use href="#' + f[0] + '" x="-50" y="-50" width="100" height="100"/>'; return s; }
+        document.querySelectorAll('.nav a').forEach((a, idx) => {
+            a.prepend(navFlower(idx));
+            // Match by section so mobile keeps the desktop flower and palette.
+            document.querySelectorAll('.m-menu a').forEach(link => {
+                if (link.getAttribute('href') === a.getAttribute('href')) link.prepend(navFlower(idx));
+            });
+        });
         const nav = document.querySelector('.nav');
         if (nav){
             const bug = document.createElementNS(NS, 'svg'); bug.setAttribute('class', 'nav-bug'); bug.setAttribute('viewBox', '-24 -20 48 40');
@@ -2955,7 +2961,7 @@ const WorldState = (() => {
                 label.style.setProperty('--label-y', (y - br.top) + 'px');
                 placed.push(candidate); highest = Math.min(highest, y);
             });
-            plant.style.setProperty('--label-headroom', Math.max(60, (innerWidth <= 700 ? 80 : 28) - highest) + 'px');
+            plant.style.setProperty('--label-headroom', Math.max(60, (innerWidth <= 700 ? 56 : 28) - highest) + 'px');
             piecesEl.classList.remove('gs-measure');
         }
         if (document.fonts) document.fonts.ready.then(() => { if (S.cat) measure(); });
@@ -3169,7 +3175,7 @@ const WorldState = (() => {
             /* quiet: opened for the visitor before they choose anything (no flight, no scrolling, no focus, not a
                "discovery"); the branch grows the first time it is actually on screen */
             const quiet = !!opts.quiet;
-            if (!quiet) bringIntoView(garden, 8);
+            if (!quiet) bringIntoView(!isExp && innerWidth <= 700 ? inner : garden, 8);
             const n = quiet ? (visits[(isExp ? 'exp:' : 'skill:') + cat] || 0) : visit((isExp ? 'exp:' : 'skill:') + cat);
             const clone = quiet ? null : await flight(from, docRect(headArt), d, false);
             head.classList.remove('is-landing');
