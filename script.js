@@ -111,7 +111,7 @@ const WorldState = (() => {
         
 
         const rvIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');rvIO.unobserve(e.target);}}),{rootMargin:'0px 0px -60px 0px'});document.querySelectorAll('.reveal').forEach(e=>rvIO.observe(e));
-        (()=>{const secs=[...document.querySelectorAll('section[id]')],links=[...document.querySelectorAll('.nav a')];let tk=false,cur='';addEventListener('scroll',()=>{if(tk)return;tk=true;requestAnimationFrame(()=>{tk=false;let c='about';for(const s of secs){if(s.id!=='home'&&scrollY>=s.offsetTop-200)c=s.id;}if(c===cur)return;cur=c;links.forEach(l=>{const on=l.getAttribute('href')==='#'+c;if(l.classList.contains('active')!==on)l.classList.toggle('active',on);});});},{passive:true});})();
+        (()=>{const secs=[...document.querySelectorAll('section[id]')],links=[...document.querySelectorAll('.nav a, .m-menu a')];let tk=false,cur='';addEventListener('scroll',()=>{if(tk)return;tk=true;requestAnimationFrame(()=>{tk=false;let c='about';for(const s of secs){if(s.id!=='home'&&scrollY>=s.offsetTop-200)c=s.id;}if(c===cur)return;cur=c;links.forEach(l=>{const on=l.getAttribute('href')==='#'+c;if(l.classList.contains('active')!==on)l.classList.toggle('active',on);});});},{passive:true});})();
         
         /* v10: in-page links and interest shortcuts are handled in explore.js */
         document.onkeydown=e=>{if(e.key==='Escape'){document.getElementById('galleryModal').classList.remove('active');document.getElementById('lightbox').classList.remove('active');document.body.style.overflow='';}};
@@ -2517,7 +2517,7 @@ const WorldState = (() => {
     const hash = str => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
     const rng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 
-    const navH = () => { const n = $('.nav'); return n ? n.getBoundingClientRect().bottom : 0; };
+    const navH = () => { const n = [$('.m-header'), $('.nav')].find(x => x && x.getClientRects().length); return n ? n.getBoundingClientRect().bottom : 0; };
     const focusQuiet = el => { if (!el) return; if (!el.hasAttribute('tabindex') && !/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.setAttribute('tabindex', '-1'); try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } };
     /* scroll just enough to show `el` below the nav; if it is taller than the screen, line up its top */
     function bringIntoView(el, pad) {
@@ -3332,7 +3332,7 @@ const WorldState = (() => {
         e.preventDefault();
         if (id === 'home') scrollTo({ top: 0, behavior: behavior() });
         else { const y = t.getBoundingClientRect().top - navH() - (id === 'about' ? 0 : 6); if (Math.abs(y) > 2) scrollBy({ top: y, behavior: behavior() }); }
-        const h = t.querySelector('h2, h1'); if (h && !a.closest('.nav')) setTimeout(() => focusQuiet(h), reduce ? 0 : 450);
+        const h = t.querySelector('h2, h1'); if (h && !a.closest('.nav, .m-menu')) setTimeout(() => focusQuiet(h), reduce ? 0 : 450);
     });
 
     /* ------------------------------------------------------------------
@@ -3450,7 +3450,7 @@ const WorldState = (() => {
         }
         return true;
     }
-    const navBottom = () => { const n = $('.nav'); return n ? n.getBoundingClientRect().bottom : 0; };
+    const navBottom = () => { const n = [$('.m-header'), $('.nav')].find(x => x && x.getClientRects().length); return n ? n.getBoundingClientRect().bottom : 0; };
     function openSpot(r, tries) {
         for (let k = 0; k < (tries || 40); k++) {
             const x = rand(20, innerWidth - 20), y = rand(navBottom() + 40, innerHeight - 60);
@@ -4329,4 +4329,17 @@ const WorldState = (() => {
         const h = e.target.closest && e.target.closest('.rb-host'); if (!h) return;
         h.classList.add('is-tapped'); clearTimeout(h.__tap); h.__tap = setTimeout(() => h.classList.remove('is-tapped'), 1600);
     }, { passive: true });
+})();
+
+
+/* mobile header: name + hamburger, menu toggles, closes on link / outside tap / Escape / widening */
+(() => {
+    const hd = document.getElementById('mHeader'); if (!hd) return;
+    const btn = hd.querySelector('.m-toggle'), menu = hd.querySelector('.m-menu');
+    const set = open => { hd.classList.toggle('open', open); btn.setAttribute('aria-expanded', open); btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); };
+    btn.addEventListener('click', () => set(!hd.classList.contains('open')));
+    menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
+    document.addEventListener('click', e => { if (hd.classList.contains('open') && !hd.contains(e.target)) set(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && hd.classList.contains('open')) { set(false); btn.focus(); } });
+    matchMedia('(min-width: 769px)').addEventListener('change', e => { if (e.matches) set(false); });
 })();
