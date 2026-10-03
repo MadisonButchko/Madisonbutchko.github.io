@@ -169,7 +169,7 @@ const WorldState = (() => {
         document.addEventListener('visibilitychange', () => { running = !document.hidden; last = 0; if (running) requestAnimationFrame(frame); });
         addEventListener('click', e => {
             /* v10: only celebrate clicks on open page space, never on buttons, links or panels */
-            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece, .gy-bed')) return;
+            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece')) return;
             for (let i = 0; i < 5; i++){
                 const ang = rand(0, Math.PI * 2), sp = rand(1.5, 4.5), p = makePetal(e.clientY);
                 Object.assign(p, { x: e.clientX, y: e.clientY, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 2, r: rand(4, 8), life: rand(55, 90), vr: rand(-0.15, 0.15), vf: rand(0.08, 0.16) });
@@ -224,7 +224,9 @@ const WorldState = (() => {
                 const k = (svg.clientWidth || 90) / 90, H = Math.max(innerHeight, svg.clientHeight || 0) / k;
                 svg.setAttribute('viewBox', '0 0 90 ' + H.toFixed(1));
                 const phase = vi ? Math.PI : 0, pts = [];
-                for (let y = -10; y <= H + 10; y += 14) pts.push([45 + Math.sin(y / H * Math.PI * 4.2 + phase) * 20 + Math.sin(y / 37) * 3, y]);
+                /* the path hugs the inner side of the screen, far enough in that a flower grown to 1.9x on hover still clears the edge */
+                const narrowVine = k < 0.6, cx = narrowVine ? (v.side === 'left' ? 46 : 44) : (v.side === 'left' ? 50 : 40), amp = narrowVine ? 12 : 20;
+                for (let y = -10; y <= H + 10; y += 14) pts.push([cx + Math.sin(y / H * Math.PI * 4.2 + phase) * amp + Math.sin(y / 37) * (narrowVine ? 1.5 : 3), y]);
                 const path = document.createElementNS(NS, 'path');
                 path.setAttribute('d', 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1]).join(' L'));
                 path.setAttribute('class', 'vine-path');
@@ -285,7 +287,7 @@ const WorldState = (() => {
         /* --- click: a flower blooms where you click --- */
         let lastBloomClick = 0;
         addEventListener('click', e => {
-            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece, .gy-bed')) return;
+            if (e.target.closest && e.target.closest('a, button, input, [role="button"], .g-stage, .g-row, .h-row, .mb-bouquet, .gallery-modal, .lightbox, .garden-bed, .nav, .fl-int, .w-piece')) return;
             /* rapid clicking: one burst at a time, so flowers never pile up */
             if (performance.now() - lastBloomClick < 280) return; lastBloomClick = performance.now();
             const n = 5;
@@ -1312,11 +1314,14 @@ const WorldState = (() => {
         bed.innerHTML = `<div class="g-meadow">${meadow}</div><svg class="g-hedge" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path class="h1" d="${humps(22, 40, 0.55)}"/><path class="h2" d="${humps(14, 28, 0.62)}"/></svg><div class="g-sun" aria-hidden="true">${SUN_SVG}</div><div class="garden-soil"></div><svg class="garden-grass" viewBox="0 0 400 16" preserveAspectRatio="none" aria-hidden="true"><path d="${grass}"/></svg>${motes}<div class="g-toast" role="status" aria-live="polite"></div>`;
         const toast = bed.querySelector('.g-toast');
         const tip = document.createElement('div'); tip.className = 'garden-tip';
-        tip.innerHTML = '<span class="gt-text"></span><span class="garden-meter" aria-hidden="true"><i></i></span><button class="g-notes-btn" type="button" aria-expanded="false" aria-controls="gardenNotes">garden notes</button><div class="g-notes" id="gardenNotes" hidden><span class="g-stats"></span><span class="g-badges" role="list" aria-label="Garden badges"></span><button class="g-reset" type="button">start over</button></div>';
+        tip.innerHTML = '<span class="gt-text"></span><span class="garden-meter" aria-hidden="true"><i></i></span>'
+            + '<div class="g-hl"><span class="g-stats g-stats-main"></span><button class="g-reset" type="button">start over</button></div>'
+            + '<button class="g-notes-btn" type="button" aria-expanded="false" aria-controls="gardenNotes">garden notes</button>'
+            + '<div class="g-notes" id="gardenNotes" hidden><span class="g-stats g-stats-more"></span><span class="g-badges" role="list" aria-label="Garden badges"></span></div>';
         /* v10: stats and badges stay one tap away instead of always on screen */
         (() => { const nb = tip.querySelector('.g-notes-btn'), nd = tip.querySelector('.g-notes'); nb.addEventListener('click', e => { e.stopPropagation(); const open = nb.getAttribute('aria-expanded') !== 'true'; nb.setAttribute('aria-expanded', open); nd.hidden = !open; }); })();
         footer.prepend(tip); footer.prepend(bed);
-        const txt = tip.querySelector('.gt-text'), meter = tip.querySelector('.garden-meter i'), stats = tip.querySelector('.g-stats'), shelf = tip.querySelector('.g-badges'), resetBtn = tip.querySelector('.g-reset');
+        const txt = tip.querySelector('.gt-text'), meter = tip.querySelector('.garden-meter i'), stats = tip.querySelector('.g-stats-main'), statsMore = tip.querySelector('.g-stats-more'), shelf = tip.querySelector('.g-badges'), resetBtn = tip.querySelector('.g-reset');
         const setHTML = (el, s) => { if (el._h !== s){ el._h = s; el.innerHTML = s; } };
 
         /* --- species: everything is drawn in the same flat SVG style --- */
@@ -1638,7 +1643,8 @@ const WorldState = (() => {
             if (bed.dataset.stage !== String(st)) bed.dataset.stage = st;
             if (!fullReached && n >= GOAL && started && !restoring){ fullReached = true; award('full'); const again = regrowing; if (regrowing){ regrowing = false; award('regrow'); } celebrate(again); save(); }
             meter.style.width = Math.min(100, n / GOAL * 100) + '%';
-            setHTML(stats, `growing <b>${n}</b> &middot; planted <b>${S.planted}</b> &middot; watered <b>${S.watered}</b> &middot; shooed <b>${S.shooed}</b> &middot; starblooms <b>${S.rare}</b> &middot; lost <b>${S.lost}</b>`);
+            setHTML(stats, `growing <b>${n}</b> &middot; planted <b>${S.planted}</b>`);
+            setHTML(statsMore, `watered <b>${S.watered}</b> &middot; shooed <b>${S.shooed}</b> &middot; starblooms <b>${S.rare}</b> &middot; lost <b>${S.lost}</b>`);
             renderShelf();
             tip.classList.toggle('alert', C.some(c => c.pest && c.state !== 'leaving'));
             setHTML(txt, hudText(n, st));
@@ -2371,7 +2377,7 @@ const WorldState = (() => {
            seed and bird that the decorations add. */
         const later = () => { clearTimeout(run.t); run.t = setTimeout(run, 200); };
         const mo = new MutationObserver(later);
-        const watch = () => ['#galleryCollage', '#lightbox', '.garden-tip', '#xpStage', '#skStage', '.mb-bouquet', '#grown'].forEach(s => { const el = document.querySelector(s); if (el && !el.__hcWatched){ el.__hcWatched = true; mo.observe(el, { childList: true, subtree: true }); } });
+        const watch = () => ['#galleryCollage', '#lightbox', '.garden-tip', '#xpStage', '#skStage', '.mb-bouquet'].forEach(s => { const el = document.querySelector(s); if (el && !el.__hcWatched){ el.__hcWatched = true; mo.observe(el, { childList: true, subtree: true }); } });
         watch(); setTimeout(watch, 0);   /* the bouquet and the final garden are built by later scripts */
         document.querySelectorAll('.hero h1 .ltr').forEach((l, k) => l.style.setProperty('--hc', HC[k % HC.length]));
         document.querySelectorAll('.section-title .t-ch, .contact-title .t-ch').forEach((c, k) => { if (!c.style.getPropertyValue('--hc')) c.style.setProperty('--hc', HC[k % HC.length]); });
@@ -2988,7 +2994,6 @@ const WorldState = (() => {
     const xpStage = xpGarden && Stage({ kind: 'exp', garden: xpGarden, row: $('.g-row', xpGarden), root: $('#xpStage'), data: EXP });
     const skStage = skGarden && Stage({ kind: 'skill', garden: skGarden, row: $('.h-row', skGarden), root: $('#skStage'), data: SK });
     let lastOpened = null;
-    if (xpStage && EXP.research) xpStage.open('research', { quiet: true, focus: false });
     if (xpStage) { const o = xpStage.open; xpStage.open = (c, x) => { lastOpened = xpStage; return o(c, x); }; }
     if (skStage) { const o = skStage.open; skStage.open = (c, x) => { lastOpened = skStage; return o(c, x); }; }
 
@@ -3037,6 +3042,11 @@ const WorldState = (() => {
        The visitor's bouquet: a small, distinct posy in the corner. New
        finds travel to it; tap it to fan out what you have found.
        ------------------------------------------------------------------ */
+    const BOW_PATHS = '<path class="bw-tail" d="M29 19 L17 41 L24 38.5 L28 43.5Z M31 19 L43 41 L36 38.5 L32 43.5Z"/>'
+        + '<path class="bw-loop" d="M30 18 C23 3 5 2 4.5 13 C4.5 24 21 24 30 18Z M30 18 C37 3 55 2 55.5 13 C55.5 24 39 24 30 18Z"/>'
+        + '<path class="bw-fold" d="M26 16 C20 9 12 9 9 13 M34 16 C40 9 48 9 51 13"/>'
+        + '<rect class="bw-knot" x="25" y="12.5" width="10" height="11" rx="4"/>';
+    const BOW_SVG = '<svg class="bq-bow" viewBox="0 0 60 46" aria-hidden="true">' + BOW_PATHS + '</svg>';
     const bouquet = (function () {
         const wrap = document.createElement('div'); wrap.className = 'mb-bouquet'; wrap.hidden = true;
         wrap.innerHTML =
@@ -3046,23 +3056,31 @@ const WorldState = (() => {
             + '<path d="M17 62 L63 62 L45 101 Q40 104 35 101 Z" fill="#f3dcbd" stroke="#c9a06a" stroke-width="1.3" stroke-linejoin="round"/>'
             + '<path d="M17 62 L40 70 L63 62" fill="none" stroke="#c9a06a" stroke-width="1.1" opacity=".7"/>'
             + '<path d="M27 66 L33 92 M53 66 L46 92" stroke="#e8cfa6" stroke-width="1.4" opacity=".8"/>'
-            + '<path class="bq-bow" d="M40 79 C33 73 28 76 31 80 C33 83 38 81 40 79 C42 81 47 83 49 80 C52 76 47 73 40 79Z" stroke-width=".8"/>'
-            + '<path class="bq-tails" d="M40 79 L35 89 M40 79 L45 88" stroke-width="1.6" stroke-linecap="round"/><circle class="bq-knot" cx="40" cy="79" r="2.2"/></svg>'
+            + '<path class="bq-band" d="M29 63.5 Q40 68.5 51 63.5 L51.6 68 Q40 73 28.4 68Z" stroke-width=".8"/></svg>'
             + '<span class="vh">Your discoveries</span></button>'
+            + '<button type="button" class="bq-bowbtn" aria-expanded="false" aria-controls="bqPick" aria-label="Change the bow colour">' + BOW_SVG + '</button>'
+            + '<div class="bq-pick" id="bqPick" role="radiogroup" aria-label="Bow colour" hidden></div>'
             + '<span class="bq-label" aria-hidden="true"><svg viewBox="0 0 40 24"><path d="M38 4 C26 2 12 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3 12 L6 19 L12 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>your discoveries</span>'
-            + '<div class="bq-fan" id="bqFan" role="group" aria-label="Your discoveries" hidden><p class="bq-title">your discoveries</p><ol class="bq-list"></ol><div class="bq-ribbons" role="radiogroup" aria-label="Ribbon for your bouquet" hidden></div><button type="button" class="bq-reset">start a fresh bouquet</button></div>';
+            + '<div class="bq-fan" id="bqFan" role="group" aria-label="Your discoveries" hidden><p class="bq-title">your discoveries</p><ol class="bq-list"></ol><button type="button" class="bq-reset">start a fresh bouquet</button></div>';
         document.body.appendChild(wrap);
         /* once the bouquet is full enough, the visitor may tie it with a ribbon of their choosing (remembered) */
         const RIBBONS = [['blush pink', '#f4a7bf', '#d9789e'], ['soft yellow', '#f6d36b', '#c99a1a'], ['sage green', '#b7cfa0', '#7f9f6a'], ['lavender', '#cdb8f2', '#9d7fd0'], ['cream', '#fbf1dc', '#c9a06a']];
-        const ribbonBox = $('.bq-ribbons', wrap);
-        ribbonBox.innerHTML = RIBBONS.map(([n, c, e]) => '<button type="button" role="radio" aria-checked="false" aria-label="' + n + ' ribbon" data-ribbon="' + n + '" style="--rc:' + c + ';--re:' + e + '"></button>').join('');
+        const ribbonBox = $('.bq-pick', wrap), bowBtn = $('.bq-bowbtn', wrap);
+        ribbonBox.innerHTML = RIBBONS.map(([n, c, e]) => '<button type="button" role="radio" aria-checked="false" aria-label="' + n + ' bow" title="' + n + '" data-ribbon="' + n + '" style="--rc:' + c + ';--re:' + e + '"><svg viewBox="0 0 60 46" aria-hidden="true">' + BOW_PATHS + '</svg></button>').join('');
+        const picking = () => !ribbonBox.hidden;
+        function pick(open, restore) {
+            if (open === picking()) return;
+            ribbonBox.hidden = !open; bowBtn.setAttribute('aria-expanded', String(open)); wrap.classList.toggle('is-picking', open);
+            if (open) { const on = $('[aria-checked="true"]', ribbonBox) || $('button', ribbonBox); focusQuiet(on); } else if (restore) focusQuiet(bowBtn);
+        }
         function tie(name) {
             const r = RIBBONS.find(x => x[0] === name) || RIBBONS[0];
             wrap.style.setProperty('--ribbon', r[1]); wrap.style.setProperty('--ribbon-edge', r[2]);
             $$('[data-ribbon]', ribbonBox).forEach(b => b.setAttribute('aria-checked', String(b.dataset.ribbon === r[0])));
         }
         tie(WorldState.get().ribbon);
-        ribbonBox.addEventListener('click', e => { const b = e.target.closest('[data-ribbon]'); if (!b) return; e.stopPropagation(); WorldState.get().ribbon = b.dataset.ribbon; WorldState.save(); tie(b.dataset.ribbon); btn.classList.remove('sway'); void btn.offsetWidth; btn.classList.add('sway'); });
+        ribbonBox.addEventListener('click', e => { const b = e.target.closest('[data-ribbon]'); if (!b) return; e.stopPropagation(); WorldState.get().ribbon = b.dataset.ribbon; WorldState.save(); tie(b.dataset.ribbon); bowBtn.classList.remove('wiggle'); void bowBtn.offsetWidth; bowBtn.classList.add('wiggle'); });
+        bowBtn.addEventListener('click', e => { e.stopPropagation(); if (!fan.hidden) close(false); pick(!picking(), true); });
         const btn = $('.bq-btn', wrap), stems = $('.bq-stems', wrap), filler = $('.bq-filler', wrap), fan = $('.bq-fan', wrap), list = $('.bq-list', wrap), label = $('.bq-label', wrap);
 
         function draw(newId) {
@@ -3091,7 +3109,6 @@ const WorldState = (() => {
             });
             wrap.hidden = !n && !foundItems.length;
             wrap.classList.toggle('is-full', n >= 6);
-            ribbonBox.hidden = n < 5;
         }
         let labelT = 0;
         function nudge(long) {
@@ -3126,14 +3143,14 @@ const WorldState = (() => {
             travel(fromEl, '<svg viewBox="-10 -10 20 20" style="color:#f4a7bf;--center:#fff6d8"><use href="#mk" x="-10" y="-10" width="20" height="20"/></svg>', 16).then(() => { draw(); if (!reduce) { btn.classList.remove('sway'); void btn.offsetWidth; btn.classList.add('sway'); } });
         }
         const isOpen = () => !fan.hidden;
-        function open() { fan.hidden = false; btn.setAttribute('aria-expanded', 'true'); wrap.classList.add('is-open'); const f = $('button', list); if (f) focusQuiet(f); }
+        function open() { pick(false); fan.hidden = false; btn.setAttribute('aria-expanded', 'true'); wrap.classList.add('is-open'); const f = $('button', list); if (f) focusQuiet(f); }
         function close(restore) { if (fan.hidden) return; fan.hidden = true; btn.setAttribute('aria-expanded', 'false'); wrap.classList.remove('is-open'); if (restore !== false) focusQuiet(btn); }
         btn.addEventListener('click', e => { e.stopPropagation(); isOpen() ? close() : open(); });
         list.addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (!b) return; close(false); openById(b.dataset.open); });
         $('.bq-reset', wrap).addEventListener('click', () => { found = []; foundItems = []; foundStore.clear(); itemStore.clear(); clearMarks(); close(); draw(); wrap.hidden = true; });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); close(); } });
-        document.addEventListener('click', e => { if (isOpen() && !wrap.contains(e.target)) close(false); });
-        return { collect, sprinkle, draw, isOpen };
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && picking()) { e.stopPropagation(); pick(false, true); } else if (e.key === 'Escape' && isOpen()) { e.stopPropagation(); close(); } });
+        document.addEventListener('click', e => { if (wrap.contains(e.target)) return; if (isOpen()) close(false); pick(false); });
+        return { collect, sprinkle, draw, isOpen: () => isOpen() || picking() };
     })();
     found.forEach(id => setMark(id, false));
     bouquet.draw();
@@ -3327,7 +3344,7 @@ const WorldState = (() => {
        the sunflower in the corner turns its face to follow, slowly.
        ------------------------------------------------------------------ */
     if (fine && !reduce) {
-        const SEL = '.g-art, .h-art, .hello-flower, .w-dandelion:not([hidden]), .page-posy, .w-sprout, .v11-bud, .gy-flower';   /* flowers with stems: a tilt reads on them (on a turning bloom it would not) */
+        const SEL = '.g-art, .h-art, .hello-flower, .w-dandelion:not([hidden]), .page-posy, .w-sprout, .v11-bud';   /* flowers with stems: a tilt reads on them (on a turning bloom it would not) */
         let items = [], dirty = true, q = 0, px = -1e4, py = -1e4;
         const sun = $('.to-top .sf-sway'), sunHost = $('.to-top');
         const refresh = () => { items = $$(SEL).map(el => ({ el, r: el.getBoundingClientRect() })).filter(o => o.r.width && o.r.bottom > -50 && o.r.top < innerHeight + 50); dirty = false; };
@@ -3568,7 +3585,7 @@ const WorldState = (() => {
     const SECTIONS = ['home', 'about', 'experience', 'skills', 'gallery', 'contact'];
     /* what a reader actually sees in a section: text lines, images and controls (not the empty width of their boxes) */
     function contentRects(sec) {
-        const rects = $$('img, button, a, input, svg.g-art, svg.h-art, .collage, .gallery-frame, .contact-photo, .about-photo, .seed-art, .page-posy, .scatter, .w-sprout, .gs-inner, .title-bloom, .w-dandelion:not([hidden]), .v11-bud, .gy-bed', sec).map(e => e.getBoundingClientRect());
+        const rects = $$('img, button, a, input, svg.g-art, svg.h-art, .collage, .gallery-frame, .contact-photo, .about-photo, .seed-art, .page-posy, .scatter, .w-sprout, .gs-inner, .title-bloom, .w-dandelion:not([hidden]), .v11-bud', sec).map(e => e.getBoundingClientRect());
         const tw = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, { acceptNode: n => n.textContent.trim() && !n.parentElement.closest('template, .vh') ? 1 : 2 });
         const range = document.createRange();
         for (let n = tw.nextNode(); n; n = tw.nextNode()) { range.selectNodeContents(n); rects.push(...range.getClientRects()); }
@@ -4024,7 +4041,7 @@ const WorldState = (() => {
     const Dandelions = (() => {
         const NSV = 'http://www.w3.org/2000/svg';
         const narrow = () => innerWidth < 700;
-        const PLAN = [['home', 'puff'], ['about', 'yellow'], ['experience', 'partial'], ['skills', 'puff'], ['gallery', 'yellow'], ['contact', 'puff'], ['grown', 'partial']];
+        const PLAN = [['home', 'puff'], ['about', 'yellow'], ['experience', 'partial'], ['skills', 'puff'], ['gallery', 'yellow'], ['contact', 'puff']];
         const list = [];
         /* one loop moves every loose seed; it only runs while seeds are in the air */
         const air = []; let raf = 0, last = 0;
@@ -4163,118 +4180,14 @@ const WorldState = (() => {
     })();
     if (/[?&]v11debug\b/.test(location.search)) window.__dand = Dandelions;
 
-    /* ------------------------------------------------------------------
-       The garden you grew. Everything the visitor touched, found or grew
-       on the way down (the session log above) comes up here as a small
-       flower. They can drag the flowers into their own arrangement (mouse,
-       touch or arrow keys), tie it with a ribbon once there are a few, or
-       scatter it and start again (which clears only this garden).
-       ------------------------------------------------------------------ */
-    (function () {
-        const sec = $('#grown'), bed = $('#gyBed'); if (!sec || !bed) return;
-        const box = $('.gy-flowers', bed), empty = $('.gy-empty', bed), ribbons = $('.gy-ribbons', sec), scatterB = $('.gy-scatter', sec);
-        rainbow($('.gy-title', sec), $('.gy-title', sec));
-        const RIB = [['cream', '#fbf1dc', '#c9a06a'], ['soft yellow', '#f6d36b', '#c99a1a'], ['sage', '#b7cfa0', '#7f9f6a'], ['blush', '#f4a7bf', '#d9789e'], ['lavender', '#cdb8f2', '#9d7fd0']];
-        ribbons.innerHTML = RIB.map(([n, c, e]) => '<button type="button" role="radio" aria-checked="false" aria-label="' + n + ' ribbon" data-ribbon="' + n + '" style="--rc:' + c + ';--re:' + e + '"></button>').join('');
-        const bow = document.createElement('div'); bow.className = 'gy-bow'; bow.setAttribute('aria-hidden', 'true');
-        bow.innerHTML = '<svg viewBox="0 0 60 36"><path class="gb-tail" d="M30 16 L19 34 M30 16 L41 33"/><path class="gb-loop" d="M30 16 C20 4 8 8 12 16 C15 23 25 20 30 16 C35 20 45 23 48 16 C52 8 40 4 30 16Z"/><circle class="gb-knot" cx="30" cy="16" r="3.4"/></svg>';
-        bed.appendChild(bow);
-        const R = (k => () => (k = (k * 16807) % 2147483647) / 2147483647);
-        /* what each kind of find looks like: a stem and a head in the site's own flower shapes */
-        function art(it, r) {
-            const stemH = 46 + r() * 44, bend = (r() - 0.5) * 14, lean = (r() - 0.5) * 12;
-            let head = '';
-            if (it.kind === 'cluster') head = '<svg class="gy-bloom" viewBox="' + (it.box || '0 0 120 110') + '" style="width:74px;height:68px;margin:-58px 0 0 -37px"><use href="#' + it.sym + '"/></svg>';
-            else if (it.sym === 'dandelion') { let p = ''; for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, x = 12 + Math.cos(a) * 9, y = 12 + Math.sin(a) * 9; p += '<path d="M12 12 L' + x.toFixed(1) + ' ' + y.toFixed(1) + '" stroke="#d8d2c4" stroke-width=".5"/><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.3" fill="#fffdf6" stroke="#e4ddcd" stroke-width=".35"/>'; } head = '<svg class="gy-bloom" viewBox="0 0 24 24" style="width:42px;height:42px;margin:-21px 0 0 -21px">' + p + '<circle cx="12" cy="12" r="1.8" fill="#c9b98a"/></svg>'; }
-            else { const sz = it.kind === 'bud' || it.kind === 'sprout' ? 30 : 38 + r() * 12; head = '<svg class="gy-bloom" viewBox="-50 -50 100 100" style="width:' + sz.toFixed(0) + 'px;height:' + sz.toFixed(0) + 'px;margin:' + (-sz / 2).toFixed(0) + 'px 0 0 ' + (-sz / 2).toFixed(0) + 'px;color:' + (it.color || '#f4a7bf') + ';--center:' + (it.center || '#f2c230') + '"><use href="#' + (it.sym || 'fl-bloom') + '" x="-50" y="-50" width="100" height="100"/></svg>'; }
-            const leafY = stemH * (0.45 + r() * 0.2), side = r() < 0.5 ? -1 : 1;
-            return '<svg class="gy-stem" viewBox="-20 0 40 ' + stemH.toFixed(0) + '" style="height:' + stemH.toFixed(0) + 'px"><path d="M0 ' + stemH.toFixed(0) + ' Q' + bend.toFixed(1) + ' ' + (stemH * 0.5).toFixed(0) + ' ' + lean.toFixed(1) + ' 0" stroke="#7fa65c" stroke-width="2" fill="none" stroke-linecap="round"/>'
-                + '<path d="M' + (bend * 0.5).toFixed(1) + ' ' + leafY.toFixed(0) + ' c' + (side * 6) + ' -6 ' + (side * 13) + ' -6 ' + (side * 16) + ' -2 c' + (-side * 5) + ' 5 ' + (-side * 11) + ' 6 ' + (-side * 16) + ' 2Z" fill="#9fbe88"/></svg>'
-                + '<span class="gy-headwrap" style="left:' + lean.toFixed(1) + 'px">' + head + '</span>';
-        }
-        /* new finds settle into a loose bunch around the middle; each keeps its spot once placed or moved */
-        function spotFor(it, i, n) {
-            const r = R(strHash(it.id) || 1);
-            const spread = Math.min(40, 12 + n * 3), a = (i % 2 ? 1 : -1) * Math.ceil(i / 2) / Math.max(1, n / 2);
-            return { x: Math.max(6, Math.min(94, 50 + a * spread + (r() - 0.5) * 6)), y: 84 + (r() - 0.5) * 16 };
-        }
-        const els = new Map();
-        function render(fresh) {
-            const items = GardenLog.items(), pos = GardenLog.pos();
-            empty.hidden = items.length > 0;
-            scatterB.hidden = !items.length;
-            ribbons.hidden = items.length < 5;
-            bed.classList.toggle('has-bow', items.length >= 5 && !!GardenLog.ribbon());
-            els.forEach((el, id) => { if (!items.some(x => x.id === id)) { el.remove(); els.delete(id); } });
-            items.forEach((it, i) => {
-                if (els.has(it.id)) return;
-                const r = R(strHash(it.id) || 7), p = pos[it.id] || spotFor(it, i, items.length);
-                const el = document.createElement('div'); el.className = 'gy-flower' + (fresh === it.id && !reduce ? ' is-new' : ''); el.tabIndex = 0;
-                el.setAttribute('role', 'img'); el.setAttribute('aria-label', ({ cluster: 'a sprig from a branch you opened', dandelion: 'a dandelion you blew', sprout: 'a sprout from a seed that took root', bud: 'a bud you found' })[it.kind] || 'a flower you touched');
-                el.innerHTML = art(it, r); el.dataset.id = it.id;
-                el.style.left = p.x.toFixed(2) + '%'; el.style.top = p.y.toFixed(2) + '%'; el.style.setProperty('--tilt', ((r() - 0.5) * 14).toFixed(1) + 'deg'); el.style.setProperty('--sd', (4 + r() * 3).toFixed(1) + 's');
-                el.style.zIndex = String(10 + Math.round(p.y));
-                box.appendChild(el); els.set(it.id, el); drag(el);
-            });
-        }
-        /* arranging: pick a flower up and set it down anywhere in the bed; it sways as it is carried */
-        function drag(el) {
-            let st = null;
-            el.addEventListener('pointerdown', e => {
-                if (e.button) return; e.preventDefault();
-                const b = bed.getBoundingClientRect(), r = el.getBoundingClientRect();
-                st = { id: e.pointerId, ox: e.clientX - (r.left + r.width / 2), oy: e.clientY - r.bottom, lx: e.clientX, b };
-                try { el.setPointerCapture(e.pointerId); } catch (_) { }
-                el.classList.add('held'); el.style.zIndex = '200';
-            });
-            el.addEventListener('pointermove', e => {
-                if (!st || e.pointerId !== st.id) return;
-                const b = st.b, x = (e.clientX - st.ox - b.left) / b.width * 100, y = (e.clientY - st.oy - b.top) / b.height * 100;
-                el.style.left = Math.max(4, Math.min(96, x)).toFixed(2) + '%'; el.style.top = Math.max(38, Math.min(97, y)).toFixed(2) + '%';
-                el.style.setProperty('--carry', Math.max(-16, Math.min(16, (e.clientX - st.lx) * 1.4)).toFixed(1) + 'deg'); st.lx = e.clientX;
-            });
-            const drop = e => {
-                if (!st || e.pointerId !== st.id) return; st = null;
-                el.classList.remove('held'); el.style.removeProperty('--carry');
-                const y = parseFloat(el.style.top); el.style.zIndex = String(10 + Math.round(y));
-                GardenLog.setPos(el.dataset.id, { x: parseFloat(el.style.left), y });
-            };
-            el.addEventListener('pointerup', drop); el.addEventListener('pointercancel', drop);
-            el.addEventListener('keydown', e => {
-                const k = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -3], ArrowDown: [0, 3] }[e.key]; if (!k) return;
-                e.preventDefault();
-                const x = Math.max(4, Math.min(96, parseFloat(el.style.left) + k[0])), y = Math.max(38, Math.min(97, parseFloat(el.style.top) + k[1]));
-                el.style.left = x + '%'; el.style.top = y + '%'; el.style.zIndex = String(10 + Math.round(y)); GardenLog.setPos(el.dataset.id, { x, y });
-            });
-        }
-        function tie(name) {
-            const r = RIB.find(x => x[0] === name);
-            $$('[data-ribbon]', ribbons).forEach(b => b.setAttribute('aria-checked', String(!!r && b.dataset.ribbon === r[0])));
-            if (r) { bed.style.setProperty('--ribbon', r[1]); bed.style.setProperty('--ribbon-edge', r[2]); }
-            bed.classList.toggle('has-bow', !!r && GardenLog.items().length >= 5);
-        }
-        ribbons.addEventListener('click', e => { const b = e.target.closest('[data-ribbon]'); if (!b) return; GardenLog.setRibbon(b.dataset.ribbon); tie(b.dataset.ribbon); if (!reduce) bow.animate([{ scale: 0.6 }, { scale: 1.12 }, { scale: 1 }], { duration: 600, easing: 'ease-out' }); });
-        /* scatter: the flowers loosen and drift out, shed a few petals, and the bed is bare again */
-        scatterB.addEventListener('click', () => {
-            const list = [...els.values()];
-            if (reduce || !list.length) { GardenLog.clear(); return; }
-            scatterB.disabled = true;
-            const b = bed.getBoundingClientRect(), cx = b.left + b.width / 2;
-            list.forEach((el, k) => {
-                const r = el.getBoundingClientRect(), dir = r.left + r.width / 2 < cx ? -1 : 1;
-                if (k % 2 === 0) petals($('.gy-bloom', el) || el, 1 + (k % 3));
-                const tilt = el.style.getPropertyValue('--tilt') || '0deg';
-                el.animate([{ transform: 'translate(-50%, -100%) rotate(' + tilt + ')', opacity: 1 },
-                    { transform: 'translate(calc(-50% + ' + (dir * rnd(10, 30)).toFixed(0) + 'px), calc(-100% - ' + rnd(6, 20).toFixed(0) + 'px)) rotate(' + (dir * rnd(10, 30)).toFixed(0) + 'deg)', opacity: 1, offset: 0.35 },
-                    { transform: 'translate(calc(-50% + ' + (dir * rnd(60, 140)).toFixed(0) + 'px), calc(-100% + ' + rnd(10, 50).toFixed(0) + 'px)) rotate(' + (dir * rnd(60, 160)).toFixed(0) + 'deg)', opacity: 0 }],
-                    { duration: rnd(1300, 1900), delay: k * 40, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
-            });
-            setTimeout(() => { GardenLog.clear(); scatterB.disabled = false; }, 1900 + list.length * 40);
-        });
-        GardenLog.on(entry => { render(entry && entry.id); if (!entry) tie(''); });
-        render(); tie(GardenLog.ribbon());
-        if (Dandelions) setTimeout(() => Dandelions.place(), 2400);
-    })();
+    if (Dandelions) setTimeout(() => Dandelions.place(), 2400);
+
+    /* touch screens have no hover: a tap on a garden flower or specimen gives the same little lift for a moment */
+    document.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse') return;
+        const h = e.target.closest && e.target.closest('.g-cat, .h-spec'); if (!h) return;
+        h.classList.add('is-tapped'); clearTimeout(h.__tapF); h.__tapF = setTimeout(() => h.classList.remove('is-tapped'), 900);
+    }, { passive: true });
 
     /* touch screens have no hover: a tap on a heading gives the same colour change for a moment */
     document.addEventListener('pointerdown', e => {

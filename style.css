@@ -37,7 +37,7 @@ body { font-family: var(--font-body); background: var(--bg-dark); color: var(--t
 .mobile-menu a:hover { color: var(--cyan); background: var(--bg-hover); }
 
 /* --- HERO & GENERAL --- */
-.hero { min-height: 92vh; display: flex; align-items: center; justify-content: center; padding: 5rem 5% 9rem; position: relative; max-width: none; margin: 0; overflow: hidden; }
+.hero { min-height: 92vh; display: flex; align-items: center; justify-content: center; padding: 5rem 5% 9rem; position: relative; max-width: none; margin: 0; overflow-x: clip; }
 .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 48%, rgba(242, 194, 48, 0.16) 0%, transparent 70%), radial-gradient(ellipse 60% 70% at 30% 50%, rgba(194, 69, 126, 0.05) 0%, transparent 70%), radial-gradient(ellipse 60% 70% at 72% 48%, rgba(138, 99, 184, 0.08) 0%, transparent 70%); pointer-events: none; }
 .hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, transparent 78%, var(--bg-dark) 100%), radial-gradient(ellipse 85% 85% at 50% 48%, transparent 55%, rgba(255, 248, 236, 0) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 .hero-inner { position: relative; z-index: 1; }
@@ -539,7 +539,7 @@ footer { border-top: none; padding: 2rem 1.5rem 2.5rem; }
 .vine { position: fixed; top: 0; width: 90px; height: 100vh; z-index: 0; pointer-events: none; overflow: visible; display: block; }
 .vine-left { left: 6px; } .vine-right { right: 6px; }
 /* narrower screens: a slim vine tucked into each page gutter (drawn at ~0.42 scale by the script) */
-@media (max-width: 1239px) { .vine { width: 38px; } .vine-left { left: -12px; } .vine-right { right: -12px; } }
+@media (max-width: 1239px) { .vine { width: 38px; } .vine-left { left: 0; } .vine-right { right: 0; } }
 .vine-path { fill: none; stroke: #8db36a; stroke-width: 2.4; stroke-linecap: round; opacity: 0.75; }
 .vine-item { transform-box: fill-box; transform-origin: center; transform: scale(0) rotate(-120deg); transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .vine-item.on { transform: scale(1) rotate(0deg); }
@@ -1998,7 +1998,7 @@ main > section, footer { overflow-x: clip; }
 }
 /* phones: the bouquet peeks in from the edge while you read, and steps out when it has news or you reach for it */
 @media (max-width: 700px) {
-    .mb-bouquet { left: 0; transform: translateX(-46%); transition: transform 0.5s var(--glide); }
+    .mb-bouquet { left: 0; transform: translateX(-30%); transition: transform 0.5s var(--glide); }
     .mb-bouquet.show-label, .mb-bouquet.is-open, .mb-bouquet:focus-within { transform: translateX(calc(8px + var(--safe-l))); }
     .bq-label { display: none; }
     .mb-bouquet.show-label .bq-label { display: flex; }
@@ -2033,6 +2033,10 @@ main > section, footer { overflow-x: clip; }
 .g-notes-btn[aria-expanded="true"] { border-style: solid; background: #fff; }
 .g-notes { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.9rem; }
 .g-notes[hidden] { display: none; }
+.g-hl { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.9rem; }
+.g-notes-btn { position: relative; margin-top: 0.15rem; }
+.g-notes-btn::before, .g-notes-btn::after { content: ''; position: absolute; top: 50%; width: 22px; border-top: 1px dashed rgba(110, 154, 76, 0.45); }
+.g-notes-btn::before { right: calc(100% + 8px); } .g-notes-btn::after { left: calc(100% + 8px); }
 .social-links { flex-wrap: wrap; gap: 0.6rem; }
 .social-link { width: auto !important; height: auto !important; min-height: 44px; padding: 0.5rem 1.15rem !important; border-radius: 999px !important; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.01em; text-decoration: none; }
 .gallery-preview:focus-visible { outline: 3px solid var(--focus); outline-offset: 6px; border-radius: 22px; }
@@ -2073,16 +2077,30 @@ main > section, footer { overflow-x: clip; }
 .vine-item.eaten > use { opacity: 0; scale: 0.15; }
 
 /* bouquet ribbon (chosen once the bouquet is full enough) */
-.bq-bow { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); transition: fill 0.5s, stroke 0.5s; }
-.bq-tails { stroke: var(--ribbon, #e98fb0); fill: none; transition: stroke 0.5s; }
-.bq-knot { fill: var(--ribbon-edge, #e07fa3); transition: fill 0.5s; }
-.bq-ribbons { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed rgba(201, 160, 106, 0.4); }
-.bq-ribbons[hidden] { display: none; }
-.bq-ribbons::before { content: 'ribbon'; font-family: var(--font-hand); font-size: 1.02rem; color: #9a5a2a; margin-right: 0.15rem; }
-.bq-ribbons button { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid var(--re); background: var(--rc); cursor: pointer; transition: transform 0.3s var(--spring), box-shadow 0.3s; }
-.bq-ribbons button:hover { transform: scale(1.12); }
-.bq-ribbons button[aria-checked="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--re); }
-@media (pointer: coarse) { .bq-ribbons button { width: 30px; height: 30px; } }
+.bq-band { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); transition: fill 0.5s, stroke 0.5s; }
+/* the bow: its own button, sitting where the stems are gathered */
+.bq-bowbtn { position: absolute; left: 50%; top: 65%; z-index: 2; width: 46px; height: 35px; padding: 0; border: 0; background: none; translate: -50% -50%; cursor: pointer; -webkit-tap-highlight-color: transparent; transform-origin: 50% 50%; transition: transform 0.35s var(--spring); }
+.bq-bowbtn::before { content: ''; position: absolute; inset: -6px -8px; }   /* comfortable touch target */
+.bq-bowbtn:hover, .bq-bowbtn[aria-expanded="true"] { transform: scale(1.1) rotate(-3deg); }
+.bq-bowbtn:focus-visible { outline: 2px dashed var(--focus); outline-offset: 3px; border-radius: 10px; }
+.bq-bowbtn.wiggle { animation: bqSway 0.9s var(--spring); }
+.bq-bow { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(110, 80, 60, 0.28)); }
+.bw-loop, .bw-tail, .bw-knot { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); stroke-width: 1.3; stroke-linejoin: round; transition: fill 0.5s, stroke 0.5s; }
+.bw-knot { fill: var(--ribbon-edge, #d9789e); }
+.bw-fold { fill: none; stroke: #fff; stroke-opacity: 0.55; stroke-width: 1.6; stroke-linecap: round; }
+.bq-pick { position: absolute; left: calc(50% + 20px); top: 65%; z-index: 3; display: flex; align-items: center; gap: 0.2rem; padding: 0.3rem 0.5rem; translate: 0 -50%; border-radius: 999px; background: rgba(255, 253, 248, 0.97); border: 1px solid rgba(201, 160, 106, 0.45); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.18); animation: fanItem 0.35s var(--glide); }
+.bq-pick[hidden] { display: none; }
+.bq-pick::before { content: ''; position: absolute; left: -5px; top: 50%; width: 9px; height: 9px; translate: 0 -50%; rotate: 45deg; background: inherit; border-left: 1px solid rgba(201, 160, 106, 0.45); border-bottom: 1px solid rgba(201, 160, 106, 0.45); }
+.bq-pick button { position: relative; width: 34px; height: 28px; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer; transition: transform 0.3s var(--spring), background 0.2s; --ribbon: var(--rc); --ribbon-edge: var(--re); }
+.bq-pick button::before { content: ''; position: absolute; inset: -8px -2px; }
+.bq-pick button svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.bq-pick button:hover { transform: translateY(-2px) scale(1.12); }
+.bq-pick button[aria-checked="true"] { background: rgba(244, 167, 191, 0.2); box-shadow: 0 0 0 2px var(--re); }
+.bq-pick button:focus-visible { outline: 2px dashed var(--focus); outline-offset: 2px; }
+@media (max-width: 1239px) { .bq-bowbtn { width: 36px; height: 28px; top: 65.5%; } .bq-pick { left: calc(50% + 16px); top: 65.5%; } }
+@media (max-width: 700px) { .mb-bouquet.is-picking { transform: translateX(calc(8px + var(--safe-l))); } }
+@media (max-width: 400px) { .bq-pick button { width: 30px; } }
+@media (prefers-reduced-motion: reduce) { .bq-bowbtn, .bq-bowbtn.wiggle, .bq-pick { animation: none !important; transition: none !important; } }
 
 /* ======================================================================
    The little world
@@ -2350,59 +2368,34 @@ html body .rb-host:hover .rb-vis .rb-ch, html body .rb-host:focus-visible .rb-vi
 .w-twig.is-fluff::after { display: none; }
 .flyby-bird .c-body { position: relative; }
 
-/* ---------------------------------------------------------------------
-   The garden you grew
-   --------------------------------------------------------------------- */
-.grown-section { position: relative; padding: 3.5rem 1.25rem 2.5rem; text-align: center; }
-.gy-head { margin-bottom: 1rem; }
-.gy-title { font-family: var(--font-display); font-weight: 500; font-style: italic; font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.4rem); color: var(--ink); letter-spacing: -0.01em; cursor: default; }
-.gy-sub { margin-top: 0.15rem; font-family: var(--font-hand); font-size: 1.3rem; color: #8c7f92; }
-.gy-bed { --ribbon: #fbf1dc; --ribbon-edge: #c9a06a; position: relative; max-width: 760px; height: clamp(240px, 28vw, 290px); margin: 0 auto; border-radius: 48% 52% 22px 22px / 26% 26% 22px 22px;
-    background: radial-gradient(ellipse at 50% 100%, rgba(207, 229, 189, 0.75), rgba(207, 229, 189, 0) 62%), radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%); }
-.gy-ground { position: absolute; left: 6%; right: 6%; bottom: 8px; height: 26px; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, rgba(141, 179, 106, 0.32), rgba(141, 179, 106, 0) 70%); }
-.gy-flowers { position: absolute; inset: 0; }
-.gy-flower { position: absolute; width: 52px; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%) rotate(calc(var(--tilt, 0deg) + var(--carry, 0deg) + var(--sun, 0deg))); transform-origin: 50% 100%; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; transition: transform 0.6s var(--spring); }
-.gy-flower.held { cursor: grabbing; transition: transform 0.12s ease-out; filter: drop-shadow(0 8px 10px rgba(90, 67, 102, 0.18)); }
-.gy-flower:focus-visible { outline: 2px dashed var(--focus); outline-offset: 4px; border-radius: 12px; }
-.gy-stem { display: block; width: 40px; overflow: visible; order: 2; }
-.gy-headwrap { position: relative; order: 1; height: 0; }
-.gy-bloom { position: absolute; left: 0; top: 0; overflow: visible; animation: flSpin 40s linear infinite; }
-.gy-flower .gy-bloom[viewBox^="0 0 120"] { animation: none; }
-.gy-flower { animation: gySway var(--sd, 5s) ease-in-out infinite alternate; }
-.gy-flower.held { animation: none; }
-@keyframes gySway { from { rotate: -1.5deg; } to { rotate: 1.8deg; } }
-.gy-flower.is-new { animation: gyGrow 1.1s var(--spring) both, gySway var(--sd, 5s) ease-in-out 1.1s infinite alternate; }
-@keyframes gyGrow { from { scale: 0.2 0; opacity: 0; } to { scale: 1; opacity: 1; } }
-.gy-empty { position: absolute; left: 50%; top: 46%; width: min(90%, 420px); translate: -50% -50%; font-family: var(--font-hand); font-size: 1.25rem; line-height: 1.35; color: #8c7f92; }
-.gy-empty[hidden] { display: none; }
-.gy-bow { position: absolute; left: 50%; bottom: 10px; width: 64px; height: 38px; translate: -50% 0; opacity: 0; scale: 0.6; pointer-events: none; z-index: 150; transition: opacity 0.5s ease, scale 0.6s var(--spring); }
-.gy-bed.has-bow .gy-bow { opacity: 1; scale: 1; }
-.gy-bow svg { width: 100%; height: 100%; overflow: visible; }
-.gy-bow .gb-loop { fill: var(--ribbon); stroke: var(--ribbon-edge); stroke-width: 1.1; }
-.gy-bow .gb-tail { fill: none; stroke: var(--ribbon); stroke-width: 4; stroke-linecap: round; }
-.gy-bow .gb-knot { fill: var(--ribbon-edge); }
-.gy-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.9rem 1.4rem; margin-top: 1rem; min-height: 44px; }
-.gy-ribbons { display: flex; gap: 0.55rem; }
-.gy-ribbons[hidden] { display: none; }
-.gy-ribbons button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid var(--re); background: var(--rc); cursor: pointer; transition: transform 0.3s var(--spring), box-shadow 0.3s; }
-.gy-ribbons button::before { content: ''; display: block; margin: -9px; width: 44px; height: 44px; }   /* comfortable touch target */
-.gy-ribbons button:hover { transform: translateY(-2px) scale(1.08); }
-.gy-ribbons button[aria-checked="true"] { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--re); }
-.gy-scatter { min-height: 40px; padding: 0.35rem 1.1rem; border-radius: 999px; border: 1.5px dashed rgba(127, 166, 92, 0.6); background: rgba(255, 255, 255, 0.7); font-family: var(--font-hand); font-size: 1.2rem; color: #4f7a34; cursor: pointer; transition: background 0.25s, transform 0.3s var(--spring); }
-.gy-scatter:hover { background: #fff; transform: rotate(-2deg); }
-.gy-scatter[hidden] { display: none; }
-@media (max-width: 700px) {
-    .grown-section { padding-top: 2.5rem; }
-    .gy-bed { height: 280px; border-radius: 40% 40% 18px 18px / 18% 18% 18px 18px; }
-    .gy-flower { width: 40px; }
-}
-@media (prefers-reduced-motion: reduce) { .gy-flower, .gy-flower.is-new, .gy-bloom { animation: none !important; } .gy-flower { transition: none; } }
-
 /* --- phones: the vines keep to the very edge (smaller blooms, a little further out) so they never sit on labels,
        and the open branch is a little smaller so the list of roles starts sooner --- */
 @media (max-width: 700px) {
-    .vine-left { left: -17px; } .vine-right { right: -17px; }
+    .vine-left { left: 0; } .vine-right { right: 0; }
     .vine-item.on { transform: scale(0.72) rotate(0deg); }
     .vine-item.near { transform: scale(0.95) rotate(12deg); }
     .gs-exp .gs-plant { width: min(80%, 300px); margin-top: 2.6rem; }
 }
+
+/* ---------------------------------------------------------------------
+   Experience flowers and Skills specimens: a gentle breeze, a livelier
+   hover, and a tap response on touch screens. Rotate / translate / scale
+   are the individual properties, so they stack on the hover transforms
+   instead of fighting them. (Reduced motion: see the media query above.)
+   --------------------------------------------------------------------- */
+@keyframes gardenBreeze { 0% { rotate: -2.6deg; translate: -1px 1px; scale: 1; } 50% { rotate: 0.5deg; translate: 0 -3px; scale: 1.015; } 100% { rotate: 2.8deg; translate: 1px 0; scale: 1; } }
+@keyframes specimenBreeze { 0% { --sway: -2.2deg; translate: 0 1px; } 50% { translate: 0 -3px; } 100% { --sway: 2.4deg; translate: 0 0; } }
+.g-art { animation: gardenBreeze 6.5s ease-in-out infinite alternate; }
+.h-art { animation: specimenBreeze 8s ease-in-out infinite alternate; }
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art, .g-cat.is-tapped .g-art { transform: translateY(-7px) rotate(calc(var(--sun, 0deg) - 3deg)) scale(1.07); }
+.h-spec:hover .h-art, .h-spec:focus-visible .h-art, .h-spec.is-tapped .h-art { transform: translateY(-8px) rotate(calc(var(--sun, 0deg) - 3.5deg)) scale(1.08); }
+.g-row.compact .g-cat:hover .g-art, .g-row.compact .g-cat.is-tapped .g-art, .h-row.compact .h-spec:hover .h-art, .h-row.compact .h-spec.is-tapped .h-art { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .g-art, .h-art { animation: none !important; }
+    .g-cat:hover .g-art, .g-cat.is-tapped .g-art, .h-spec:hover .h-art, .h-spec.is-tapped .h-art { transform: none; }
+}
+
+/* until script.js builds the garden at the bottom, hold its space so the page height (and a restored scroll position) does not jump */
+footer:not(:has(.garden-bed)) { min-height: 320px; }
+@media (max-width: 768px) { footer:not(:has(.garden-bed)) { min-height: 300px; } }
+.mb-bouquet.is-picking .bq-label { opacity: 0 !important; }

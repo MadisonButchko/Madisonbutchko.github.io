@@ -7,8 +7,9 @@
     <link rel="icon" type="image/png" href="images/kitty.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,50;1,9..144,300..600,100&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,50;1,9..144,300..600,100&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -638,22 +639,6 @@
                 </div>
             </div>
         </section>
-        <!-- The garden you grew: made (by script.js) from what the visitor touched, found and grew on the way down -->
-        <section class="grown-section" id="grown" aria-labelledby="grown-title">
-            <div class="gy-head reveal">
-                <h2 class="gy-title" id="grown-title">the garden you grew</h2>
-                <p class="gy-sub">a few things you found along the way</p>
-            </div>
-            <div class="gy-bed reveal" id="gyBed" role="group" aria-label="Your garden. Drag the flowers to arrange them, or use the arrow keys">
-                <div class="gy-ground" aria-hidden="true"></div>
-                <div class="gy-flowers"></div>
-                <p class="gy-empty">nothing has taken root here yet. touch a flower or two on your way down, and it will grow here.</p>
-            </div>
-            <div class="gy-tools reveal">
-                <div class="gy-ribbons" role="radiogroup" aria-label="Tie it with a ribbon" hidden></div>
-                <button type="button" class="gy-scatter" hidden>scatter the garden</button>
-            </div>
-        </section>
         <footer><div class="footer-flowers" aria-hidden="true"><svg style="color:var(--pink)"><use href="#fl-bloom"/></svg><svg style="color:var(--yellow);--center:#d99a12"><use href="#fl-forsythia"/></svg><svg style="color:var(--lilac)"><use href="#fl-daisy"/></svg></div><p>&copy; <span id="footerYear">2026</span> Madison Butchko</p></footer>
     </main>
     <div class="gallery-modal" id="galleryModal">
@@ -678,6 +663,6 @@
             <div class="lightbox-counter" id="lightboxCounter"></div>
         </div>
     </div>
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
 </body>
 </html>
