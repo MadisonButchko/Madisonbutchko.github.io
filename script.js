@@ -2697,21 +2697,6 @@ const WorldState = (() => {
         function measure() {
             const k = plant.clientWidth / VW; if (!k || !S.pos) return;
             $$('.gs-bud', piecesEl).forEach((b, i) => { const p = S.pos[i]; b.style.setProperty('--fx', f1((HC.x - p.x) * k) + 'px'); b.style.setProperty('--fy', f1((HC.y - p.y) * k) + 'px'); });
-            fitLabels();
-        }
-        /* skill labels sit outside their piece; nudge any that would run past the stage edge */
-        function fitLabels() {
-            if (isExp) return;
-            const sr = inner.getBoundingClientRect(), nr = note.getBoundingClientRect(), pr = plant.getBoundingClientRect();
-            const lo = Math.max(sr.left, 0) + 6, hi = (nr.left > pr.right - 8 ? nr.left : Math.min(sr.right, innerWidth)) - 8;   /* stop short of the note when it sits beside the plant */
-            piecesEl.classList.add('gs-measure');   /* measure where the pieces will rest, not where they start */
-            $$('.gs-lab', piecesEl).forEach(l => {
-                l.style.removeProperty('--shift');
-                const r = l.getBoundingClientRect(); let s = 0;
-                if (r.left < lo) s = lo - r.left; else if (r.right > hi) s = hi - r.right;
-                if (s) l.style.setProperty('--shift', f1(s) + 'px');
-            });
-            piecesEl.classList.remove('gs-measure');
         }
         addEventListener('resize', () => { clearTimeout(measure.t); measure.t = setTimeout(measure, 120); });
 
@@ -2748,7 +2733,7 @@ const WorldState = (() => {
                 + (minor.length ? '<p class="xl-also">also</p><ol class="xl-list xl-list--quiet">' + minor.map(row).join('') + '</ol>' : '');
         }
         function showIntro(d) {
-            const word = isExp ? 'bloom' : (PIECE_WORD[d.plant] || 'piece');
+            const word = isExp ? 'bloom' : 'skill';
             if (isExp) {
                 swapNote(listHTML(d));
                 if (window.__rainbow) window.__rainbow($('.xl-cat', body));
