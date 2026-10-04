@@ -1132,12 +1132,12 @@ footer { position: relative; padding-top: 0 !important; }
 .vine-sprout .sprout use { animation: none; }
 .vine-sprout .sprout.grow { scale: 1.45; }
 /* a caterpillar crawling along a side vine */
-.vine-cat { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 17px; margin: -15px 0 0 -17px; cursor: pointer; opacity: 0; transition: opacity 0.5s ease; will-change: transform; }
+.vine-cat { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 17px; margin: -15px 0 0 -17px; transform-origin: 17px 15px; cursor: pointer; opacity: 0; transition: opacity 0.5s ease; will-change: transform; }
 .vine-cat.on { opacity: 1; }
 .vine-cat svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(90, 67, 102, 0.2)); }
 .vine-cat::after { content: ''; position: absolute; inset: -12px; }
 .vine-cat.rev .vc-flip { transform: scaleY(-1); }
-.vine-cat .vc-flip { animation: inch 0.8s ease-in-out infinite; transform-origin: left bottom; }
+.vine-cat .vc-flip { animation: inch 0.8s ease-in-out infinite; transform-origin: 0 15px; }
 .vine-cat.rev .vc-flip { animation-name: inchRev; }
 @keyframes inchRev { 0%, 100% { transform: scaleY(-1) scaleX(1); } 50% { transform: scaleY(-1) scaleX(0.86); } }
 .vine-cat.eating .vc-flip { animation: nibble 0.22s ease-in-out infinite; }
@@ -1145,7 +1145,9 @@ footer { position: relative; padding-top: 0 !important; }
 .vine-cat.drop { transition: opacity 0.8s ease; opacity: 0; }
 .vine-cat.drop svg { animation: catDrop 0.85s ease-in forwards; }
 @keyframes catDrop { to { transform: translateY(70px) rotate(220deg); } }
-@media (max-width: 1239px) { .vine-cat { width: 26px; height: 13px; margin: -11px 0 0 -13px; } }
+@media (max-width: 1239px) { .vine-cat { width: 26px; height: 13px; margin: -11px 0 0 -13px; transform-origin: 13px 11px; } .vine-cat .vc-flip { transform-origin: 0 11px; } }
+/* a bloom a caterpillar has bitten off (the rest of its sprig stays) */
+.vine-sprout .sprout.bitten { animation: sproutOut 0.7s ease-in forwards; }
 /* birds flying through the page */
 .flyby-bird { position: fixed; left: 0; top: 0; z-index: 3; pointer-events: none; will-change: transform; }
 .flyby-bird svg { display: block; width: calc(36px * var(--fs, 0.7)); height: calc(29px * var(--fs, 0.7)); overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.15)); }
