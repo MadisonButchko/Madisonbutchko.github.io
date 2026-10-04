@@ -1,11 +1,11 @@
 /* js/animals/birds.js
    Purpose : the world's birds: a visiting bird (for seeds and petals), the seed you can feed a bird, petal/seed theft, material gathering and the nest at the contact photo.
    Owns    : the vine bird and the page flybys (vineBird(), flyby(): each starts its own timer and returns the function, for ?v11debug), visitingBird, gather, the seed (spawn/drag/feed/take), sparkle, steal, the nest (render/visit; stays inside this file), WorldState.nest/nestShown/nestBits updates.
-   Uses    : plants.plants (tween, ease, BIRD_SVG), plants.vine-sprigs (VINE, fadeSprout), core.utils (rand, f1, $, reduce), core.state (WorldState), core.scheduler (Life), core.safe-zones (clearAt, navBottom, openSpot, whenUnseen, inView), animals.animals; reads window.__birdSVG and window.__guideBird at call time.
-   Used by : legacy/200-little-world.js (heartbeat: seed spawn, steal, nest render/visit; window.World helpers; ?worlddebug hook) and, through window.World.gather, legacy/140.
+   Uses    : plants.plants (tween, ease, BIRD_SVG), plants.vine-sprigs (VINE, fadeSprout), core.utils (rand, f1, $, reduce), core.state (WorldState), core.scheduler (Life), core.safe-zones (clearAt, navBottom, openSpot, whenUnseen, inView), animals.animals; reads the guide bird (animals.guide-bird get()) at call time.
+   Used by : legacy/200-little-world.js (heartbeat: seed spawn, steal, nest render/visit; core.world helpers; ?worlddebug hook) and main.js (init() creates the nest where the old definition-time code ran).
    Mobile / reduced motion: unchanged: the seed is a pointer-drag (touch works) or Enter/Space; no visiting birds, theft or nest visits under prefers-reduced-motion (a fed seed is simply eaten).
    Moved verbatim from legacy/200 (Migration Step 10d) and legacy/140 (vine bird + flyby, Step 12e); behaviour, order and timing unchanged. */
-MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals', 'plants.plants', 'plants.vine-sprigs'], function (utils, state, scheduler, zones, animals, plants, sprigs) {
+MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals', 'plants.plants', 'plants.vine-sprigs', 'animals.guide-bird', 'core.world'], function (utils, state, scheduler, zones, animals, plants, sprigs, guide, World) {
     'use strict';
     const { $, rand, f1, reduce } = utils, { Life } = scheduler;
     const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -21,7 +21,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
     function visitingBird(getTarget, opts) {
         opts = opts || {};
         const el = document.createElement('div'); el.className = 'vine-bird flying w-bird'; el.setAttribute('aria-hidden', 'true');
-        el.innerHTML = '<div class="c-flip"><div class="c-body">' + (window.__birdSVG || '') + '</div></div>';
+        el.innerHTML = '<div class="c-flip"><div class="c-body">' + BIRD_SVG + '</div></div>';
         document.body.appendChild(el);
         const t0 = getTarget(), fromLeft = t0.x > innerWidth / 2 ? false : true;
         let x = fromLeft ? -50 : innerWidth + 50, y = rand(-40, innerHeight * 0.25);
@@ -63,7 +63,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
         function docPos() { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
         function feed(near) {
             const s = el; if (!s || s.classList.contains('taken')) return; s.classList.add('taken'); s.setAttribute('aria-disabled', 'true');
-            const gb = window.__guideBird, pos = docPos();
+            const gb = guide.get(), pos = docPos();
             const eat = bird => { s.classList.add('eaten'); if (bird) { bird.classList.add('fed'); setTimeout(() => bird.classList.remove('fed'), 1400); } sparkle(pos.x, pos.y); setTimeout(() => remove(false), 500); gather(); };
             if (near && gb && gb.visible()) { gb.visit(pos.x, pos.y, () => eat(gb.el)); return; }
             if (reduce) { eat(null); return; }
@@ -84,13 +84,13 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
                 if (!drag || e.pointerId !== drag.id) return;
                 el.style.left = f1(e.pageX - drag.dx) + 'px'; el.style.top = f1(e.pageY - drag.dy) + 'px';
                 drag.moved = Math.max(drag.moved, Math.hypot(e.pageX - drag.sx, e.pageY - drag.sy));
-                const gb = window.__guideBird;
+                const gb = guide.get();
                 if (gb && gb.visible()) { const p = gb.at(); gb.el.classList.toggle('curious', Math.hypot(p.x - e.clientX, p.y - e.clientY) < 220); }
             });
             const drop = e => {
                 if (!drag || e.pointerId !== drag.id) return;
                 const moved = drag.moved; drag = null; el.classList.remove('held');
-                const gb = window.__guideBird; if (gb) gb.el.classList.remove('curious');
+                const gb = guide.get(); if (gb) gb.el.classList.remove('curious');
                 if (moved < 24) { el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle'); return; }
                 const p = docPos(), near = gb && gb.visible() && Math.hypot(gb.at().x - p.x, gb.at().y - p.y) < 220;
                 feed(near || !(gb && gb.visible()));
@@ -144,7 +144,8 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
        The nest: tucked at a corner of the contact photo. It only changes
        while out of sight, a twig at a time, and birds visit it later.
        ------------------------------------------------------------------ */
-    const nest = (function () {
+    let nest = null;   /* created by init() (the DOM at the contact photo), as the old definition-time code did */
+    function initNest() { nest = (function () {
         const host = $('.contact-photo'); if (!host) return { render() { }, visit() { return false; } };
         const el = document.createElement('div'); el.className = 'w-nest'; el.setAttribute('aria-hidden', 'true');
         el.innerHTML = '<svg viewBox="0 0 80 46">'
@@ -169,7 +170,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
             return true;
         }
         return { render, visit };
-    })();
+    })(); }
 
     /* ---- vine birds (Migration Step 12e, moved verbatim from legacy/140): one that drops by to snack on a vine flower (click to shoo), and flybys across the page ---- */
     function vineBirdStart() {
@@ -235,7 +236,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
                     el.innerHTML = `<div class="c-flip"><div class="c-body">${BIRD_SVG.replace(/#a9d8ea/g, t[0]).replace(/#8fc3dc/g, t[1]).replace(/#7fb3cc/g, t[2])}</div></div>`;
                     el.style.setProperty('--fs', (rand(0.6, 0.8) * (W < 600 ? 0.8 : 1)).toFixed(2));
                     /* now and then the first bird carries something home for its nest: a twig, a strand of grass, a bit of fluff */
-                    const carries = k === 0 && window.World && World.gather && (World.nestStage ? World.nestStage() < 5 : true) && Math.random() < 0.4;
+                    const carries = k === 0 && World.gather && (World.nestStage ? World.nestStage() < 5 : true) && Math.random() < 0.4;
                     if (carries){ const it = document.createElement('i'); it.className = 'w-twig is-' + pick(['twig', 'grass', 'fluff']); el.querySelector('.c-body').appendChild(it); el.__carry = true; }
                     document.body.appendChild(el);
                     const yy = y0 + k * 22, lag = k * 0.06;
@@ -250,5 +251,5 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
             return flyby;
     }
 
-    return animals.register('birds', { seed, steal, nest, gather, sparkle, visitingBird, vineBird: vineBirdStart, flyby: flybyStart });
+    return animals.register('birds', { seed, steal, get nest() { return nest; }, init: initNest, gather, sparkle, visitingBird, vineBird: vineBirdStart, flyby: flybyStart });
 });

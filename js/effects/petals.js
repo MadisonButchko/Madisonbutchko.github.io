@@ -1,12 +1,13 @@
 /* js/effects/petals.js
    Purpose : drifting spring petals (two canvases) and the click-burst petals.
    Owns    : the #petalsBack / #petalsFront canvases, their animation loop, resize handling and click bursts.
-   Uses    : nothing.   Used by: nothing (self-contained; loaded at the position the old petals block ran).
+   Uses    : nothing.   Used by: js/main.js calls init() at the position the old code ran (the module itself no longer runs at definition).
    Mobile / reduced motion: returns immediately under prefers-reduced-motion (no canvas drawing, no listeners); DPR capped at 1 on phones (< 700 px) and 1.5 otherwise.
    Moved verbatim from the legacy files (Migration Step 6); behaviour, order and timing unchanged. */
 MB.define('effects.petals', [], function () {
     'use strict';
 
+    function init() {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const COLORS = ['#f2c230','#f7d65e','#f4a7bf','#f9c6d6','#b9a2de','#d6c7f0','#fff4f7','#f8c9a0'];
         const back = document.getElementById('petalsBack'), front = document.getElementById('petalsFront');
@@ -69,4 +70,7 @@ MB.define('effects.petals', [], function () {
             }
             if (burst.length > 60) burst.splice(0, burst.length - 60);   /* fast clicking never piles up petals */
         });
+    }
+
+    return { init };
 });

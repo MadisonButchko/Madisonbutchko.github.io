@@ -1,17 +1,17 @@
 /* js/plants/flowers.js
    Purpose : everything the decorative flowers do. start(): turning flowers (Spin, hover speed-up), the touch responses (REACT / FINDS: spin, bloom, petals, ... ladybug, tiny butterfly, seed, bud), `interactive`/`turning` wiring and late-flower adoption. startAmbient(): Experience/Skills breathing, off-screen pause, pollen, the capture-phase ~230 ms click delay, wind (via breeze) and the rare butterfly visitor.
-   Owns    : Spin (window.__spin), REACT/FINDS/react/interactive/turning/adoptLate (window.__adoptFlowers; ?v11debug window.__v11), the seeded(7) generator the dandelions continue from, the capture-phase document click handler, the rare-visitor timer.
-   Uses    : core.utils ($, $$, reduce), core.scheduler (Life), core.particles (FX), core.state (GardenLog), environment.breeze (wind); window.World (sparkle, seedAt, hasSeed, clearAt) and window.__visitFlower (legacy/190) read at call time.
+   Owns    : Spin (module-level; was window.__spin), REACT/FINDS/react/interactive/turning/adoptLate (?v11debug window.__v11), touchTap, the seeded(7) generator the dandelions continue from, the capture-phase document click handler, the rare-visitor timer.
+   Uses    : core.utils ($, $$, reduce), core.scheduler (Life), core.particles (FX), core.state (GardenLog), environment.breeze (wind); core.world (sparkle, seedAt, hasSeed, clearAt, note) and animals.butterflies (the rare visitor) read at call time.
    Used by : legacy/210-v11-polish.js calls start() at the spot the block ran and hands `seeded`/`REACT` to plants/dandelions.js; js/main.js (LAST script) calls startAmbient() where ecosystem.js used to run, so listener and init order are unchanged.
    Mobile / reduced motion: unchanged: hover speed-ups are mouse-only; wind only on fine pointers; reduced motion = no spin, no click delay, no pollen, no visitor; taps still react.
    Moved verbatim from legacy/210 (Migration Step 12a) and ecosystem.js (Step 11); behaviour, order and timing unchanged. */
-MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', 'core.state', 'environment.breeze'], function (utils, scheduler, particles, state) {
+MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', 'core.state', 'environment.breeze', 'core.world'], function (utils, scheduler, particles, state, breeze, World) {
     'use strict';
     const { $, $$, reduce } = utils, { Life } = scheduler, FX = particles.FX, GardenLog = state.GardenLog;
     const rnd = (a, b) => a + Math.random() * (b - a);
     const f1 = n => Math.round(n * 10) / 10;           /* number-returning, as in the old ecosystem.js (not utils.f1) */
 
-    function start() {
+    /* the turning-flower speed controller lives at module level so other modules can read it (was window.__spin) */
     /* ------------------------------------------------------------------
        Turning flowers. Each decorative flower turns slowly on its own
        (a CSS animation, so it costs nothing while left alone). Hover
@@ -52,7 +52,8 @@ MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', '
         }
         return { set, spinning: el => { const s = st.get(el); return !!s && s.rate > 1.5; } };
     })();
-    window.__spin = Spin;
+
+    function start() {
 
     /* ------------------------------------------------------------------
        Touching a flower. Each decorative flower has its own little
@@ -200,7 +201,6 @@ MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', '
     }
     adoptLate(); setTimeout(adoptLate, 2500); addEventListener('load', () => setTimeout(adoptLate, 1500));
     document.addEventListener('click', () => setTimeout(adoptLate, 1000));
-    window.__adoptFlowers = adoptLate;
 
         return { seeded, REACT, Spin };
     }
@@ -277,12 +277,22 @@ MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', '
         if (!reduce) (function rare() {
             setTimeout(function () {
                 const cats = $$('.g-cat .g-art').filter(a => { const r = a.getBoundingClientRect(); return r.width && r.top > 80 && r.bottom < innerHeight - 40; });
-                if (!document.hidden && cats.length && window.__visitFlower && Math.random() < 0.7) window.__visitFlower(cats[Math.floor(Math.random() * cats.length)], 'butterfly');
+                if (!document.hidden && cats.length && Math.random() < 0.7) MB.use('animals.butterflies').visitFlower(cats[Math.floor(Math.random() * cats.length)], 'butterfly');
                 rare();
             }, rnd(90000, 170000));
         })();
     })();
     }
 
-    return { start, startAmbient };
+
+    /* touch screens have no hover: a tap on a garden flower or specimen gives the same little lift for a moment (was in legacy/210) */
+    function touchTap() {
+        document.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'mouse') return;
+            const h = e.target.closest && e.target.closest('.g-cat, .h-spec'); if (!h) return;
+            h.classList.add('is-tapped'); clearTimeout(h.__tapF); h.__tapF = setTimeout(() => h.classList.remove('is-tapped'), 900);
+        }, { passive: true });
+    }
+
+    return { start, startAmbient, touchTap, Spin };
 });

@@ -1,11 +1,11 @@
 /* js/botanical/stage.js
    Purpose : the "stage" of the Experience garden and the Skills specimens: one per section; open() flies the chosen plant to the stage and grows it, select() shows one note at a time, close() folds everything back; labels, notes, keyboard, swipe, hover lean, specimen nudge; plus Escape-to-close and the linger-for-a-butterfly easter egg.
    Owns    : Stage(cfg) (build, measure/fitLabels, notes, select, flight, open/close), create() (makes the two stages from #expGarden / #skillGarden, registers them in ctx, Escape handler, linger handler).
-   Uses    : botanical.content, botanical.plant-art, botanical.bouquet (discover, discoverItem, itemCount, isOpen), animals.butterflies; window.__rainbow / window.__spin read at call time.
+   Uses    : botanical.content, botanical.plant-art, botanical.bouquet (discover, discoverItem, itemCount, isOpen), animals.butterflies; effects.text-effects (rainbow) read at call time.
    Used by : legacy/190 orchestrator (create()), botanical/links.js (through ctx.xpStage / ctx.skStage).
    Mobile / reduced motion: unchanged: phone layout (<= 700 px) scrolls to the plant, swipe moves between Skills pieces, hover lean only with fine pointers, no flight under reduced motion.
    Moved verbatim from legacy/190-botanical.js (Migration Step 13); behaviour, order and timing unchanged. */
-MB.define('botanical.stage', ['botanical.content', 'botanical.plant-art', 'botanical.bouquet', 'animals.butterflies'], function (content, art, bouq, creatures) {
+MB.define('botanical.stage', ['botanical.content', 'botanical.plant-art', 'botanical.bouquet', 'animals.butterflies', 'effects.text-effects'], function (content, art, bouq, creatures, textFx) {
     'use strict';
     const { $, $$, wait, f1, clamp, reduce, fine, frame, settle, esc, plain, behavior, hash, rng, navH, focusQuiet, bringIntoView, visits, visit, EXP, SK, PIECE_WORD, ctx } = content;
     const { VW, VH, HC, ring, pct, budArt, pieceArt } = art, { visitFlower, shouldVisit, ladybugOn } = creatures;
@@ -193,7 +193,7 @@ MB.define('botanical.stage', ['botanical.content', 'botanical.plant-art', 'botan
             const word = isExp ? 'bloom' : 'skill';
             if (isExp) {
                 swapNote(listHTML(d));
-                if (window.__rainbow) window.__rainbow($('.xl-cat', body));
+                textFx.rainbow($('.xl-cat', body));
                 count.textContent = ''; prevB.disabled = nextB.disabled = true;
                 return;
             }
@@ -275,7 +275,7 @@ MB.define('botanical.stage', ['botanical.content', 'botanical.plant-art', 'botan
             const hot = (i, on) => {
                 const b = piecesEl.children[i], li = $('.xl-item[data-i="' + i + '"]', body);
                 if (b) b.classList.toggle('is-hot', on); if (li) li.classList.toggle('is-hot', on);
-                if (b && window.__spin && on && fine) { const art = $('.gb-art', b); if (art) art.animate([{ rotate: '0deg' }, { rotate: '72deg' }], { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', composite: 'add' }); }
+                if (b && on && fine) { const art = $('.gb-art', b); if (art) art.animate([{ rotate: '0deg' }, { rotate: '72deg' }], { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', composite: 'add' }); }
             };
             body.addEventListener('click', e => { const r = e.target.closest('.xl-row'); if (r) select(+r.parentElement.dataset.i, { toggle: true }); });
             body.addEventListener('pointerover', e => { const r = e.target.closest('.xl-item'); if (r && !r.contains(e.relatedTarget)) hot(+r.dataset.i, true); });

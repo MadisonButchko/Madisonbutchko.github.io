@@ -1,13 +1,13 @@
 /* js/botanical/bouquet.js
    Purpose : the discovery memory and the visitor's bouquet (a small posy in the corner that collects what was opened; ribbon colour; fan of finds; reset).
    Owns    : CATS, found / foundItems (sessionStorage "mb-discoveries-v2", "mb-found-items-v1"), setMark/clearMarks ("visited" marks), discover/discoverItem (feed GardenLog and World.note), the bouquet UI (create()), isOpen.
-   Uses    : botanical.content, core.state (WorldState); window.GardenLog / window.World read at call time; ctx.openById (set by botanical/links.js).
+   Uses    : botanical.content, core.state (WorldState); GardenLog and core.world (note) read at call time; ctx.openById (set by botanical/links.js).
    Used by : botanical/stage.js (discover, discoverItem, itemCount, isOpen), legacy/190 orchestrator (create, markAll, draw).
    Mobile / reduced motion: unchanged (travelling flowers and the nudge are skipped under prefers-reduced-motion).
    Moved verbatim from legacy/190-botanical.js (Migration Step 13); behaviour, order and timing unchanged. */
-MB.define('botanical.bouquet', ['core.state', 'botanical.content'], function (state, content) {
+MB.define('botanical.bouquet', ['core.state', 'botanical.content', 'core.world'], function (state, content, World) {
     'use strict';
-    const { WorldState, mem } = state;
+    const { WorldState, mem, GardenLog } = state;
     const { $, $$, wait, f1, clamp, reduce, fine, frame, settle, esc, plain, behavior, hash, rng, navH, focusQuiet, bringIntoView, visits, visit, EXP, SK, PIECE_WORD, ctx } = content;
     let bouquet = null;   /* set by create() */
     /* ------------------------------------------------------------------
@@ -35,14 +35,14 @@ MB.define('botanical.bouquet', ['core.state', 'botanical.content'], function (st
         found.push(id); foundStore.set(found); setMark(id, true);
         bouquet.collect(id, fromEl);
         /* the garden at the bottom keeps a sprig of every branch the visitor opened */
-        if (window.GardenLog) GardenLog.add({ id: 'cat:' + id, kind: 'cluster', sym: CATS[id].sym, box: CATS[id].box });
-        if (window.World) World.note(2);
+        GardenLog.add({ id: 'cat:' + id, kind: 'cluster', sym: CATS[id].sym, box: CATS[id].box });
+        if (World.note) World.note(2);
     }
     function discoverItem(id, fromEl) {
         if (foundItems.includes(id)) return;
         foundItems.push(id); itemStore.set(foundItems);
         bouquet.sprinkle(fromEl);
-        if (window.World) World.note(1);
+        if (World.note) World.note(1);
     }
 
     /* ------------------------------------------------------------------

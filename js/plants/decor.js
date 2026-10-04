@@ -1,6 +1,6 @@
 /* js/plants/decor.js
    Purpose : flower patches ("page-posy") and scattered blooms/leaves ("scatter") dropped into empty margins; each spot is checked against text, photos, panels and the other decorations, and re-checked on load, resize and clicks.
-   Owns    : both placers and their own copies of the content-avoidance selector lists (CONTENT: deliberately NOT unified until Phase D), window.__scatterPlace.
+   Owns    : both placers and their own copies of the content-avoidance selector lists (CONTENT: deliberately NOT unified until Phase D).
    Uses    : core.utils (rand, reduce); the seeded generators `rng`/`vf` are small private copies of the ones legacy/140 uses.
    Used by : legacy/140-side-vines-and-garden.js calls start() at the spot the two blocks ran; plants/flowers.js adopts the results later (adoptLate); weather reads .page-posy.
    Mobile / reduced motion: unchanged: patch hover-bloom only where hover exists, taps bloom too; reduced motion skips the petal burst.
@@ -145,7 +145,6 @@ MB.define('plants.decor', ['core.utils'], function (utils) {
             addEventListener('load', () => later(900)); later(1800);
             let lastW = innerWidth; addEventListener('resize', () => { if (innerWidth !== lastW){ lastW = innerWidth; later(350); } });
             document.addEventListener('click', () => later(800));
-            window.__scatterPlace = place;
         })();
     }
 

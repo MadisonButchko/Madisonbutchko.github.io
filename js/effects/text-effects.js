@@ -1,11 +1,12 @@
 /* js/effects/text-effects.js
    Purpose : text effects: animated section titles (letters + squiggles), the letters/words "settle" after their entrance, hover colours on text, and the rainbow letters on headings/labels.
-   Owns    : titles(), hoverSettle(), hoverColor(), rainbowLetters() (also publishes the legacy global window.__rainbow, read by the botanical stage). Each is called by a legacy file at the spot its code used to run: titles before hoverSettle (it needs the .t-ch letters).
-   Uses    : core.utils ($, $$).   Used by: js/legacy/090, 100, 180, 210 (until Phase D wiring); window.__rainbow is read by js/legacy/190-botanical.js.
+   Owns    : titles(), hoverSettle(), hoverColor(), rainbowLetters() (its `rainbow(el, host)` is exported; was window.__rainbow). Each is called by a legacy file at the spot its code used to run: titles before hoverSettle (it needs the .t-ch letters).
+   Uses    : core.utils ($, $$).   Used by: js/legacy/090, 100, 180, 210 (until Phase D wiring); botanical/stage.js reads rainbow().
    Mobile / reduced motion: hover colours are CSS-driven; a tap equivalent for headings exists elsewhere (legacy 210 tap handlers). Nothing here reads prefers-reduced-motion.
    Moved verbatim from the legacy files (Migration Step 6); behaviour, order and timing unchanged. */
 MB.define('effects.text-effects', ['core.utils'], function (utils) {
     'use strict';
+    let rainbowFn = null;   /* set by rainbowLetters(); was window.__rainbow */
     const { $, $$ } = utils;
 
     function titles() {
@@ -110,7 +111,7 @@ MB.define('effects.text-effects', ['core.utils'], function (utils) {
         el.classList.add('rb-text');
         const h = host || el; h.classList.add('rb-host'); h.classList.remove('hc-text');
     }
-    window.__rainbow = rainbow;
+    rainbowFn = rainbow;
     rainbow($('.about-hello .hello-ink'), $('.about-hello'));
     $$('.nav a').forEach(a => rainbow(a));
     $$('.g-cat').forEach(b => rainbow($('.g-name', b), b));
@@ -120,5 +121,14 @@ MB.define('effects.text-effects', ['core.utils'], function (utils) {
     const h1 = $('.hero h1'); if (h1) h1.classList.add('rb-host', 'rb-h1');
     }
 
-    return { titles, hoverSettle, hoverColor, rainbowLetters };
+    /* touch screens have no hover: a tap on a heading gives the same colour change for a moment (was in legacy/210) */
+    function tapHover() {
+        document.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'mouse') return;
+            const h = e.target.closest && e.target.closest('.rb-host'); if (!h) return;
+            h.classList.add('is-tapped'); clearTimeout(h.__tap); h.__tap = setTimeout(() => h.classList.remove('is-tapped'), 1600);
+        }, { passive: true });
+    }
+
+    return { titles, hoverSettle, hoverColor, rainbowLetters, tapHover, rainbow: (el, host) => { if (rainbowFn) return rainbowFn(el, host); } };
 });

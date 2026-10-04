@@ -203,11 +203,11 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - **12e** **DONE** (12e: vine bird + flyby → `animals/birds.js` (`vineBird()`, `flyby()`), vine caterpillar → `animals/vine-caterpillar.js`; `animals.js`/`birds.js` tags moved before legacy/140) vine bird + flyby birds (1196–1239, 1400–1428) → `animals/birds.js`; vine caterpillar (1240–1396) → `animals/vine-caterpillar.js`. T1 (12c–e): scroll the page both ways (stems/leaves/blooms retreat in order), click vine at several heights (limit 24 / 14), birds and caterpillars eat sprigs and they regrow, slim vines at < 1240 px, resize/address-bar guard, `?v11debug`.
 - **End of step 12: T2.** **DONE** (full capture, file://, Pages export, forced events, nav, Experience, idle node stability, reload, desktop/phone/RM).
 
-### Step 13: botanical · medium, **stage high**; separate commits in this order
+### Step 13: botanical · medium, **stage high**; separate commits in this order · **DONE** (legacy/190 → `botanical/{content,plant-art,bouquet,stage,links}.js`, `animals/butterflies.js`, `easter-eggs/easter-eggs.js`; the closure's shared bindings became `ctx` in `botanical.content`; legacy/190 is a 12-line orchestrator that runs them in the original order; `plants/seeds.js` tag moved earlier because links depends on it; T1 + T2 passed)
 `content.js` (2752–2785) → `plant-art.js` (2892–2928) → `bouquet.js` incl. discoveries (2786–2820, 3375–3513) → `links.js` incl. seed of curiosity (3514–3618) → visitor butterfly/bee to `animals/butterflies.js` (2821–2891) → hidden moments to `easter-eggs/easter-eggs.js` (3620–3643) → **`stage.js` last** (2929–3358; decide the `stage-notes`/`stage-flight` splits only after reading its closure variables).
 - **Depends on:** `__rainbow` (6c), `pour` (11), `GardenLog`/`mem` (2), `World.note` (10f). **T1:** open/switch/close both sections (desktop + phone layout), buds and notes, swipe, keyboard/focus order, Escape, bouquet fill + ribbon, ways-in links, revisit "new bud", RM. **Then T2.**
 
-### Step 14: footer garden → `garden/` + `animals/deer.js` + `environment/weather.js` · **high**, bottom-up
+### Step 14: footer garden → `garden/` + `animals/deer.js` + `environment/weather.js` · **high**, bottom-up · **DONE** (14a `garden/species.js`, 14b `garden/hud.js`, 14c `environment/weather.js` `createGarden`, 14d `garden/critters.js`, 14e `animals/deer.js`, 14f `garden/garden.js`; the closure's shared state/functions are the garden-facing API object `ga` (state S/badges/deer/cloud/play/tick... and cross-module functions); the rewrite was done with a JS-aware tokenizer, not regex; T1 via `__garden` on desktop/phone/RM + T2 passed)
 - **14a** species art (pure functions, 1603–1711) → `garden/species.js`.
 - **14b** badges, toasts, HUD text (1769–1933) → `garden/hud.js`.
 - **14c** garden weather (2287–2344) → `environment/weather.js` (sharing cloud art with 10c).
@@ -216,7 +216,7 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - **14f** the game core (state, save, plant/water/input/reset, tick) → `garden/garden.js`.
 - **T1 each:** force with `__garden`: plant/water/thirst/lifespan, each critter, deer walk-in/bite/flee/leave (narrow bed < 600 reach/speed), sun/rain cycles, badges, save/restore, **start over wipes `mb-garden-v1`**, phone layout (starter patch 6 vs 10), RM, tab hidden. **Then T2.**
 
-### Step 15: guide bird → `animals/guide-bird.js` · medium
+### Step 15: guide bird → `animals/guide-bird.js` · medium · **DONE** (`animals.guide-bird` `start()` + `get()`; `window.__guideBird` removed; `animals.birds` declares the dependency; legacy/160 is a one-line call)
 - 2391–2520. `__guideBird` becomes the public API of `animals.guide-bird`, a declared dependency of `animals.birds`. **T1:** flutters in empty spaces, points to the garden, yields to purposeful creatures, phone behaviour unchanged.
 
 ## Phase D: consolidation (behaviour-adjacent; one change per commit)

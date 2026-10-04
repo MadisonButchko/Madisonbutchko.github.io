@@ -1,12 +1,13 @@
 /* js/effects/flower-fx.js
    Purpose : click blooms (a flower stamps where you click) and little flower pops around photos on hover.
    Owns    : the click-bloom stamp and the photo flower pops (each with its own cooldown).
-   Uses    : nothing.   Used by: nothing (self-contained; loaded at the position the old "Flower FX (c)" block ran).
+   Uses    : nothing.   Used by: js/main.js calls init() at the position the old code ran (the module itself no longer runs at definition).
    Mobile / reduced motion: skipped entirely under prefers-reduced-motion; pops are mouseenter-based (no hover on touch, so none there).
    Moved verbatim from the legacy files (Migration Step 6); behaviour, order and timing unchanged. */
 MB.define('effects.flower-fx', [], function () {
     'use strict';
 
+    function init() {
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (reduce) return;
         const NS = 'http://www.w3.org/2000/svg';
@@ -62,4 +63,7 @@ MB.define('effects.flower-fx', [], function () {
                 }
             });
         });
+    }
+
+    return { init };
 });

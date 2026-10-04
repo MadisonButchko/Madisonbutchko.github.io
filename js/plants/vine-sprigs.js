@@ -162,7 +162,7 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
             }
             if (!grew && !fresh.length && !upg.length) return false;
             if (grew) extendVine(v, side, endD);
-            if (window.GardenLog && (fresh.length || upg.length)) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
+            if (fresh.length || upg.length) GardenLog.add({ id: 'vine:' + side, kind: 'flower', sym: 'fl-bloom', color: side === 'left' ? '#e9789f' : '#b9a2de', center: '#fff1cc' });
             const now = performance.now();
             fresh.forEach(s => {
                 const spec = { level: 1, seed: 1 + Math.floor(Math.random() * 2e9), leafy: Math.random() < 0.12, t: { 1: now } };

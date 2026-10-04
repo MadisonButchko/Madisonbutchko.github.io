@@ -2,12 +2,13 @@
    Purpose : the two side vines that grow with scroll (and with clicks), their leaves/blooms, the near-bloom hover on desktop.
    Owns    : start(): vine building/layout, ONE growth system (scroll growth + click bonus -> pf/qf), the rAF tick, the click-strip sizing; gm / update / vineQ / bonus (public API, were window.__gm / __vineUpdate / __vineQ / __vineBonus). stems(): the "near bloom" mousemove handler (the vine stays one clean line; the addStems stem code is dormant, as before).
    Hooks   : hosts onLayout(fn) / onTick(fn) / onRender(fn), registered by plants/vine-sprigs.js (layout + render) and animals/caterpillar.js (layout + tick), called in registration order.
-   Uses    : nothing (self-contained; reads window.__spin from plants/flowers.js at call time).
+   Uses    : nothing (self-contained; reads plants.flowers Spin at call time).
    Used by : legacy/050-vine-growth.js calls start() and legacy/130-vine-stems-butterflies.js calls stems(), each at the spot its code ran, so execution order is unchanged.
    Mobile / reduced motion: unchanged: no vines at all under prefers-reduced-motion; the near-bloom hover only with hover + fine pointer.
    Moved verbatim from legacy/050 and legacy/130 (Migration Step 12c; hook registry added in 12d); behaviour, order and timing unchanged. */
 MB.define('plants.vines', [], function () {
     'use strict';
+    const flowersSpin = () => MB.has('plants.flowers') ? MB.use('plants.flowers').Spin : null;   /* the turning-flower speed controller (was window.__spin) */
 
     /* hooks other modules register (replace the old window.__onVineLayout / __onVineTick / __vineSprigs globals; same call order) */
     const layoutHooks = [], tickHooks = []; let renderHook = null;
@@ -166,7 +167,7 @@ MB.define('plants.vines', [], function () {
             addEventListener('mousemove', e => { ev = e; if (q) return; q = true; requestAnimationFrame(() => { q = false;
                 if (ev.clientX > 130 && ev.clientX < innerWidth - 130){
                     /* the cursor left the vines: let any flower it was touching settle back */
-                    document.querySelectorAll('.vine-item.near').forEach(it => { it.classList.remove('near'); if (window.__spin) window.__spin.set(it.firstElementChild, false); });
+                    document.querySelectorAll('.vine-item.near').forEach(it => { it.classList.remove('near'); if (flowersSpin()) flowersSpin().set(it.firstElementChild, false); });
                     return;
                 }
                 document.querySelectorAll('.vine-item.on').forEach(it => {
@@ -174,7 +175,7 @@ MB.define('plants.vines', [], function () {
                     if (it.classList.contains('near') === near) return;
                     it.classList.toggle('near', near);
                     /* a flower the cursor reaches spins up, and eases back when it leaves */
-                    if (window.__spin && it.classList.contains('spin')) window.__spin.set(it.firstElementChild, near);
+                    if (flowersSpin() && it.classList.contains('spin')) flowersSpin().set(it.firstElementChild, near);
                 });
             }); }, { passive: true });
         }

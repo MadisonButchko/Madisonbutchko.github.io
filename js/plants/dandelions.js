@@ -1,11 +1,11 @@
 /* js/plants/dandelions.js
    Purpose : the page's dandelions (fluffy clocks, half-blown ones, yellow flowers): tap or brush a clock and its seeds drift off on a shared breeze; a few land and bloom briefly.
    Owns    : the Dandelions controller (placement per section, wish text, shared seed-drift loop, regrow, landing flowers), the ?v11debug hook window.__dand.
-   Uses    : core.utils ($, $$, rand), core.particles (FX), core.state (GardenLog); window.World (placeIn, contentRects, inView, onBeat, note) and, passed in by legacy/210 because they are still private there, `seeded` (the shared seeded PRNG: dandelion shapes depend on its sequence) and `REACT` (nod).
+   Uses    : core.utils ($, $$, rand), core.particles (FX), core.state (GardenLog); core.world (placeIn, contentRects, inView, onBeat, note) and, passed in by legacy/210 because they are still private there, `seeded` (the shared seeded PRNG: dandelion shapes depend on its sequence) and `REACT` (nod).
    Used by : legacy/210-v11-polish.js calls start() at the spot the block used to run.
    Mobile / reduced motion: unchanged: tap/keyboard release, mouse-only brush, no seeds or landing flowers under prefers-reduced-motion.
    Moved verbatim from legacy/210 (Migration Step 10a); behaviour, order and timing unchanged. */
-MB.define('plants.dandelions', ['core.utils', 'core.particles', 'core.state'], function (utils, particles, state) {
+MB.define('plants.dandelions', ['core.utils', 'core.particles', 'core.state', 'core.world'], function (utils, particles, state, World) {
     'use strict';
     const { $, $$, reduce, fine } = utils;
     const rnd = (a, b) => a + Math.random() * (b - a);
@@ -188,7 +188,7 @@ MB.define('plants.dandelions', ['core.utils', 'core.particles', 'core.state'], f
             });
             if (!motion.matches) { d.el.classList.remove('puffed'); void d.el.offsetWidth; d.el.classList.add('puffed'); }
             regrow(d);
-            if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:' + d.sec, kind: 'dandelion', sym: 'dandelion', color: '#fffdf6', center: '#c9b98a' }); if (window.World) World.note(1); }
+            if (!d.logged) { d.logged = true; GardenLog.add({ id: 'dand:' + d.sec, kind: 'dandelion', sym: 'dandelion', color: '#fffdf6', center: '#c9b98a' }); if (World.note) World.note(1); }
             return went;
         }
         function wire(d) {

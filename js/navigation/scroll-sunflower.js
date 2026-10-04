@@ -1,12 +1,13 @@
 /* js/navigation/scroll-sunflower.js
    Purpose : the corner sunflower: scroll indicator (a bud that grows and blooms as you scroll) and the back-to-top button.
    Owns    : the .to-top button, its drawing and its scroll-driven animation loop.
-   Uses    : nothing.   Used by: nothing (self-contained; loaded right after legacy/110, where this block used to be the last statement).
+   Uses    : nothing.   Used by: js/main.js calls init() at the position the old code ran (the module itself no longer runs at definition).
    Mobile / reduced motion: drawn closed/open from scroll progress; reduced motion handled inside (sfReduce) exactly as before; tap/click scrolls to the top.
    Moved verbatim from the legacy files (Migration Step 7); behaviour, order and timing unchanged. */
 MB.define('navigation.scroll-sunflower', [], function () {
     'use strict';
 
+    function init() {
     /* v4c: scroll indicator + back to top: a sunflower on its own little pad. At the top of the page it is a small
            closed bud; as you scroll the stem grows, leaves unfurl and the petals open ring by ring; at the bottom it
            is in full bloom. It follows scroll progress (0..1) both ways, eased so it grows and retreats smoothly. */
@@ -79,4 +80,7 @@ MB.define('navigation.scroll-sunflower', [], function () {
         }
         addEventListener('scroll', growFlower, { passive: true });
         addEventListener('resize', growFlower); growFlower();
+    }
+
+    return { init };
 });

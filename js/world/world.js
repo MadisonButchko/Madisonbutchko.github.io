@@ -1,14 +1,15 @@
-/* =====================================================================
-   The little world: things that quietly happen as someone explores.
-   Flowers lean toward the cursor like sunlight, a caterpillar becomes a
-   chrysalis and later a butterfly, birds take seeds and petals and slowly
-   build a nest, a dandelion scatters seeds that may take root further
-   down, and now and then a small cloud brings rain (and maybe a rainbow).
-   Everything shares WorldState (memory) and Life (one creature at a time,
-   and bigger events only after a quiet stretch), driven by one heartbeat.
-   ===================================================================== */
-(function () {
+/* js/world/world.js
+   Purpose : the little world's wiring: sunlight, the birds/nest/seed, the caterpillar story, the dandelion seeds that took root, the rare-event heartbeat (rain / petal thief / nest visit in ONE roll, seed spawn as a beat callback), the shared helper registry (core.world, formerly window.World) and the ?worlddebug hook window.__world.
+   Owns    : init() (everything legacy/200 did, in the same order), placeIn (where a dandelion may stand in a section).
+   Uses    : core.state (WorldState), core.scheduler (Life, Beat), core.safe-zones, core.world, animals.birds, animals.caterpillar, plants.seeds, environment.breeze, environment.weather.
+   Used by : js/main.js (init(), after the garden/botanical code and before the v11 flower pass, where legacy/200 ran).
+   Mobile / reduced motion: unchanged (nothing here adds motion of its own).
+   Moved verbatim from legacy/200 (Phase D); window.World became the core.world registry; behaviour, order and timing unchanged. */
+MB.define('world.world', ['core.state', 'core.scheduler', 'core.safe-zones', 'core.world'], function (state, scheduler, zones, World) {
     'use strict';
+    const { WorldState } = state, { Life } = scheduler;
+
+    function init() {
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
     const $ = (sel, root) => (root || document).querySelector(sel);
@@ -66,14 +67,16 @@
         () => { checkWaiting(); caterpillar.advance(); nest.render(); },
         beats => { if (beats > 6 && !seed.el && W.explored >= 2 && Math.random() < 0.06) seed.spawn(); });
 
-    window.World = {
+    Object.assign(World, {
         note(n) { W.explored += n || 1; save(); caterpillar.advance(); },
         /* shared with the v11 pass below, so it reuses these instead of making its own */
         sparkle, gather, placeIn, openSpot, clearAt, inView, whenUnseen, contentRects,
         seedAt: at => seed.spawn(at), hasSeed: () => !!seed.el, nestStage: () => W.nest,
         plantSeed: seeds.plantSeed, onBeat: fn => Beat.onBeat(fn), calm: ms => Life.calm(ms)
-    };
+    });
     /* test hook, only when the page is opened with ?worlddebug */
     if (/[?&]worlddebug\b/.test(location.search)) window.__world = { seed: () => seed.spawn(), steal, rain: rainCloud, nestVisit: () => nest.visit(), state: W, sprouts: seeds.sprouts };
-})();
+    }
 
+    return { init };
+});

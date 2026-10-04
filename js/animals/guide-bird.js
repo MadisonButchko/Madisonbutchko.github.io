@@ -1,5 +1,16 @@
-    /* a little red bird that flutters around the empty spaces and points visitors down to the garden */
-    (function(){
+/* js/animals/guide-bird.js
+   Purpose : the little red guide bird that flutters around the empty spaces of the page and points visitors down to the garden ("grow your garden below"); click, tap, Enter or Space glides to the garden bed.
+   Owns    : the bird's DOM (.guide-bird), open-spot finding (it never perches on text), flying/settling/exit, the 700 ms show/hide/wander heartbeat, scroll/resize/click re-checks, and the public API get() -> { el, visible(), at(), visit(x, y, done) } (was window.__guideBird; null when there is no garden bed).
+   Uses    : core.scheduler (Life, so it never wanders while another creature is out).
+   Used by : legacy/160-guide-bird.js calls start() at the spot the code ran; animals/birds.js (the seed you feed a bird) reads get() at call time.
+   Mobile / reduced motion: unchanged: the bird stays away when no open space exists (common on phones); under reduced motion it jumps instead of flying and never wanders.
+   Moved verbatim from legacy/160 (Migration Step 15); behaviour, order and timing unchanged. */
+MB.define('animals.guide-bird', ['core.scheduler'], function (scheduler) {
+    'use strict';
+    const { Life } = scheduler;
+    let api = null;
+
+    function start() {
         const bed = document.querySelector('.garden-bed'); if (!bed) return;
         const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const BIRD = '<svg viewBox="0 0 40 34" aria-hidden="true">'
@@ -77,7 +88,7 @@
             /* the page may have moved while it flew: never stay perched on text */
             if (blockedCount(boxFor(x, y, side)) > 0){ const s2 = findSpot(0); if (s2 && (Math.abs(s2.x - x) > 4 || Math.abs(s2.y - y) > 4)) settle(s2); else if (!s2) exit(); }
         }); }
-        window.__guideBird = {
+        api = {
             el, visible: () => shown && !flying && el.classList.contains('on'),
             at: () => ({ x: x + BW / 2, y: y + BH / 2 }),
             visit(tx, ty, done){ hovering = false; flyTo(tx - BW / 2, ty - BH + 4, () => { nextWander = performance.now() + 4000; done && done(); }); }
@@ -127,5 +138,7 @@
         addEventListener('resize', () => { if (shown && !flying){ const s = findSpot(0); if (s) settle(s); else exit(); } });
         /* clicking an experience/skill circle can open a panel under the bird, so check after clicks too */
         document.addEventListener('click', () => setTimeout(() => { lastCheck = 0; recheck(); }, 450));
-    })();
+    }
 
+    return { start, get: () => api };
+});

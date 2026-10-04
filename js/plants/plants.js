@@ -1,10 +1,10 @@
 /* js/plants/plants.js
-   Purpose : the small art and helpers the vine/garden code shares: bloom palettes, the "click the vine" flower icon, creature art (SVG), tween, burstAt/fxFlower, the bird art (also published as window.__birdSVG for legacy readers).
+   Purpose : the small art and helpers the vine/garden code shares: bloom palettes, the "click the vine" flower icon, creature art (SVG), tween, burstAt/fxFlower, the bird art (from animals/art.js).
    Owns    : NS, hoverable/act, rand/pick, ease, FLI, BLOOMS, BIRD_SVG, SVG (the garden adds SVG.caterpillar later), tween, fxFlower, burstAt.
    Uses    : nothing.   Used by: plants/vine-sprigs.js, animals/birds.js, animals/vine-caterpillar.js, legacy/140 (garden game).
    Mobile / reduced motion: reduced motion is read once, as before (burstAt does nothing under it).
    Moved verbatim from legacy/140 (Migration Step 12d); behaviour, order and timing unchanged. */
-MB.define('plants.plants', [], function () {
+MB.define('plants.plants', ['animals.art'], function (art) {
     'use strict';
         const NS = 'http://www.w3.org/2000/svg', reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const hoverable = matchMedia('(hover: hover)').matches, act = hoverable ? 'click' : 'tap';
@@ -12,7 +12,7 @@ MB.define('plants.plants', [], function () {
         const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         const FLI = '<svg class="tiny-fl" viewBox="-50 -50 100 100" aria-hidden="true"><use href="#fl-bloom" x="-50" y="-50" width="100" height="100"/></svg>';
         const BLOOMS = [['fl-bloom','#f4a7bf','#f2c230'],['fl-daisy','#ffffff','#f2c230'],['fl-forsythia','#f2c230','#d99a12'],['fl-bloom','#b9a2de','#f2c230'],['fl-daisy','#c9b2ec','#fbe7a1'],['fl-bloom','#e9789f','#fff1cc'],['fl-daisy','#f2c230','#7a4a1e'],['fl-bloom','#f8c9a0','#e07fa3']];
-        const BIRD_SVG = window.__birdSVG = '<svg viewBox="0 0 40 32"><path d="M5 15 L0 10 L1.5 18 Z" fill="#7fb3cc"/><ellipse cx="18" cy="18" rx="13" ry="10" fill="#a9d8ea"/><ellipse cx="20" cy="22" rx="8" ry="5.5" fill="#fff4e0"/><circle cx="29" cy="11" r="7" fill="#a9d8ea"/><circle cx="31" cy="9.5" r="1.4" fill="#5a4366"/><circle cx="31.5" cy="13.2" r="1.6" fill="#f9c6d6" opacity=".85"/><path d="M35 10.5 L40 12.5 L35 14 Z" fill="#f2c230"/><g class="c-wing"><path d="M11 15 C15 5 26 7 24 16 C21 20 13 20 11 15Z" fill="#8fc3dc"/></g><path d="M15 27.5 L14 31.5 M21 27.5 L22 31.5" stroke="#c98a06" stroke-width="1.3" stroke-linecap="round"/></svg>';
+        const BIRD_SVG = art.BIRD_SVG;
         const SVG = {
             bunny: '<svg viewBox="0 0 46 40"><circle cx="6" cy="27" r="4" fill="#fff" stroke="#e8dcea"/><ellipse cx="18" cy="28" rx="13" ry="10" fill="#f3ece6" stroke="#d9cbd0"/><ellipse cx="12" cy="36" rx="7" ry="3" fill="#e9dfd8"/><ellipse cx="30" cy="9" rx="3" ry="8" fill="#f3ece6" stroke="#d9cbd0" transform="rotate(-14 30 9)"/><ellipse cx="30" cy="9" rx="1.3" ry="5.5" fill="#f9c6d6" transform="rotate(-14 30 9)"/><ellipse cx="35.5" cy="8" rx="3" ry="8" fill="#f3ece6" stroke="#d9cbd0" transform="rotate(10 35.5 8)"/><ellipse cx="35.5" cy="8" rx="1.3" ry="5.5" fill="#f9c6d6" transform="rotate(10 35.5 8)"/><circle cx="33" cy="21" r="8" fill="#f3ece6" stroke="#d9cbd0"/><circle cx="35.5" cy="25" r="2" fill="#f9c6d6" opacity=".7"/><circle cx="36" cy="19" r="1.4" fill="#5a4366"/><circle cx="40.5" cy="22.5" r="1.3" fill="#f4a7bf"/><ellipse cx="28" cy="37" rx="4" ry="2.5" fill="#e9dfd8"/></svg>',
             snail: '<svg viewBox="0 0 40 26"><path d="M2 24 Q2 18 10 19 L30 19 Q33 13 35 10 Q39 12 37 18 Q36 24 30 24 Z" fill="#e8cfa8"/><path d="M34 12 L33 4 M36 12 L38 4" stroke="#c9a979" stroke-width="1.2" stroke-linecap="round"/><circle cx="33" cy="4" r="1.6" fill="#5a4366"/><circle cx="38" cy="4" r="1.6" fill="#5a4366"/><circle cx="18" cy="12" r="10" fill="#c9b2ec" stroke="#8a63b8" stroke-width="1.2"/><path d="M18 6 a6 6 0 1 1 -5.2 3 a4 4 0 1 1 4.2 -1 a2 2 0 1 1 1.6 2.6" fill="none" stroke="#8a63b8" stroke-width="1.2" stroke-linecap="round"/><circle cx="14" cy="7" r="2" fill="#fff" opacity=".5"/></svg>',
