@@ -4,8 +4,9 @@ Static, build-free personal site (GitHub Pages). Plain HTML/CSS and classic orde
 It must work from `file://` (double-click), a local server (`python3 -m http.server 8080`) and GitHub Pages (case-sensitive paths); verify all three.
 
 ## Read first
+- **`STATUS.md`** before any edit.
 - **`ARCHITECTURE.md`** before any structural or feature work. Its routing table says which files to read for a given request.
-- **`MIGRATION_PLAN.md`** while the migration is in progress (code may still live in `js/legacy/*` (the old `script.js`) / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
+- **`MIGRATION_PLAN.md`** is historical/reference only. Read it only for requests about unfinished migration work (code may still live in `js/legacy/*` / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
 
 ## Rules
 - Preserve existing design, content, animation, timing and behavior unless explicitly asked to change it. This is not a redesign.
@@ -17,3 +18,42 @@ It must work from `file://` (double-click), a local server (`python3 -m http.ser
 - Moving code and changing behavior never happen in the same commit.
 - Don't touch the files in `tools/` or `tools/baseline/` as part of site work; they are verification aids.
 - Commit or push only when asked.
+
+## Feature workflow
+Follow this automatically for every new feature, modification or bug fix.
+
+### 1. Orient
+- Read `STATUS.md`, then use `ARCHITECTURE.md` to find the owning system.
+- Inspect only the owning module, its direct dependencies, relevant styles and relevant shared services. Don't scan the whole repo unless necessary.
+
+### 2. Choose one home per feature
+- Extend an existing module if the behavior naturally belongs there.
+- Create a new module only if the feature has meaningful independent logic, state, lifecycle, interactions, animation, dependencies or likely future expansion. No tiny files for trivial behavior.
+- Never put feature code in `main.js` (wiring/init only).
+
+### 3. Reuse before creating
+Check for existing infrastructure first: shared state, scheduling/rare events, animals, plants, garden, weather/environment, safe zones, navigation, gallery, botanical systems, effects, touch/mobile handling, reduced motion, storage/persistence, utilities. Never duplicate schedulers, global state, timers, pointer trackers, safe-zone systems, utilities, event infrastructure or persistence.
+
+### 4. Smallest change
+Implement only what the request requires. Don't refactor unrelated code, redesign unrelated parts, optimize working systems without reason, rename unrelated code, change existing timing/randomness, change storage semantics, change unrelated responsive behavior, or clean up things you merely notice.
+
+### 5. Compatibility
+Preserve desktop, mobile, touch, keyboard/accessibility, responsive breakpoints, `prefers-reduced-motion`, `file://`, local server and GitHub Pages. No ES-module requirement or other change that breaks `file://` without explicit approval.
+
+### 6. Lifecycle
+Clean up DOM nodes, listeners, timers, intervals, observers, animation frames and temporary state. No uncontrolled loops or duplicate global listeners.
+
+### 7. Testing
+- Isolated feature: test the requested behavior and directly related behavior, check console errors, and test mobile/reduced motion if relevant.
+- Structural/high-risk change: use the existing regression/baseline tools and test broader affected systems. Don't rebuild test infrastructure unless existing tools can't verify the change.
+- Don't investigate known animation/randomness screenshot noise unless reproducible or a real regression.
+- A passing automated test does not override a manually observed regression.
+
+### 8. Needs explicit approval
+Don't automatically: centralize pointer sampling, unify safe-zone selector behavior, merge timers/heartbeats, alter randomness/probabilities, alter scheduling timing, alter persistence/storage behavior, or remove intentional hooks that merely look unused. These can change observable behavior.
+
+### 9. Docs
+Update `ARCHITECTURE.md` only if ownership or architecture changes. Update `STATUS.md` only for meaningful long-term project-state changes. No doc updates for trivial edits.
+
+### 10. Final response
+Keep it brief: what changed, files changed, tests performed, important caveats. No long migration-style report unless asked.
