@@ -227,12 +227,12 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 5. **DONE** (`animals/art.js`: BIRD_SVG, CLOUD_SVG) Share creature/cloud art where two files use it (`animals/art.js`).
 - **T2 after each of 1–3.**
 
-## Phase E: CSS (structural), separate from JS steps
+## Phase E: CSS (structural), separate from JS steps · **DONE (E1 only; E2 deliberately skipped, see STATUS.md)**
 - **E1 mechanical split (provably safe):** cut `style.css` at existing banner lines into ordered files; link in the same order; css-concat-check must be byte-identical.
 - **E2 regroup by responsibility** into `css/{base,layout,navigation,gallery,effects,botanical,plants,garden,animals,environment}.css`, moving a feature's CSS *after* its JS has moved. Before moving a rule check whether another rule targets the same element + property later in the cascade (148 `!important`s, v-layers override earlier ones); verify with style-snapshot + screenshots at 1440 / 1024 / 768 / 390 and RM. Media queries and reduced-motion rules travel with their feature.
 - **Exception to "no cleanup":** an obsolete rule is touched only if it directly blocks a move (record in the commit message).
 
-## Phase F: dead-code cleanup (later, separate, approved)
+## Phase F: dead-code cleanup · **DONE (see STATUS.md)**
 - ≈ 72 CSS class names look unreferenced (`yard`, `yd-*`, `eco-*`, `chick`, `ch-*`, `eg-*`, `rock`, `gulp`, `row-*`, `sp-lv2/3`…); some may be built by string concatenation. Produce the list, confirm, delete in its own commits with before/after screenshots. Also: stale `explore.js` comments, the leftover `TODO(human)` near `clickGrowthLimit` (script.js ≈ 1101), unread globals, the Experience "fawn" CSS after commit `ba7d87c`.
 
 ## Risks and notes

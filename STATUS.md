@@ -1,7 +1,13 @@
 # STATUS (handoff)
 
 ## Status
-- **Migration Steps 0–15 and Phase D items 3 and 5 complete and verified** (uncommitted). Phase D items 1 (core/pointer), 2 (unify safe-zone lists) and 4 (merge timers) are deliberately NOT done: they change observable behavior/timing and need approval. Next optional phases: E (CSS), F (dead code).
+- **Migration finished: Steps 0–15, Phase D items 3 and 5, Phase E (E1) and Phase F complete and verified** (uncommitted). Phase D items 1 (core/pointer), 2 (unify safe-zone lists) and 4 (merge timers) are deliberately NOT done: they change observable behavior/timing and need approval.
+- **Phase E:** `style.css` split at its existing layer banners into `css/01-base.css` … `css/14-side-vines-plants.css`, linked in the same order (`?v=2`); `tools/css_concat_check.py` proved the pure cut byte-identical (226,489 bytes) before the Phase F pruning. E2 (regrouping rules by feature) was deliberately NOT done: the cascade is layered by version with 148 `!important`s, so reordering is not provably safe and was not required. The old `style.css` was removed (original kept as `pre-modular:style.css`).
+- **Phase F:** removed 144 CSS rules/selectors that target only classes never referenced in `index.html` or `js/` (`yard`, `yd-*`, `eco-*`, `ch-*`, `eg-*`, `chick`, `rock`, `gulp`, `sp-lv2/3`, `vine-bud-stem`, old `mobile-*`/`writing-*`/`flip-*`/`skill-tag`…), skipping dynamic prefixes (`is-*`, `row-*`, `gs-*`, `vine-right`); removed dead `BF` constant, `addStems` (+ its resize listener) and unused `NS`/`rand` in `plants/vines.js`; fixed stale comments (`explore.js`, `style.css`) and the obsolete `TODO(human)` on `clickGrowthLimit`.
+- **Left unresolved on purpose:** `shouldVisit` placeholder (returns false) in `animals/butterflies.js`, still wired into `botanical/stage.js` (real, unimplemented design hook; its TODO stays); the passive `.w-nest/.w-story/.w-jade` `display:none !important` rules; `@keyframes` possibly orphaned by pruned rules; Phase D 1/2/4; `tools/` is still publicly served by Pages.
+
+## Final verification (Chrome, headless)
+file://, local server and a Pages-style export (`css/` only, no `style.css`): desktop, desktop-rm, laptop, tablet, phone: 0 console errors/warnings, smoke 0 errors, computed-style snapshots 0 differences vs `tools/baseline`, `check_site.py paths` and `globals` PASS. Fingerprint differences are only the intentionally removed globals/`__story` hook plus known reduced-motion DOM-node noise. Screenshots differ only by known noise (photo fan tilt, bird, random decorations).
 
 ## Important architecture
 - Classic `<script src defer>` files, **not ES modules** (modules break on `file://`).
@@ -50,4 +56,4 @@
 - Reuse existing tests; no new test infrastructure unless necessary.
 - Keep commentary concise. Targeted tests first; broad baseline only where required.
 
-NEXT: Phase E (CSS) — only when asked
+NEXT: nothing required. Optional, needs approval: Phase D items 1, 2, 4.

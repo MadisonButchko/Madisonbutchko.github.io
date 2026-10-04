@@ -4,7 +4,7 @@ The permanent guide to how this site is organised. **Read this before changing a
 Migration steps (temporary) live in [MIGRATION_PLAN.md](MIGRATION_PLAN.md).
 
 > **STATUS: migration in progress (Phase C).** Real `MB.define` modules: `js/core/` (namespace, utils, scheduler, state, particles, safe-zones), `js/gallery/` (artworks, gallery), `js/effects/` (petals, flower-fx, scroll-effects, text-effects, cursor), `js/navigation/` (navigation, scroll-sunflower) and `js/site/hero.js` (Steps 1-3, 6-9).
-> The remaining features live in `js/legacy/` (19 files; many are already just calls into the modules), `ecosystem.js` (155) and `style.css` (2,769).
+> The remaining features live in `js/legacy/` (19 files; many are already just calls into the modules), `ecosystem.js` (155) and the stylesheet (now split into `css/01…14-*.css`, loaded in that order).
 > §1–§10 describe the **target**; §0 says where things live **right now**.
 > As each migration step lands, update §0 (rows disappear as code reaches its home) and the global-debt table (§4).
 
@@ -111,7 +111,7 @@ v13 living plants (2607). ≈ 72 of 631 class names are never referenced from JS
 
 ### index.html
 Structure and content only: SVG symbol sprite (≈ 15–37), sections `#home #about #experience #skills #gallery #contact`, footer,
-`#galleryModal`, `#lightbox`, `<template id="xpData">` (~340 lines) and `<template id="skData">`. Loads `style.css?v=28`,
+`#galleryModal`, `#lightbox`, `<template id="xpData">` (~340 lines) and `<template id="skData">`. Loads `css/01…14-*.css`,
 the `js/core`, `js/gallery`, 21 `js/legacy` files and `ecosystem.js` (all ordered `defer` scripts with `?v=` tags; see the manifest in §1b and the comment in `index.html`). No inline handlers. Keep it that way.
 
 ---

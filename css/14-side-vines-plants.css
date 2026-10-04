@@ -1,0 +1,215 @@
+/* ==========================================================================
+   v12: one shared growth system for the side vines.
+   script.js writes a single 0..1 progress per element (--g leaves/flowers, --st stems, --lf leaf, --bl bloom);
+   everything below only maps those numbers to transforms and stroke offsets, so a leaf, bud or bloom can
+   never be visible unless the vine that carries it has reached it.
+   ========================================================================== */
+.vine-path { transition: none; }
+.vine-item, .vine-item.on, .vine-item.near, .vine-item.spin.on {
+    --g: 0; --vs: 1;
+    transform: scale(calc(var(--g) * var(--vs))) rotate(calc((1 - var(--g)) * -80deg));
+    transition: scale 0.5s cubic-bezier(0.34, 1.5, 0.64, 1), rotate 0.5s cubic-bezier(0.34, 1.5, 0.64, 1); transition-delay: 0s;
+}
+.vine-item.near { scale: 1.35; rotate: 15deg; }
+.vine-item.grow, .vine-item.leaf.grow {
+    transform: scale(calc(var(--g) * var(--vs))) rotate(calc((1 - var(--g)) * -80deg)) !important;
+    scale: 1.9; rotate: 20deg; transition: scale 0.6s cubic-bezier(0.34, 1.8, 0.64, 1), rotate 0.6s cubic-bezier(0.34, 1.8, 0.64, 1) !important;
+}
+@media (max-width: 700px) { .vine-item, .vine-item.on, .vine-item.near { --vs: 0.72; } .vine-item.near { scale: 1.3; rotate: 12deg; } }
+
+
+/* click-grown sprigs: same rules, same easing */
+.vine-sprout .vs-lv .sprout-stem { stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--st, 0)); opacity: calc(var(--st, 0) * 30); animation: none; }
+.vine-sprout .vs-lv .sprout { animation: none; transform: scale(var(--bl, 0)) rotate(calc((1 - var(--bl, 0)) * -70deg)); }
+.vine-sprout .vs-lv .vs-leaf { animation: none; transform: scale(var(--lf, 0)); }
+.vine-sprout.eaten .vs-lv .sprout, .vine-sprout.wilt .vs-lv .sprout { animation: sproutOut 0.8s ease-in forwards; }
+/* very small, out-of-step sway: each branch moves on its own clock */
+@keyframes vineSway { from { rotate: -1.8deg; } to { rotate: 1.8deg; } }
+.vine-sprout > .vs-sway { transform-origin: 0 0; animation: vineSway var(--sd, 7s) ease-in-out var(--sl, 0s) infinite alternate; }
+.vine-item.on:not(.spin) > use { transform-box: fill-box; transform-origin: 50% 100%; animation: vineSway 6.5s ease-in-out infinite alternate; }
+.vine-item.on:not(.spin):nth-of-type(3n) > use { animation-duration: 8.3s; animation-delay: -2s; }
+.vine-hit { touch-action: pan-y; }
+@media (prefers-reduced-motion: reduce) { .vine-sprout > .vs-sway, .vine-item.on:not(.spin) > use { animation: none; } }
+
+/* v12: bouquet bow, a little smaller and lower, with softer lines */
+.bq-bowbtn { top: 75%; width: 34px; height: 26px; }
+.bq-bow { filter: drop-shadow(0 1.5px 1.5px rgba(110, 80, 60, 0.2)); }
+.bw-loop, .bw-tail, .bw-knot { stroke-width: 1; }
+.bw-fold { fill: none; stroke: var(--ribbon-edge, #d9789e); stroke-width: 0.7; stroke-linecap: round; opacity: 0.55; }
+.bq-pick { top: 75%; }
+@media (max-width: 1239px) { .bq-bowbtn { width: 28px; height: 21px; top: 75%; } .bq-pick { top: 75%; } }
+
+/* v12: the bouquet starts as an empty vase; a collected flower's stem draws up, then the bloom opens */
+.bq-stem.new { animation: none; }
+.bq-s { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.bq-stem.new .bq-s { stroke-dashoffset: 1; animation: bqDraw 0.55s ease-out forwards; }
+.bq-stem.new .bq-f { transform-box: fill-box; transform-origin: center; animation: bqBloom 0.75s cubic-bezier(0.34, 1.5, 0.64, 1) 0.4s both; }
+@keyframes bqDraw { to { stroke-dashoffset: 0; } }
+@keyframes bqBloom { from { transform: scale(0) rotate(-40deg); opacity: 0; } to { transform: none; } }
+.bq-list:empty::before { content: 'open a flower in Experience or Skills to add it here'; display: block; font-family: var(--font-hand); font-size: 1.05rem; color: #9a5a2a; padding: 0.2rem 0 0.4rem; }
+@media (prefers-reduced-motion: reduce) { .bq-stem.new .bq-s, .bq-stem.new .bq-f { animation: none !important; stroke-dashoffset: 0; } }
+
+/* ==========================================================================
+   v13: living Experience / Skills plants.
+   Each illustration is split into small parts (heads, leaves, stalks, leaflets) that move on their own clock.
+   Host variables (set on .g-art / .h-art): --hv hover bloom 0..1, --wd breeze from fast cursor passes -1..1,
+   --a overall intensity, --ps play state (paused while off-screen). Per-part: --t --d --s --k --ox --oy.
+   Only individual transform properties are animated: nothing here touches layout.
+   ========================================================================== */
+@property --hv { syntax: '<number>'; inherits: true; initial-value: 0; }
+@property --wd { syntax: '<number>'; inherits: true; initial-value: 0; }
+.g-art, .h-art { --a: 1; transition: max-width 0.5s var(--glide), transform 0.9s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.4s ease, --hv 0.9s cubic-bezier(0.22, 1, 0.36, 1), --wd 1.8s cubic-bezier(0.22, 1, 0.36, 1); }
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art, .g-cat.is-tapped .g-art, .h-spec:hover .h-art, .h-spec:focus-visible .h-art, .h-spec.is-tapped .h-art { --hv: 1; }
+/* a gentler lift than before: ~4% larger, a few pixels up */
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art, .g-cat.is-tapped .g-art { transform: translateY(-4px) rotate(calc(var(--sun, 0deg) - 2deg)) scale(1.04); }
+.h-spec:hover .h-art, .h-spec:focus-visible .h-art, .h-spec.is-tapped .h-art { transform: translateY(-4px) rotate(calc(var(--sun, 0deg) - 2deg)) scale(1.035); }
+/* the click reaction: a quick bloom and lift before the content opens */
+.g-cat.is-bloom .g-art, .h-spec.is-bloom .h-art { --hv: 2; transform: translateY(-8px) rotate(calc(var(--sun, 0deg) - 1deg)) scale(1.06); transition: max-width 0.5s var(--glide), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease, --hv 0.28s ease-out, --wd 1.8s ease-out; }
+
+.pt { --k2: calc(var(--k, 1) * var(--a, 1)); transform-box: view-box; transform-origin: var(--ox, 50%) var(--oy, 50%); animation-duration: var(--t, 6s); animation-delay: var(--d, 0s); animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-play-state: var(--ps, running); }
+/* small flowers bob and tip (Research, Exploration, bud heads) */
+.hd.bob { animation-name: hdBob; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes hdBob {
+    0%, 100% { translate: 0 calc(var(--hv) * -1.2px); rotate: calc(var(--s, 1) * var(--k2) * -1.8deg + var(--wd) * var(--k2) * 4deg); }
+    50% { translate: 0 calc(var(--k2) * -1.4px + var(--hv) * -1.2px); rotate: calc(var(--s, 1) * var(--k2) * 1.9deg + var(--wd) * var(--k2) * 4deg); }
+}
+/* leaves swing from their base, each its own way */
+.lf { animation-name: lfSway; animation-direction: alternate; }
+@keyframes lfSway {
+    from { rotate: calc(var(--s, 1) * var(--k2) * -2.6deg + var(--hv) * var(--s, 1) * -4deg + var(--wd) * var(--k2) * 3deg); }
+    to { rotate: calc(var(--s, 1) * var(--k2) * 2.2deg + var(--hv) * var(--s, 1) * -4deg + var(--wd) * var(--k2) * 3deg); }
+}
+/* Teaching: the three pink blooms open outward one after another */
+.hd.open { animation-name: bloomOpen; }
+@keyframes bloomOpen {
+    0%, 55%, 100% { scale: calc(1 + var(--hv) * 0.05); rotate: calc(var(--wd) * var(--a, 1) * 3deg); }
+    28% { scale: calc(1 + 0.045 * var(--a, 1) + var(--hv) * 0.05); rotate: calc(var(--s, 1) * var(--a, 1) * 2.4deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* Writing: a ripple travels through the lavender stalks */
+.stk { animation-name: stalkWave; scale: calc(1 + var(--hv) * 0.025); }
+@keyframes stalkWave {
+    0%, 100% { rotate: calc(var(--a, 1) * -1.5deg + var(--wd) * var(--a, 1) * 3deg); }
+    50% { rotate: calc(var(--a, 1) * 1.7deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* Programming: leaflets ripple up the fern */
+.rip { animation-name: leafRipple; animation-direction: normal; }
+@keyframes leafRipple {
+    0%, 100% { rotate: calc(var(--a, 1) * -2.8deg + var(--wd) * var(--a, 1) * 2deg); scale: calc(1 + var(--hv) * 0.05); }
+    50% { rotate: calc(var(--a, 1) * 3.2deg + var(--wd) * var(--a, 1) * 2deg); scale: calc(1 + 0.04 * var(--a, 1) + var(--hv) * 0.05); }
+}
+/* Machine Learning: little flowers bloom in turn, from the centre outward */
+.hd.bl { animation-name: bloomPulse; }
+@keyframes bloomPulse {
+    0%, 70%, 100% { scale: calc(1 + var(--hv) * 0.05); }
+    36% { scale: calc(1 + 0.13 * var(--a, 1) + var(--hv) * 0.05); }
+}
+/* Languages: the purple flowers lean in alternating directions */
+.hd.lean { animation-name: leanSway; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes leanSway {
+    0%, 100% { rotate: calc(var(--s, 1) * var(--a, 1) * -3.4deg + var(--wd) * var(--a, 1) * 4deg); }
+    50% { rotate: calc(var(--s, 1) * var(--a, 1) * 3.2deg + var(--wd) * var(--a, 1) * 4deg); }
+}
+/* CAD: the geometric flower never spins; it turns a few degrees on hover and settles back */
+.geo { animation: none; rotate: calc(var(--hv) * 4deg); }
+/* Artwork: petals open a touch, the bud drifts */
+.hd.pet { animation-name: petalBreathe; }
+@keyframes petalBreathe {
+    0%, 100% { scale: calc(1 + var(--hv) * 0.07); rotate: calc(var(--wd) * var(--a, 1) * 2deg); }
+    50% { scale: calc(1 + 0.03 * var(--a, 1) + var(--hv) * 0.07); rotate: calc(var(--a, 1) * 2deg + var(--wd) * var(--a, 1) * 2deg); }
+}
+/* Writing (wheat): grains ripple along the ear */
+.gr { animation-name: grainRipple; }
+@keyframes grainRipple {
+    0%, 100% { rotate: calc(var(--a, 1) * -2.2deg + var(--wd) * var(--a, 1) * 2deg); }
+    50% { rotate: calc(var(--a, 1) * 2.6deg + var(--wd) * var(--a, 1) * 2deg); }
+}
+/* Hobbies: the yellow cluster bounces and sways on its own */
+.hd.bounce { animation-name: bounceSway; scale: calc(1 + var(--hv) * 0.05); }
+@keyframes bounceSway {
+    0%, 100% { translate: 0 0; rotate: calc(var(--s, 1) * var(--a, 1) * -2deg + var(--wd) * var(--a, 1) * 3deg); }
+    50% { translate: 0 calc(var(--a, 1) * -1.8px); rotate: calc(var(--s, 1) * var(--a, 1) * 2deg + var(--wd) * var(--a, 1) * 3deg); }
+}
+/* smaller screens move a little less; the bouquet copies stay still */
+@media (max-width: 700px) { .g-art, .h-art { --a: 0.65; } }
+.bq-art, .bq-traveler, .gb-art { --a: 0; --ps: paused; }
+@media (prefers-reduced-motion: reduce) {
+    .pt { animation: none !important; }
+    .g-art, .h-art { --hv: 0 !important; --wd: 0 !important; }
+    .g-cat.is-bloom .g-art, .h-spec.is-bloom .h-art { transform: scale(1.03); }
+}
+
+.mb-bouquet:not([hidden]) { animation: bqAppear 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes bqAppear { from { opacity: 0; transform: translateY(12px) scale(0.92); } }
+
+
+/* ---------------------------------------------------------------------
+   Gallery: clickable hint, 36-piece preview (8 rows), quick lightbox transitions
+   --------------------------------------------------------------------- */
+.hint-link { font: inherit; color: inherit; background: none; border: 0; padding: 0 0.15em; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(194, 69, 126, 0.35); text-underline-offset: 0.18em; transition: color 0.2s, text-decoration-color 0.2s; }
+.hint-link:hover, .hint-link:focus-visible { color: var(--cyan); text-decoration-color: currentColor; }
+.preview-item { transition-delay: calc(var(--i, 0) * 22ms); }
+#lightbox.lightbox.active { animation-duration: 0.22s; }
+#lightbox img#lightboxImg { transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+#lightbox img#lightboxImg.swap-l { transform: translateX(-28px) scale(0.97); }
+#lightbox img#lightboxImg.swap-r { transform: translateX(28px) scale(0.97); }
+#lightbox img#lightboxImg.loading { opacity: 0; transform: none; }
+#lightbox img#lightboxImg.zoomed { transition: transform 0.25s ease; }
+.lb-backdrop-image { transition: opacity 0.35s ease; }
+.lightbox { transition: --art1 0.35s ease, --art2 0.35s ease; }
+#lightbox .lb-thumbs img { background: rgba(255, 248, 236, 0.12); }
+@media (prefers-reduced-motion: reduce) { #lightbox img#lightboxImg, .lb-backdrop-image { transition: none; } }
+
+/* A quiet wish, drifting pappus seeds, and temporary flowers in clear spaces. */
+.dandelion-wish {
+    position: fixed; z-index: 180; width: 148px; pointer-events: none;
+    font: 400 1.3rem/1.2 var(--font-hand); text-align: center; color: #aa91c6;
+    opacity: 0.78; animation: wishFade 4.8s ease-in-out both;
+}
+.wish-words {
+    display: inline-block; color: transparent;
+    background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.85) 50%, transparent 60%), linear-gradient(90deg, #c98da8, #aa91c6 27%, #d5a56a 48%, #a5b77d 70%, #85afc4);
+    background-size: 250% 100%, 100% 100%; background-position: 120% 0, 0 0;
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 0 2px rgba(255, 253, 246, 0.7));
+    animation: wishGlimmer 3.4s ease-in-out 0.5s both;
+}
+.dandelion-wish::before, .dandelion-wish::after {
+    content: '✧'; position: absolute; top: 0; color: #c9afd8;
+    font-size: 0.9rem; animation: wishShimmer 1.6s ease-in-out 3;
+}
+.dandelion-wish::before { left: 3px; top: 6px; animation-delay: 0.2s; }
+.dandelion-wish::after { right: 3px; color: #d5bc84; }
+
+@keyframes wishFade { 0% { opacity: 0; transform: translateY(5px); } 14%, 78% { opacity: 0.85; transform: none; } 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes wishDismiss { from { opacity: 0.6; } to { opacity: 0; } }
+@keyframes wishGlimmer { to { background-position: -100% 0, 0 0; } }
+@keyframes wishShimmer { 0%, 100% { opacity: 0.15; transform: scale(0.7) rotate(-12deg); } 50% { opacity: 0.85; transform: scale(1.15) rotate(12deg); } }
+.v11-dand .wd-seed { transition: opacity 1.2s ease; }
+.v11-dand .wd-seed.gone { transition-duration: 0.45s; }
+.w-fluff { width: 13px; height: 17px; margin: -6px 0 0 -6px; background: none; scale: var(--fluff-size, 1); }
+.w-fluff::before { content: ''; position: absolute; left: 6px; top: 6px; width: 1px; height: 10px; background: #c9bca3; rotate: 12deg; }
+.w-fluff::after {
+    content: ''; position: absolute; inset: 0 0 7px; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 65%, #fffef9 0 25%, rgba(255, 254, 249, 0.8) 38%, transparent 70%), repeating-conic-gradient(from 5deg at 50% 90%, #fffdf6 0deg 11deg, transparent 11deg 30deg);
+    filter: drop-shadow(0 0 0.6px #b8ad98);
+}
+.wish-grown { position: absolute; z-index: 1; width: 32px; height: 58px; pointer-events: none; transition: opacity 1.5s ease; }
+.wish-grown svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.wish-grown.fading { opacity: 0; }
+.wish-spark { transform-origin: 16px 48px; animation: wishLanding 0.9s ease both; }
+.wish-sprout, .wish-stem { transform-origin: 16px 56px; animation: wishGrow 1.3s ease-out 0.55s both; }
+.wish-stem { animation-duration: 1.8s; animation-delay: 1.1s; }
+.wish-bloom { transform-origin: 16px 18px; animation: wishGrow 1.4s ease-out 2.5s both; }
+@keyframes wishLanding { 0% { opacity: 0; transform: scale(0.4); } 35% { opacity: 0.85; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes wishGrow { from { opacity: 0; transform: scale(0.1, 0); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+    .dandelion-wish, .wish-words, .dandelion-wish::before, .dandelion-wish::after, .wish-grown g { animation: none !important; }
+    
+    .v11-dand .wd-seed, .wish-grown { transition: none; }
+    .w-fluff, .wish-grown .wish-spark { display: none; }
+}
+
+/* phones: a compact, quick-fading vine message that never lingers over content */
+@media (hover: none), (max-width: 700px) {
+    .vine-tip { font-size: 0.9rem; padding: 0.05rem 0.6rem 0.15rem; max-width: calc(100vw - 16px); transition: opacity 0.18s ease; }
+}

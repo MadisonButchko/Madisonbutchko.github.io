@@ -64,7 +64,7 @@ MB.define('gallery.gallery', ['gallery.artworks'], function (data) {
         }
     });
     
-    /* v10: Experience and Skills interactions live in explore.js (garden clusters, specimen cards, bouquet). */
+    /* v10: Experience and Skills interactions live in js/botanical/ (garden clusters, specimen cards, bouquet). */
     /* gallery preview: clicking a piece opens the gallery straight to that piece; clicking elsewhere just opens the gallery */
     document.querySelectorAll('#galleryPreview .preview-item img').forEach(img => {
         const file = img.dataset.file || img.getAttribute('src').replace(/^images\//, ''), art = artworks.find(a => a.file === file);

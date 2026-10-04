@@ -13,7 +13,7 @@ MB.define('effects.scroll-effects', [], function () {
     }
 
     function offscreen() {
-    /* sections far off screen pause their CSS animations (see .is-off in style.css) */
+    /* sections far off screen pause their CSS animations (see .is-off in css/12-polish-pass.css) */
     const offIO = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('is-off', !e.isIntersecting)), { rootMargin: '300px 0px' });
     document.querySelectorAll('main > section, footer').forEach(s => offIO.observe(s));
     }

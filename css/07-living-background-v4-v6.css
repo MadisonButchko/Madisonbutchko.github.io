@@ -1,0 +1,207 @@
+/* =====================================================
+   v4: one seamless living background, calmer gallery,
+   lighter effects, extra UI touches
+   ===================================================== */
+/* one continuous page background (no section edges) */
+body { position: relative; }
+.page-bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden;
+    background: linear-gradient(180deg, #fff2d8 0%, #fde4ed 9%, #f3e8fb 16%, #fde9e0 24%, #fff3d6 31%, #efe7fa 40%, #fde6ee 48%, #e5f1da 56%, #fff4d2 63%, #fde7da 71%, #efe7fa 79%, #fde3ec 87%, #fff1cf 94%, #fdeef2 100%); }
+@keyframes bgBreathe { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.ambient span { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; opacity: 0.55; will-change: transform; background: radial-gradient(circle closest-side, var(--c) 0%, transparent 100%) !important;  }
+.ambient span:nth-child(1) { --c: #fbe29a; left: -18vmax; top: -16vmax; }
+.ambient span:nth-child(2) { --c: #f9c3d5; right: -20vmax; top: 4vh;   }
+.ambient span:nth-child(3) { --c: #d9cbf3; left: 14vw; bottom: -26vmax;   }
+.ambient span:nth-child(4) { --c: #cfe5bd; right: 4vw; bottom: -16vmax; width: 44vmax; height: 44vmax;   opacity: 0.4; }
+@keyframes ambDrift { 0% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(8vw, 6vh, 0) scale(1.15); } 100% { transform: translate3d(-6vw, -4vh, 0) scale(0.92); } }
+.hero { background: transparent !important; animation: none !important; }
+.hero::after, .hero::before { display: none !important; }
+.hero-blobs, .hero-glow { display: none !important; }
+main > section:not(.hero)::before { display: none !important; }
+#gallery::after { display: none !important; }
+
+/* rainbow cursor glow: one element moved/rotated by transform (cheap) */
+.rainbow-glow { position: fixed; left: 0; top: 0; inset: auto; width: 600px; height: 600px; z-index: 0; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 0.6s; will-change: transform; background: none !important; animation: none !important;
+    -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,0.5) 40%, transparent 100%) !important; mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,0.5) 40%, transparent 100%) !important; }
+.rainbow-glow i { position: absolute; inset: 0; background: conic-gradient(#f9b8cf, #fbdc84, #c7e3ad, #a9d8ea, #cdb8f2, #f9b8cf); animation: spinSlow 7s linear infinite; will-change: transform; }
+.rainbow-glow.on { opacity: 0.6; }
+
+/* lighter spinning frames: rotate a big inner layer instead of repainting gradients */
+.gallery-frame { background: none !important; animation: none !important; overflow: hidden; isolation: isolate; }
+.gallery-frame::after { content: ''; position: absolute; left: 50%; top: 50%; width: 200%; aspect-ratio: 1; translate: -50% -50%; z-index: -1; background: conic-gradient(#f2c230, #f4a7bf, #c2457e, #b9a2de, #8db36a, #a9d8ea, #f2c230); animation: spinSlow 9s linear infinite; will-change: transform; }
+.gallery-frame::before { display: none; }
+.gallery-section .gallery-container { position: relative; }
+.gallery-section .gallery-container::before { content: ''; position: absolute; left: 6%; right: 6%; top: 18%; bottom: 8%; border-radius: 40px; background: linear-gradient(120deg, #fbe29a, #f9c3d5, #d9cbf3, #cfe5bd); filter: blur(40px); opacity: 0.55; z-index: -1; }
+.collage .fan-halo { animation: spinSlow 18s linear infinite; will-change: transform; }
+
+/* gallery preview: no overlay/dimming, big playful pop that follows the cursor */
+.gallery-frame .gallery-preview { background: #fff !important; animation: none !important; overflow: visible; gap: 6px; padding: 0; }
+.preview-overlay { background: none !important;  }
+.preview-overlay span { box-shadow: 0 8px 26px rgba(194, 69, 126, 0.35); }
+.preview-item { border-radius: 10px; overflow: hidden; transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.3s; }
+.preview-item img { transform: translate(var(--px, 0), var(--py, 0)) scale(1.12); transition: transform 0.25s ease-out; }
+.gallery-preview.visible .preview-item:hover { transform: perspective(700px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) scale(1.22) translateY(-6px); z-index: 5; box-shadow: 0 26px 50px rgba(120, 72, 96, 0.35), 0 0 0 4px #fff; outline: none; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s; transition-delay: 0s; }
+.gallery-preview .preview-item:hover img { transform: translate(var(--px, 0), var(--py, 0)) scale(1.18); }
+.gallery-preview .preview-item:nth-child(1):hover, .gallery-preview .preview-item:nth-child(13):hover { transform: perspective(700px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) scale(1.1) translateY(-6px); }
+
+/* modal: no hover-to-open ring */
+.collage-item::after { display: none !important; }
+.gallery-modal::before { display: none; }
+
+
+/* nav: sliding pill */
+.nav { position: fixed; }
+.nav a { position: relative; z-index: 1; background: transparent !important; box-shadow: none !important; }
+.nav-pill { position: absolute; top: 0.3rem; height: calc(100% - 0.6rem); border-radius: 50px;   z-index: 0;  }
+
+/* circles bloom in one after another */
+
+
+
+
+@keyframes ripple { to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+
+/* handwritten hints write themselves in */
+.section-hint.reveal { clip-path: inset(0 100% 0 0); opacity: 1; transform: none; transition: clip-path 1.4s cubic-bezier(0.6, 0.1, 0.3, 1) 0.8s; }
+.section-hint.reveal.visible { clip-path: inset(0 -5% 0 0); }
+
+/* scroll indicator + back to top: a sunflower on its own soft pad (separate from the page decorations) */
+.to-top { position: fixed; right: 26px; bottom: 14px; z-index: 115; width: 64px; height: 106px; padding: 0; border: 0; background: none; border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.to-top svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 4px rgba(110, 80, 50, 0.22)); }
+.to-top:hover, .to-top:focus-visible { transform: translateY(-4px); }
+.to-top .sf-pot { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.to-top:hover .sf-pot, .to-top:focus-visible .sf-pot { transform: scale(1.05, 0.96); }
+.to-top:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.sf-stem { fill: none; stroke: #6e9a4c; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; }
+.sf-pet { stroke: rgba(170, 110, 10, 0.25); stroke-width: 0.5; }
+.sf-disk g { opacity: calc(var(--sfq, 0) * 1.2); }
+.to-top.bloomed .sf-sway { animation: sfSway 4.5s ease-in-out infinite; }
+@keyframes sfSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.tt-arrow { fill: none; stroke: #c98a06; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.to-top:hover .tt-arrow, .to-top:focus-visible .tt-arrow { opacity: 1; transform: none; }
+.tt-tip { position: absolute; right: calc(100% + 8px); top: 30px; white-space: nowrap; font-family: var(--font-hand); font-size: 1.05rem; color: #9a6b06; background: rgba(255, 255, 255, 0.95); padding: 0.05rem 0.65rem 0.15rem; border-radius: 14px; box-shadow: 0 4px 12px rgba(120, 72, 96, 0.12); opacity: 0; translate: 6px 0; pointer-events: none; transition: opacity 0.3s ease, translate 0.35s ease; }
+.to-top:hover .tt-tip, .to-top:focus-visible .tt-tip { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .to-top.bloomed .sf-sway { animation: none; } }
+
+@media (max-width: 768px) {
+    .gallery-preview.visible .preview-item:hover { transform: none; box-shadow: none; }
+    .to-top { right: 12px; bottom: 10px; width: 50px; height: 83px; border-radius: 12px; }
+    footer { padding-bottom: 96px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page-bg::before, .ambient span { animation: none; }
+    
+    .section-hint.reveal { clip-path: none; }
+}
+
+/* =====================================================
+   v5: gap-free gallery grid, bigger contact photo,
+   garden vines game, flower nav
+   ===================================================== */
+/* gallery preview: 6 columns, spans add up to full rows (36 cells) */
+.gallery-preview { grid-template-columns: repeat(6, 1fr) !important; grid-auto-rows: 118px !important; grid-auto-flow: dense; }
+.gallery-preview .preview-item { grid-column: auto !important; grid-row: auto !important; }
+.gallery-preview .preview-item:nth-child(1), .gallery-preview .preview-item:nth-child(13) { grid-column: span 2 !important; grid-row: span 2 !important; }
+.gallery-preview .preview-item:nth-child(8), .gallery-preview .preview-item:nth-child(20), .gallery-preview .preview-item:nth-child(23) { grid-column: span 2 !important; }
+.gallery-preview .preview-item:nth-child(5), .gallery-preview .preview-item:nth-child(10), .gallery-preview .preview-item:nth-child(17) { grid-row: span 2 !important; }
+.preview-overlay { align-items: center !important; padding: 0 !important; }
+.preview-overlay span { pointer-events: none; }
+.gallery-preview:hover .preview-overlay span { opacity: 0; transform: scale(0.9); }
+.preview-overlay span { transition: opacity 0.3s, transform 0.3s; }
+
+/* contact photo: bigger, still balanced */
+.contact-inner { max-width: 920px !important;  }
+.contact-photo img { object-position: center 30% !important; }
+.contact-inner .contact-text {  max-width: 470px !important; }
+
+/* garden vines: hover the edges and flowers grow / sprout */
+.vine-item.grow { transform: scale(1.9) rotate(20deg) !important; transition: transform 0.6s cubic-bezier(0.34, 1.8, 0.64, 1) !important; }
+.vine-item.leaf.grow { transform: scale(1.5) rotate(-18deg) !important; }
+.sprout { transform-box: fill-box; transform-origin: center; animation: sproutIn 0.9s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+.sprout use { transform-box: fill-box; transform-origin: center; animation: spinSlow 16s linear infinite; }
+@keyframes sproutIn { from { transform: scale(0) rotate(-160deg); } to { transform: scale(1) rotate(0); } }
+.sprout-stem { fill: none; stroke: #8db36a; stroke-width: 1.8; stroke-linecap: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: drawLine 0.5s ease-out forwards; }
+
+
+
+
+@keyframes countPop { 50% { transform: scale(1.5) rotate(-8deg); } }
+
+/* flower nav: a flower per link, gradient pill, butterfly that flies to your section */
+.nav { padding: 0.35rem 0.45rem; gap: 0.2rem; border: 1.5px solid transparent !important; background: linear-gradient(rgba(255, 251, 245, 0.88), rgba(255, 251, 245, 0.88)) padding-box, linear-gradient(90deg, #f2c230, #f4a7bf, #b9a2de, #8db36a, #f2c230) border-box !important;  transition: padding 0.4s, top 0.4s, box-shadow 0.4s; }
+.nav.small { top: 0.6rem; box-shadow: 0 8px 22px rgba(120, 72, 96, 0.16); }
+.nav a { display: inline-flex; align-items: center; gap: 0.35rem;   font-weight: 500; color: var(--text-mid) !important; transition: color 0.3s; }
+.nav a.active { color: var(--white) !important; }
+.nav-fl { width: 16px; height: 16px; overflow: visible; flex-shrink: 0; scale: 0.55; rotate: -90deg; opacity: 0.55; transition: scale 0.5s cubic-bezier(0.34, 1.8, 0.64, 1), rotate 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; }
+.nav a:hover .nav-fl { scale: 1.15; rotate: 0deg; opacity: 1; }
+.nav a.active .nav-fl { scale: 1; rotate: 0deg; opacity: 1;  }
+.nav a:hover { color: var(--cyan) !important; }
+.nav a:active .nav-fl { scale: 1.5; }
+.nav-pill { background: linear-gradient(120deg, #fde6ee, #efe8fa 50%, #fff1cc) !important; box-shadow: inset 0 0 0 1px rgba(194, 69, 126, 0.18), 0 4px 12px rgba(194, 69, 126, 0.12) !important; transition: left 0.6s cubic-bezier(0.34, 1.5, 0.64, 1), width 0.6s cubic-bezier(0.34, 1.5, 0.64, 1) !important; }
+.nav-bug { position: absolute; top: -13px; left: 0; width: 22px; height: 19px; z-index: 2; pointer-events: none; overflow: visible; }
+.nav-bug .bf-wing-l, .nav-bug .bf-wing-r { animation-duration: 0.5s; }
+.nav-bug.flying .bf-wing-l, .nav-bug.flying .bf-wing-r { animation-duration: 0.12s; }
+
+
+   
+
+
+@media (max-width: 768px) {
+    .gallery-preview { grid-template-columns: repeat(3, 1fr) !important; grid-auto-rows: 86px !important; }
+    .gallery-preview .preview-item:nth-child(n) { grid-column: auto !important; grid-row: auto !important; }
+    .gallery-preview .preview-item:nth-child(1), .gallery-preview .preview-item:nth-child(13) { grid-column: span 2 !important; grid-row: span 2 !important; }
+    .contact-photo { width: 220px !important; height: 282px !important; }
+    .contact-inner .contact-title { font-size: 2.6rem !important; }
+    .contact-inner .contact-text { font-size: 1.02rem !important; }
+}
+
+/* =====================================================
+   v6: tidy contact, glassy nav, scroll-grown vines,
+   vine butterflies, footer garden
+   ===================================================== */
+
+.contact-inner { gap: 3.25rem !important; }
+.contact-photo { width: 236px !important; height: 302px !important; }
+.contact-inner .contact-title { font-size: clamp(2.1rem, 3.8vw, 2.9rem) !important; }
+.contact-inner .contact-text { font-size: 1.08rem !important; }
+@media (max-width: 768px) { .contact-photo { width: 200px !important; height: 256px !important; } .contact-inner .contact-title { font-size: 2.2rem !important; } }
+
+.nav { background: linear-gradient(rgba(255, 251, 245, 0.42), rgba(255, 251, 245, 0.42)) padding-box, linear-gradient(90deg, rgba(242,194,48,.6), rgba(244,167,191,.6), rgba(185,162,222,.6), rgba(141,179,106,.6), rgba(242,194,48,.6)) border-box !important; backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 8px 26px rgba(120, 72, 96, 0.08) !important; }
+.nav-pill { opacity: 0.85; }
+
+
+/* vines: smooth scroll growth, each flower blooms on a little stem */
+.vine-item { transform: scale(0) rotate(-140deg); transition: transform 0.8s cubic-bezier(0.34, 1.6, 0.64, 1); }
+.vine-item.on { transform: scale(1) rotate(0); }
+
+
+.vine-item.spin.on { transition-delay: 0.25s; }
+.vine-item.near { transform: scale(1.35) rotate(15deg); transition-delay: 0s; }
+
+/* butterflies that visit the vine flowers */
+
+
+
+
+
+@media (max-width: 1239px) {  }
+
+/* footer garden: flowers grow up as you arrive; click to plant */
+footer { position: relative; padding-top: 0 !important; }
+.garden-bed { position: relative; max-width: 1100px; margin: 0 auto 0.4rem; cursor: pointer; }
+.g-plant svg { display: block; width: 100%; overflow: visible; }
+.g-stem { fill: none; stroke: #7fa65c; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: var(--l); stroke-dashoffset: var(--l); }
+.g-leaf { transform-box: fill-box; transform-origin: bottom center; transform: scale(0); }
+.g-head { transform-box: fill-box; transform-origin: center; transform: scale(0) rotate(-150deg); }
+.grow .g-stem { animation: drawLine 0.8s ease-out forwards; animation-delay: var(--d); }
+.grow .g-leaf { animation: popIn 0.5s cubic-bezier(0.34, 1.7, 0.64, 1) forwards; animation-delay: calc(var(--d) + 0.45s); }
+.grow .g-head { animation: popHead 0.8s cubic-bezier(0.34, 1.7, 0.64, 1) forwards; animation-delay: calc(var(--d) + 0.7s); }
+@keyframes popIn { to { transform: scale(1); } }
+@keyframes popHead { to { transform: scale(1) rotate(0); } }
+@keyframes sway { 0%, 100% { rotate: -3deg; } 50% { rotate: 3deg; } }
+.garden-tip { font-family: var(--font-hand);  color: var(--text-dim); margin-bottom: 0.4rem; opacity: 0;  }
+.garden-bed.grown + .garden-tip { opacity: 1; }
+.footer-flowers { display: none; }
+@media (prefers-reduced-motion: reduce) { .g-stem { stroke-dashoffset: 0; } .g-leaf, .g-head { transform: none; }  }
+

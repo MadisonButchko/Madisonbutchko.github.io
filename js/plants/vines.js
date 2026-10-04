@@ -1,6 +1,6 @@
 /* js/plants/vines.js
    Purpose : the two side vines that grow with scroll (and with clicks), their leaves/blooms, the near-bloom hover on desktop.
-   Owns    : start(): vine building/layout, ONE growth system (scroll growth + click bonus -> pf/qf), the rAF tick, the click-strip sizing; gm / update / vineQ / bonus (public API, were window.__gm / __vineUpdate / __vineQ / __vineBonus). stems(): the "near bloom" mousemove handler (the vine stays one clean line; the addStems stem code is dormant, as before).
+   Owns    : start(): vine building/layout, ONE growth system (scroll growth + click bonus -> pf/qf), the rAF tick, the click-strip sizing; gm / update / vineQ / bonus (public API, were window.__gm / __vineUpdate / __vineQ / __vineBonus). stems(): the "near bloom" mousemove handler (the vine stays one clean line).
    Hooks   : hosts onLayout(fn) / onTick(fn) / onRender(fn), registered by plants/vine-sprigs.js (layout + render) and animals/caterpillar.js (layout + tick), called in registration order.
    Uses    : nothing (self-contained; reads plants.flowers Spin at call time).
    Used by : legacy/050-vine-growth.js calls start() and legacy/130-vine-stems-butterflies.js calls stems(), each at the spot its code ran, so execution order is unchanged.
@@ -147,21 +147,8 @@ MB.define('plants.vines', [], function () {
     }
 
     function stems() {
-    /* v6: vine stems + near-bloom, vine butterflies */
-        const NS = 'http://www.w3.org/2000/svg', reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const rand = (a, b) => a + Math.random() * (b - a);
-        const BF = '<svg viewBox="-24 -20 48 40"><g class="bf-wing-l"><path d="M-1 -2 C-10 -20 -26 -16 -21 -3 C-18 4 -8 3 -1 0Z" fill="{C1}"/><path d="M-1 1 C-9 3 -18 10 -13 16 C-8 19 -3 10 -1 3Z" fill="{C2}"/></g><g class="bf-wing-r"><path d="M1 -2 C10 -20 26 -16 21 -3 C18 4 8 3 1 0Z" fill="{C1}"/><path d="M1 1 C9 3 18 10 13 16 C8 19 3 10 1 3Z" fill="{C2}"/></g><rect x="-1.5" y="-8" width="3" height="20" rx="1.5" fill="#5a4366"/></svg>';
-
-        /* --- vines: give each flower a little stem that grows with it; gentle grow when cursor is near --- */
-        function addStems(){ return;   /* the vine stays one clean line; only click-grown sprigs carry stems */
-            document.querySelectorAll('.vine').forEach(v => {
-                v.querySelectorAll('.vine-item.spin').forEach(it => {
-                    const g = it.parentNode; if (g.querySelector('.vine-bud-stem')) return;
-                    const st = document.createElementNS(NS, 'path'); st.setAttribute('class', 'vine-bud-stem'); st.setAttribute('d', 'M0 0 Q -4 6 0 10'); st.setAttribute('pathLength', '1'); g.insertBefore(st, it);
-                });
-            });
-        }
-        addStems(); addEventListener('resize', () => setTimeout(addStems, 50));
+        /* near-bloom: a flower the cursor reaches spins up */
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (!reduce && matchMedia('(hover: hover)').matches){
             let q = false, ev;
             addEventListener('mousemove', e => { ev = e; if (q) return; q = true; requestAnimationFrame(() => { q = false;

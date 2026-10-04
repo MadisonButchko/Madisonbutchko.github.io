@@ -1,0 +1,187 @@
+/* =====================================================
+   v9: shifting background, text hover colors, prettier
+   circle hover, gallery color wash, shuffle, banner bird
+   ===================================================== */
+/* slowly shifting background gradient (three layers crossfade) */
+.sky-shift i {    will-change: opacity;  }
+.sky-shift i:nth-child(1) { background: linear-gradient(135deg, #fde3ec 0%, #fff2cf 50%, #e6f1dc 100%); }
+.sky-shift i:nth-child(2) { background: linear-gradient(225deg, #efe5fa 0%, #fde6ee 45%, #dff0f6 100%);  }
+.sky-shift i:nth-child(3) { background: linear-gradient(315deg, #fff1cc 0%, #f3e6fb 55%, #fde1ea 100%);  }
+@keyframes skyFade { 0%, 100% { opacity: 0; } 33% { opacity: 0.6; } 66% { opacity: 0; } }
+
+/* hovering any text shifts its color */
+.hc-text { transition: color 0.35s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), translate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s, border-color 0.3s, box-shadow 0.3s, opacity 0.4s; }
+.hc-text:hover { color: var(--hc) !important; }
+.hero h1 .ltr:hover {  -webkit-text-fill-color: var(--hc) !important; }
+
+/* circles: soft translucent shimmer on hover instead of plain white */
+
+@keyframes circleShimmer { 0%, 100% { background-position: 0% 40%; } 50% { background-position: 100% 60%; } }
+
+
+/* shuffle button beside Surprise me */
+.shuffle-btn { margin-left: 0.4rem !important; background: var(--pink-soft); border-color: rgba(194, 69, 126, 0.3); color: var(--cyan); }
+.shuffle-btn:hover { background: var(--cyan); }
+.shuffle-btn.spin .ic { animation: spinOnce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes spinOnce { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+.surprise-btn .sp { display: inline-flex; vertical-align: middle; }
+
+/* banner bird that invites people down to the garden */
+
+
+
+
+
+
+
+
+
+@keyframes bannerWave { 0%, 100% { transform: rotate(-3deg) skewY(-2deg); } 50% { transform: rotate(3deg) skewY(2deg); } }
+
+
+@keyframes arrowBob { 50% { transform: translateY(3px); } }
+
+
+
+@media (prefers-reduced-motion: reduce) { .sky-shift i { animation: none; } .sky-shift i:nth-child(1) { opacity: 0.45; }  }
+
+/* phones: a taller bed, smaller plants and critters with bigger tap areas, and a stacked HUD with roomy controls */
+@media (max-width: 600px) {
+    .garden-bed { height: 240px; border-radius: 0 0 22px 22px; }
+    .g-plant.row-back { transform: scale(0.7); } .g-plant.row-mid { transform: scale(0.78); } .g-plant.row-front { transform: scale(0.86); }
+    .critter.bunny svg { width: 40px; height: 35px; } .critter.snail svg { width: 36px; height: 23px; } .critter.caterpillar svg { width: 38px; height: 19px; }
+    .critter.bird svg { width: 32px; height: 26px; } .critter.deer svg { width: 74px; height: 66px; }
+    .critter:not(.flutter)::after { content: ''; position: absolute; inset: -12px; }
+    .g-cloud { width: 78px; height: 44px; } .g-sun { width: 40px; height: 40px; right: 5%; top: 6px; }
+    .g-toast { top: 56px; max-width: calc(100% - 28px); white-space: normal; text-align: center; font-size: 1rem; padding: 0.3rem 0.85rem 0.35rem; }
+    .shoo-pop { font-size: 1.05rem; }
+    .garden-tip { gap: 0.55rem 0.6rem; padding: 0 0.9rem; font-size: 1.08rem; }
+    .garden-tip .gt-text { flex-basis: 100%; text-align: center; line-height: 1.35; }
+    .garden-meter { width: min(70%, 240px); height: 9px; }
+    .g-stats { font-size: 0.74rem; line-height: 1.7; }
+    .g-badges { flex-basis: 100%; justify-content: center; flex-wrap: wrap; gap: 7px; }
+    .g-bdg { width: 22px; height: 22px; }
+    .g-reset { min-height: 40px; padding: 0.4rem 1.2rem; font-size: 0.82rem; }
+}
+
+/* cloud: still raindrops are only shown when motion is reduced (the animated drizzle is skipped then) */
+.g-cloud .cl-still { display: none; }
+@media (prefers-reduced-motion: reduce) { .g-cloud .cl-still { display: block; opacity: 0.7; } }
+
+/* Let's Connect: each link hovers (and keyboard-focuses) in the accent of its own tinted circle */
+.social-link:nth-child(1) { --acc: #8a63b8; --acc-bg: #dccdf3; --acc-glow: rgba(138, 99, 184, 0.35); }
+.social-link:nth-child(2) { --acc: #c2457e; --acc-bg: #f9cfdf; --acc-glow: rgba(194, 69, 126, 0.32); }
+.social-link:nth-child(3) { --acc: #4f7a34; --acc-bg: #c9e0b6; --acc-glow: rgba(79, 122, 52, 0.32); }
+.social-link { transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.social-link:hover, .social-link:focus-visible { background: var(--acc-bg); color: var(--acc); border-color: var(--acc); box-shadow: 0 6px 16px var(--acc-glow); transform: translateY(-4px) rotate(-6deg); }
+.social-link:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+.social-link:hover *, .social-link:focus-visible * { color: inherit; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .social-link:hover, .social-link:focus-visible { transform: none; } .guide-bird { transition: none; } }
+
+/* scattered single blooms and leaves (same look as the hero decorations) */
+.scatter { position: absolute; z-index: 1; pointer-events: none; opacity: 0; scale: 0.3; transition: opacity 1s ease, scale 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.scatter.open { opacity: 0.92; scale: 1; }
+.scatter svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.sc-bloom svg { animation: spinSlow var(--spin, 40s) linear var(--sdl, 0s) infinite; }
+.sc-leaf { rotate: var(--rot, 0deg); }
+.sc-leaf svg { animation: leafSway 6s ease-in-out var(--sdl, 0s) infinite; }
+@media (prefers-reduced-motion: reduce) { .scatter { opacity: 0.92; scale: 1; transition: none; } .sc-bloom svg, .sc-leaf svg { animation: none; } }
+
+/* ======================================================================
+   v9 lightbox / gallery / nav refinements
+   ====================================================================== */
+/* ===== v9: lightbox layout (ambient backdrop lives in style.css, driven by setBackdrop()) ===== */
+#lightbox.lightbox { position: fixed; inset: 0; z-index: 300; background: #2a1f31 !important; display: none; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; flex-direction: column; gap: 0; }
+#lightbox.lightbox.active { display: flex; animation: modalIn 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+#lightbox img#lightboxImg { position: relative; z-index: 1; max-height: 70vh; max-width: 78vw; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);  cursor: zoom-in; transform-origin: var(--ox, 50%) var(--oy, 50%); }
+#lightbox img#lightboxImg.swap-l { opacity: 0;  }
+#lightbox img#lightboxImg.swap-r { opacity: 0;  }
+#lightbox img#lightboxImg.zoomed { transform: scale(2.1); cursor: zoom-out;  }
+#lightbox .lightbox-info { position: relative; bottom: auto; left: auto; transform: none; z-index: 2; margin-top: 1rem; text-align: center; }
+#lightbox .lightbox-title { font-family: var(--font-display); font-size: 1.25rem; color: #fff8ec; }
+#lightbox .lightbox-cat { font-size: 0.75rem; color: var(--pink); text-transform: uppercase; }
+#lightbox .lightbox-counter { font-size: 0.8rem; color: rgba(255, 248, 236, 0.6); margin-top: 0.5rem; }
+#lightbox .lightbox-close, #lightbox .lightbox-arrow { z-index: 3; background: rgba(255, 248, 236, 0.15); border: 2px solid rgba(255, 248, 236, 0.3); color: #fff8ec; }
+#lightbox .lightbox-close:hover, #lightbox .lightbox-arrow:hover { background: rgba(244, 167, 191, 0.45); }
+#lightbox .lb-thumbs { position: relative; z-index: 2; display: flex; gap: 6px; margin-top: 0.9rem; max-width: 90vw; overflow-x: auto; padding: 6px 4px; scrollbar-width: none; }
+#lightbox .lb-thumbs img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; opacity: 0.5; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); flex-shrink: 0; border: 2px solid transparent; }
+#lightbox .lb-thumbs img:hover { opacity: 0.9; transform: translateY(-3px); }
+#lightbox .lb-thumbs img.on { opacity: 1; border-color: #fff; transform: translateY(-4px) scale(1.1); }
+#lightbox .lb-play { position: absolute; top: 1rem; left: 1rem; z-index: 3; height: 44px; padding: 0 1.1rem; border-radius: 50px; border: 1px solid rgba(255, 248, 236, 0.3); background: rgba(255, 248, 236, 0.15); color: #fff8ec; font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+#lightbox .lb-play:hover { background: rgba(244, 167, 191, 0.45); }
+#lightbox .lb-play .ic { width: 12px; height: 12px; }
+#lightbox .lb-progress { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; z-index: 3; background: linear-gradient(90deg, var(--yellow), var(--pink), var(--lilac)); }
+@media (max-width: 768px) { #lightbox img#lightboxImg { max-width: 92vw; max-height: 62vh; } }
+
+/* ===== v9: every piece of text changes color when you hover it ===== */
+.hc-text:hover, .hc-text:focus-visible { color: var(--hc) !important; -webkit-text-fill-color: var(--hc); }
+#experience .hc-text:hover, #lightbox .hc-text:hover, #galleryModal .hc-text:hover, #experience .hc-text.hc-text:hover { color: var(--hc) !important; -webkit-text-fill-color: var(--hc); }
+.hc-text:hover :is(strong, b, em, i, span:not(.ltr):not(.t-ch):not(.w)) { color: inherit !important; -webkit-text-fill-color: inherit; }
+.hc-smooth { transition: color 0.3s ease; }
+.t-done .t-ch { transition: color 0.35s ease; transition-delay: calc(var(--i) * 22ms); }
+.t-done:hover .t-ch, .t-done:hover em .t-ch { color: var(--hc) !important; animation: none !important; }
+.about-text .w { transition: color 0.3s ease; }
+.about-text.done .w:hover { color: var(--hc) !important; }
+.hero h1 .ltr { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease; }
+.hero h1 .ltr:hover { color: var(--hc) !important; -webkit-text-fill-color: var(--hc); }
+.hero-role .rot-word:hover { filter: hue-rotate(60deg); }
+.gb-bubble:hover { color: #d7263d; }
+
+/* ===== v9: fuller, prettier garden ===== */
+.g-meadow { position: absolute; inset: 0; pointer-events: none; z-index: 0; border-radius: 30px 30px 0 0;
+    background:
+        radial-gradient(45% 70% at 15% 100%, rgba(251, 226, 154, 0.45), transparent 70%),
+        radial-gradient(40% 75% at 50% 100%, rgba(249, 195, 213, 0.45), transparent 70%),
+        radial-gradient(45% 70% at 85% 100%, rgba(217, 203, 243, 0.5), transparent 70%),
+        radial-gradient(70% 40% at 50% 100%, rgba(207, 229, 189, 0.6), transparent 80%); }
+.g-meadow i { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7); animation: wildBob 3s ease-in-out infinite; animation-delay: var(--dl); }
+@keyframes wildBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2px; } }
+.g-plant.bloomed .g-head { filter: drop-shadow(0 2px 4px rgba(194, 69, 126, 0.18)); }
+.g-sparkle { position: absolute; width: 8px; height: 8px; pointer-events: none; z-index: 6; background: radial-gradient(circle, #fff 0 25%, rgba(255, 226, 122, 0.9) 35%, transparent 70%); border-radius: 50%; animation: sparkle 1.2s ease-out forwards; }
+@keyframes sparkle { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.6); opacity: 1; } 100% { transform: scale(0.4) translateY(-14px); opacity: 0; } }
+
+/* ===== v8: background colors slowly flow and shift ===== */
+.page-bg::before { content: '' !important; position: absolute; inset: 0; opacity: 0; display: block !important;
+    background: linear-gradient(180deg, #fde6ee 0%, #efe7fa 9%, #fff3d3 16%, #e6f1dc 24%, #fde4ed 31%, #fff1cf 40%, #eee5fa 48%, #fde7da 56%, #e9f2df 63%, #f3e8fb 71%, #fff3d6 79%, #e6f1dc 87%, #fde4ed 94%, #efe7fa 100%);
+    animation: bgBreathe8 16s ease-in-out infinite !important; }
+@keyframes bgBreathe8 { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.ambient span { animation: ambDrift8 26s ease-in-out infinite alternate !important; }
+.ambient span:nth-child(2) { animation-duration: 31s !important; animation-delay: -8s !important; }
+.ambient span:nth-child(3) { animation-duration: 28s !important; animation-delay: -15s !important; }
+.ambient span:nth-child(4) { animation-duration: 23s !important; animation-delay: -4s !important; }
+@keyframes ambDrift8 { 0% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(8vw, 6vh, 0) scale(1.15); } 100% { transform: translate3d(-6vw, -4vh, 0) scale(0.92); } }
+.sky-shift { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.sky-shift i { position: absolute; inset: 0; opacity: 0; animation: skyFade8 36s ease-in-out infinite !important; }
+.sky-shift i:nth-child(1) { background: radial-gradient(70% 60% at 15% 20%, rgba(251, 226, 154, 0.45), transparent 70%), radial-gradient(60% 55% at 85% 80%, rgba(249, 195, 213, 0.4), transparent 70%); }
+.sky-shift i:nth-child(2) { background: radial-gradient(70% 60% at 85% 25%, rgba(217, 203, 243, 0.45), transparent 70%), radial-gradient(60% 55% at 20% 85%, rgba(207, 229, 189, 0.4), transparent 70%); animation-delay: -12s !important; }
+.sky-shift i:nth-child(3) { background: radial-gradient(70% 60% at 50% 50%, rgba(253, 225, 234, 0.45), transparent 70%), radial-gradient(55% 50% at 80% 10%, rgba(255, 241, 204, 0.4), transparent 70%); animation-delay: -24s !important; }
+@keyframes skyFade8 { 0%, 100% { opacity: 0; } 33% { opacity: 1; } 66% { opacity: 0; } }
+
+/* ===== v8: little red guide bird ===== */
+
+.guide-bird { position: fixed; left: 0; top: 0; z-index: 98; width: 26px; height: 22px; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.5s ease, visibility 0s linear 0.5s; will-change: transform; font: inherit; -webkit-tap-highlight-color: transparent; }
+.guide-bird.on { opacity: 1; pointer-events: auto; visibility: visible; transition-delay: 0s; }
+.gb-body { display: block; width: 26px; height: 22px; animation: gbBob 2.6s ease-in-out infinite; }
+.guide-bird.flying .gb-body { animation: none; }
+.gb-flip { display: block; width: 100%; height: 100%; transition: transform 0.25s ease; }
+.guide-bird.face-left .gb-flip { transform: scaleX(-1); }
+.gb-flip svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 3px rgba(90, 30, 50, 0.28)); }
+.gb-wing { transform-box: fill-box; transform-origin: 80% 30%; animation: gbFlap 0.55s ease-in-out infinite alternate; }
+.guide-bird.flying .gb-wing { animation-duration: 0.11s; }
+@keyframes gbFlap { from { transform: rotate(0deg) scaleY(1); } to { transform: rotate(-20deg) scaleY(0.55); } }
+@keyframes gbBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+.gb-bubble { position: absolute; top: 50%; left: 32px; translate: 0 -62%; white-space: nowrap; font-family: var(--font-body); font-size: 10.5px; font-weight: 500; line-height: 1; letter-spacing: 0.01em; color: #5e5168; background: rgba(255, 255, 255, 0.94); border: 1px solid rgba(215, 38, 61, 0.28); padding: 4px 8px 5px; border-radius: 10px; box-shadow: 0 3px 10px rgba(120, 72, 96, 0.12); transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s, border-color 0.2s; pointer-events: auto; cursor: pointer; }
+.gb-bubble::after { content: ''; position: absolute; inset: -9px -6px; } /* roomier tap target */
+.guide-bird.flying .gb-bubble { pointer-events: none; }
+.gb-bubble::before { content: ''; position: absolute; left: -4.5px; top: 50%; width: 7px; height: 7px; background: rgba(255, 255, 255, 0.94); border-left: 1px solid rgba(215, 38, 61, 0.28); border-bottom: 1px solid rgba(215, 38, 61, 0.28); transform: translateY(-50%) rotate(45deg); }
+.guide-bird.bubble-left .gb-bubble { left: auto; right: 32px; }
+.guide-bird.bubble-left .gb-bubble::before { left: auto; right: -4.5px; border-left: 0; border-bottom: 0; border-right: 1px solid rgba(215, 38, 61, 0.28); border-top: 1px solid rgba(215, 38, 61, 0.28); }
+.guide-bird.flying .gb-bubble { opacity: 0; transform: scale(0.85); }
+.gb-arrow { display: inline-block; margin-left: 2px; color: #d7263d; animation: gbArrow 1.4s ease-in-out infinite; }
+@keyframes gbArrow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+.guide-bird:hover .gb-bubble, .guide-bird:focus-visible .gb-bubble { color: #d7263d; border-color: #d7263d; }
+.guide-bird:focus-visible { outline: 2px solid #d7263d; outline-offset: 3px; border-radius: 6px; }
+.guide-bird:focus-visible .gb-bubble { box-shadow: 0 0 0 2px #d7263d, 0 3px 10px rgba(120, 72, 96, 0.12); }
+@media (max-width: 768px) { .gb-bubble { font-size: 10px; padding: 3px 7px 4px; } }
+@media (prefers-reduced-motion: reduce) { .gb-body, .gb-wing, .gb-arrow, .sky-shift i, .page-bg::before, .ambient span { animation: none !important; } }
+

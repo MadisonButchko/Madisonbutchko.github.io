@@ -128,9 +128,8 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
         }
         /* a click does not draw anything itself: it earns the vine some extra growth, and the shared system draws it */
         function extendVine(v, side, d){ vines.bonus(side, d); }
-        /* TODO(human): how many click-grown blooms may one vine carry in total? Picking this number is a
-           design decision: a low number keeps the composition airy, a high one rewards persistent clicking.
-           (v.narrow is true on phones, where the vine is slimmer and the page gutter is tighter.) */
+        /* how many click-grown blooms one vine may carry in total: a low number keeps the composition airy,
+           a high one rewards persistent clicking. (v.narrow is true on phones, where the vine is slimmer and the page gutter is tighter.) */
         function clickGrowthLimit(v){ return v.narrow ? 14 : 24; }
         let vineClicks = 0;
         /* returns false when that stretch of vine is already at its limit */

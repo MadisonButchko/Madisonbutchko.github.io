@@ -1,0 +1,71 @@
+/* =====================================================
+   FX v3: flowing section backgrounds, rainbow glow,
+   butterfly cursor, calmer text hovers
+   ===================================================== */
+@property --ga { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes gaSpin { to { --ga: 360deg; } }
+main > section:not(.hero) { position: relative; }
+main > section:not(.hero)::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%); z-index: -1; pointer-events: none;
+    background: linear-gradient(var(--sa, 135deg), var(--s1), var(--s2), var(--s3), var(--s4), var(--s1)); background-size: 320% 320%; animation: secFlow var(--sd, 22s) ease-in-out infinite; opacity: 0.62;
+    -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); }
+@keyframes secFlow { 0%, 100% { background-position: 0% 30%; } 25% { background-position: 60% 100%; } 50% { background-position: 100% 60%; } 75% { background-position: 40% 0%; } }
+#about { --s1: #fde1ea; --s2: #fff1cc; --s3: #fde6d6; --s4: #f3e6fb; --sa: 120deg; --sd: 20s; }
+#experience { --s1: #efe8fa; --s2: #fde6ee; --s3: #fff6e3; --s4: #e4dbf6; --sa: 160deg; --sd: 24s; }
+#skills { --s1: #e2f0d6; --s2: #fff4cf; --s3: #eef7e4; --s4: #fde9c9; --sa: 100deg; --sd: 21s; }
+#gallery { --s1: #fde8d6; --s2: #efe8fa; --s3: #fde1ea; --s4: #fff1cc; --sa: 145deg; --sd: 26s; }
+#contact { --s1: #fff1cc; --s2: #e6f1dc; --s3: #efe8fa; --s4: #fde1ea; --sa: 115deg; --sd: 19s; }
+.rainbow-glow {      
+    background: conic-gradient(from var(--ga) at var(--mx, 50%) var(--my, 50%), #f9b8cf, #fbdc84, #c7e3ad, #a9d8ea, #cdb8f2, #f9b8cf);
+    -webkit-mask-image: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), #000 0%, rgba(0,0,0,0.45) 40%, transparent 72%); mask-image: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), #000 0%, rgba(0,0,0,0.45) 40%, transparent 72%);
+     }
+.vine { z-index: 2; }
+
+/* text: entrance plays once, then hovering just changes colors */
+.t-done .t-ch { opacity: 1; transform: none; filter: none; animation: none !important;  transition-delay: calc(var(--i) * 22ms); }
+.t-done em .t-ch { animation: inkWave 4s ease-in-out infinite !important; animation-delay: calc(var(--i) * 120ms) !important; }
+.about-text.done .w { opacity: 1; transform: none; animation: none !important; transition: color 0.3s ease; }
+.about-text.done .kw { background-size: 100% 100%; }
+.about-text.done .kw:hover { color: var(--hc); background-image: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%); }
+
+/* butterfly cursor + dotted flight path */
+
+html.bf-cursor, html.bf-cursor * { cursor: none !important; }
+.bf-pointer { position: fixed; left: 0; top: 0; width: 30px; height: 26px; margin: -6px 0 0 -15px; will-change: transform; z-index: 1000; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+.bf-pointer.on { opacity: 1; }
+.bf-pointer .bf-inner { width: 100%; height: 100%; transition: scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.bf-pointer.big .bf-inner { scale: 1.35; }
+.bf-pointer.big .bf-wing-l, .bf-pointer.big .bf-wing-r { animation-duration: 0.14s; }
+.bf-pointer svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 4px rgba(90, 67, 102, 0.25)); }
+.bf-trail { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 999; pointer-events: none; }
+html.bf-cursor .butterfly { display: none; }
+@media (prefers-reduced-motion: reduce) { main > section:not(.hero)::before, .rainbow-glow, .hero-glow { animation: none; } }
+
+/* =====================================================
+   GALLERY v3: rainbow frame, color-aware hover, hover-to-open
+   ===================================================== */
+@property --p { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+.gallery-section { transition: --s1 0.8s; }
+#gallery::after { content: ''; position: absolute; top: 8%; bottom: 8%; left: 50%; width: 100vw; transform: translateX(-50%); z-index: -1; pointer-events: none; background: radial-gradient(60% 55% at 50% 50%, var(--art, transparent), transparent 70%); opacity: 0; transition: opacity 0.6s ease, background 0.6s ease; }
+
+.gallery-frame { position: relative; padding: 7px; border-radius: 22px; background: conic-gradient(from var(--ga), #f2c230, #f4a7bf, #c2457e, #b9a2de, #8db36a, #a9d8ea, #f2c230);  box-shadow: 0 24px 60px rgba(120, 72, 96, 0.18); }
+.gallery-frame::before { content: ''; position: absolute; inset: -14px; border-radius: 30px; background: inherit; filter: blur(26px); opacity: 0.45; z-index: -1; animation: inherit; }
+.gallery-frame .gallery-preview { border: none !important; border-radius: 16px; background: conic-gradient(from var(--ga), #fbe29a, #f9c3d5, #d9cbf3, #cfe5bd, #fbe29a);  box-shadow: none;  }
+.gallery-frame .gallery-preview:hover { box-shadow: none; }
+.gallery-preview .preview-item:hover { outline: 3px solid #fff; outline-offset: -3px; }
+.preview-overlay { pointer-events: none; }
+
+
+
+/* modal: hover a piece and it opens (ring fills first) */
+.gallery-modal { transition: background-color 0.6s ease; }
+.gallery-modal::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1; background: radial-gradient(70% 60% at 50% 55%, var(--art, transparent), transparent 75%); opacity: 0.5; transition: background 0.6s ease; }
+.collage-item { position: relative; }
+.collage-item::after { content: ''; position: absolute; inset: 0; border-radius: 12px; padding: 4px; pointer-events: none; z-index: 3;
+    background: conic-gradient(from -90deg, #f2c230, #f4a7bf, #c2457e, #b9a2de, #8db36a var(--p), transparent 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+
+@keyframes charge { to { --p: 100%; } }
+
+
+@media (prefers-reduced-motion: reduce) { .gallery-frame, .gallery-frame .gallery-preview { animation: none; } }
+

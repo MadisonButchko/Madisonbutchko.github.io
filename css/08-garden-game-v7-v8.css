@@ -1,0 +1,262 @@
+/* =====================================================
+   v7: tidy vine blooms, garden game, faster lightbox
+   ===================================================== */
+/* performance: the full-page breathing layer was a huge repaint */
+.tiny-fl { display: inline-block; width: 0.95em; height: 0.95em; vertical-align: -0.12em; overflow: visible; color: var(--pink); --center: #f2c230; }
+.ic { display: inline-block; width: 0.85em; height: 0.85em; vertical-align: -0.05em; }
+.surprise-btn .sp { color: var(--teal); }
+.surprise-btn:hover .tiny-fl { color: #fff; }
+
+.lightbox img#lightboxImg.loading { opacity: 0.12; transform: scale(0.97); }
+
+/* click the side vines: flowers grow on evenly spaced spots, then fade */
+.vine-hit { position: fixed; top: 0; width: 84px; height: 100vh; z-index: 4; display: block; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vine-hit.left { left: 8px; } .vine-hit.right { right: 8px; }
+@media (max-width: 1239px) { .vine-hit { width: 20px; } .vine-hit.left { left: 0; } .vine-hit.right { right: 0; } }
+.vine-tip { position: fixed; left: 0; top: 0; z-index: 130; pointer-events: none; font-family: var(--font-hand); font-size: 1.1rem; color: var(--green); background: rgba(255, 255, 255, 0.9); padding: 0.1rem 0.75rem 0.2rem; border-radius: 20px; box-shadow: 0 4px 14px rgba(120, 72, 96, 0.12); opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
+.vine-tip.show { opacity: 1; }
+.vine-sprout { transition: opacity 1.4s ease; }
+.vine-sprout .sprout { animation: sproutIn 0.85s cubic-bezier(0.34, 1.6, 0.64, 1) 0.3s both; }
+.vine-sprout .sprout.leafy use { animation: none; }
+.vine-sprout .vs-leaf { transform-box: fill-box; transform-origin: center; transform: scale(0); animation: popIn 0.5s cubic-bezier(0.34, 1.7, 0.64, 1) 0.2s forwards; }
+.vine-sprout.wilt { opacity: 0; }
+.vine-sprout.wilt .sprout { animation: sproutOut 1.5s ease-in forwards; }
+.vine-sprout.eaten { opacity: 0; transition-duration: 0.8s; }
+.vine-sprout.eaten .sprout { animation: sproutOut 0.8s ease-in forwards; }
+/* sprig levels: the newest level animates in; levels that already existed are redrawn instantly */
+.vine-sprout .sp-lv .sprout-stem { stroke-dasharray: 60; stroke-dashoffset: 60; }
+
+.vine-sprout .still, .vine-sprout .still * { animation-duration: 0s !important; animation-delay: 0s !important; }
+.vine-sprout .tendril { stroke-width: 1.2; }
+.vine-sprout .sprout { transition: scale 0.5s cubic-bezier(0.34, 1.8, 0.64, 1); }
+.vine-sprout .sprout use { animation: none; }
+.vine-sprout .sprout.grow { scale: 1.45; }
+/* a caterpillar crawling along a side vine */
+.vine-cat { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 17px; margin: -15px 0 0 -17px; transform-origin: 17px 15px; cursor: pointer; opacity: 0; transition: opacity 0.5s ease; will-change: transform; }
+.vine-cat.on { opacity: 1; }
+.vine-cat svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(90, 67, 102, 0.2)); }
+.vine-cat::after { content: ''; position: absolute; inset: -12px; }
+.vine-cat.rev .vc-flip { transform: scaleY(-1); }
+.vine-cat .vc-flip { animation: inch 0.8s ease-in-out infinite; transform-origin: 0 15px; }
+.vine-cat.rev .vc-flip { animation-name: inchRev; }
+@keyframes inchRev { 0%, 100% { transform: scaleY(-1) scaleX(1); } 50% { transform: scaleY(-1) scaleX(0.86); } }
+.vine-cat.eating .vc-flip { animation: nibble 0.22s ease-in-out infinite; }
+.vine-cat.eating.rev .vc-flip { animation: none; }
+.vine-cat.drop { transition: opacity 0.8s ease; opacity: 0; }
+.vine-cat.drop svg { animation: catDrop 0.85s ease-in forwards; }
+@keyframes catDrop { to { transform: translateY(70px) rotate(220deg); } }
+@media (max-width: 1239px) { .vine-cat { width: 26px; height: 13px; margin: -11px 0 0 -13px; transform-origin: 13px 11px; } .vine-cat .vc-flip { transform-origin: 0 11px; } }
+/* a bloom a caterpillar has bitten off (the rest of its sprig stays) */
+.vine-sprout .sprout.bitten { animation: sproutOut 0.7s ease-in forwards; }
+/* birds flying through the page */
+.flyby-bird { position: fixed; left: 0; top: 0; z-index: 3; pointer-events: none; will-change: transform; }
+.flyby-bird svg { display: block; width: calc(36px * var(--fs, 0.7)); height: calc(29px * var(--fs, 0.7)); overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.15)); }
+.flyby-bird .c-wing { transform-box: fill-box; transform-origin: 30% 80%; animation: wingFlap 0.34s ease-in-out infinite alternate; }
+.flyby-bird.left-facing .c-flip { transform: scaleX(-1); }
+/* flower patches in open spaces */
+.page-posy { position: absolute; z-index: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.page-posy svg { display: block;   overflow: visible; }
+.pp-grass { fill: none; stroke: #8db36a; stroke-width: 2.4; stroke-linecap: round; }
+.pp-st { fill: none; stroke: #7fa65c; stroke-width: 2.2; stroke-linecap: round; }
+.pp-stem { transform-box: view-box; transform-origin: 0 0; animation: ppSway var(--sd, 4s) ease-in-out var(--dl, 0s) infinite alternate; }
+@keyframes ppSway { from { transform: rotate(-3.5deg); } to { transform: rotate(3.5deg); } }
+.pp-pop { transform-box: fill-box; transform-origin: center; transform: scale(0) rotate(-120deg); transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); transition-delay: calc(var(--i, 0) * 120ms); }
+.page-posy.open .pp-pop { transform: scale(1) rotate(0deg); }
+.page-posy.boing .pp-pop { animation: ppBoing 0.8s cubic-bezier(0.34, 1.6, 0.64, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes ppBoing { 0%, 100% { transform: scale(1) rotate(0); } 40% { transform: scale(1.4) rotate(40deg); } 70% { transform: scale(0.92) rotate(-8deg); } }
+.pp-petal { position: absolute; width: 6px; height: 9px; margin: -4px 0 0 -3px; border-radius: 60% 60% 50% 50% / 70% 70% 30% 30%; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .pp-stem, .page-posy.boing .pp-pop, .flyby-bird, .vine-cat { animation: none !important; } .pp-pop { transition: none; } }
+@keyframes sproutOut { from { transform: scale(1) rotate(0deg); } to { transform: scale(0.15) rotate(80deg); } }
+
+/* birds (vines + garden) */
+.vine-bird { position: fixed; left: 0; top: 0; z-index: 6; cursor: pointer; will-change: transform; }
+.vine-bird svg, .critter.bird svg { display: block; width: 36px; height: 29px; overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.18)); }
+.vine-bird .c-flip, .critter .c-flip { transform-origin: center; }
+.vine-bird.left-facing .c-flip, .critter.left-facing .c-flip { transform: scaleX(-1); }
+.c-wing { transform-box: fill-box; transform-origin: 75% 85%; }
+.vine-bird.flying .c-wing, .critter.bird.moving .c-wing { animation: wingFlap 0.13s ease-in-out infinite alternate; }
+@keyframes wingFlap { from { transform: rotate(12deg); } to { transform: rotate(-55deg) scaleY(0.7); } }
+.vine-bird.eating .c-body, .critter.bird.eating .c-body { animation: peck 0.34s ease-in-out infinite; transform-origin: 40% 90%; }
+@keyframes peck { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(16deg); } }
+.vine-bird:hover svg, .critter:hover svg { filter: drop-shadow(0 0 6px rgba(244, 167, 191, 0.95)); }
+
+/* ---------- garden ---------- */
+.garden-bed { height: 250px; overflow: hidden; border-radius: 0 0 28px 28px; outline: none; }
+.garden-bed:focus-visible { box-shadow: inset 0 0 0 2px rgba(194, 69, 126, 0.45); }
+.garden-bed::before { content: ''; position: absolute; left: 4%; right: 4%; bottom: 0; height: 60px; pointer-events: none; background: radial-gradient(ellipse at 50% 100%, rgba(141, 179, 106, 0.22), transparent 70%); }
+.garden-soil { position: absolute; left: 2%; right: 2%; bottom: 0; height: 22px; pointer-events: none; border-radius: 60% 60% 10px 10px / 18px 18px 10px 10px;
+    background: radial-gradient(circle at 30% 60%, rgba(160, 120, 90, 0.2) 1.4px, transparent 2px) 0 0 / 22px 13px, radial-gradient(circle at 70% 30%, rgba(160, 120, 90, 0.14) 1.2px, transparent 2px) 7px 4px / 17px 11px, linear-gradient(#f2e4d0, #e5cfb3);
+    box-shadow: inset 0 3px 6px rgba(255, 255, 255, 0.6), 0 6px 18px rgba(150, 110, 80, 0.1); }
+.garden-grass { position: absolute; left: 2.5%; bottom: 16px; width: 95%; height: 14px; pointer-events: none; }
+.garden-grass path { fill: none; stroke: #9cc27a; stroke-width: 1.3; stroke-linecap: round; }
+.mote { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff8d6 0%, rgba(242, 194, 48, 0.55) 55%, transparent 70%); animation: moteDrift var(--md, 9s) ease-in-out infinite alternate; animation-delay: var(--mdl, 0s); }
+@keyframes moteDrift { 0% { transform: translate(0, 0); opacity: 0.15; } 50% { opacity: 0.9; } 100% { transform: translate(22px, -30px); opacity: 0.25; } }
+.garden-bed:not(.awake) *, .garden-bed:not(.awake)::before { animation-play-state: paused !important; }
+
+/* three planting layers: back (taller, smaller, softer) -> middle -> front */
+.g-plant { position: absolute; bottom: 0; width: 40px; margin-left: -20px; transform-origin: bottom center; pointer-events: none; }
+.g-plant.row-back { bottom: 30px; z-index: 1; transform: scale(0.82); filter: saturate(0.85) brightness(1.03); }
+.g-plant.row-mid { bottom: 20px; z-index: 2; transform: scale(0.92); }
+.g-plant.row-front { bottom: 9px; z-index: 3; }
+.g-life, .g-sway { transform-origin: bottom center; }
+.g-life { transition: transform 2.4s cubic-bezier(0.4, 0, 0.2, 1), filter 2.4s ease; }
+.grow .g-sway { animation: sway 4s ease-in-out infinite; animation-delay: var(--sd); }
+.garden-bed:hover .grow .g-sway { animation-duration: 2.4s; }
+.g-pop { transform-box: fill-box; transform-origin: bottom center; transform: scale(0); }
+.grow .g-pop { animation: popIn 0.7s cubic-bezier(0.34, 1.7, 0.64, 1) forwards; animation-delay: var(--d); }
+.g-plant.thirsty { pointer-events: auto; cursor: pointer; }
+.g-plant.thirsty .g-life { transform: rotate(var(--droop, 9deg)) scaleY(0.93); filter: saturate(0.4) brightness(0.98); }
+.g-plant.thirsty::after { content: ''; position: absolute; left: 50%; top: -18px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50% 0 50% 50%; rotate: -45deg; background: linear-gradient(135deg, #cdeaf6, #7fbfdc); box-shadow: 0 2px 4px rgba(90, 140, 170, 0.25); animation: dropBob 1.1s ease-in-out infinite; }
+@keyframes dropBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+.g-plant.withered .g-life { animation: witherOut 1.5s ease-in forwards; }
+@keyframes witherOut { to { transform: rotate(calc(var(--droop, 9deg) * 2.5)) scaleY(0.25); opacity: 0; filter: saturate(0) brightness(0.9); } }
+.g-plant.eaten .g-life { animation: munched 1.1s ease-in forwards; }
+@keyframes munched { 0% { transform: none; } 20% { transform: rotate(-8deg) scaleY(0.9); } 40% { transform: rotate(6deg) scaleY(0.7); } 60% { transform: rotate(-4deg) scaleY(0.45); } 100% { transform: scaleY(0); opacity: 0; } }
+/* being eaten: the plant shakes; shooed in time: it does a happy hop */
+.g-plant.nibbled .g-life { animation: nibbleShake 0.26s ease-in-out infinite; filter: saturate(0.75); }
+@keyframes nibbleShake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-5deg) translateX(-1px); } 75% { transform: rotate(5deg) translateX(1px); } }
+.g-plant.saved .g-life { animation: savedHop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes savedHop { 0%, 100% { transform: none; } 35% { transform: scale(1.12, 1.18) translateY(-6px); } 65% { transform: scale(0.97, 0.95); } }
+
+.g-fx { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5; }
+.g-petal { width: 7px; height: 10px; margin: -5px 0 0 -3.5px; border-radius: 60% 60% 50% 50% / 70% 70% 30% 30%; background: var(--pc, #f4a7bf); box-shadow: inset 0 0 0 1px rgba(90, 67, 102, 0.08); }
+.g-minus { z-index: 7; font-family: var(--font-hand); font-size: 1.2rem; font-weight: 600; line-height: 1; color: #c2457e; text-shadow: 0 1px 0 #fff; animation: minusUp 1.1s ease-out forwards; }
+@keyframes minusUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -26px); } }
+.puff { width: 12px; height: 12px; border-radius: 50%; background: rgba(245, 236, 226, 0.95); box-shadow: 0 0 0 1px rgba(200, 180, 160, 0.3); }
+.dirt { width: 5px; height: 5px; border-radius: 50%; background: #cdb293; }
+.drop { width: 6px; height: 8px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #9fd0e6; }
+.bloom-ring { width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid rgba(244, 167, 191, 0.85); animation: ringOut 0.9s ease-out forwards; }
+@keyframes ringOut { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+
+.garden-tip { display: flex; align-items: center; justify-content: center; gap: 0.5rem 1rem; flex-wrap: wrap; font-size: 1.2rem; min-height: 1.8rem; transition: opacity 0.6s 1.5s, color 0.3s; }
+.garden-tip b { color: var(--cyan); font-weight: 600; }
+.garden-tip.alert .gt-text { color: var(--cyan); }
+.g-stats { font-family: var(--font-body); font-size: 0.78rem; color: var(--text-dim); letter-spacing: 0.02em; }
+.g-stats b { color: var(--green); font-weight: 600; }
+.garden-meter { display: inline-block; width: 140px; height: 8px; border-radius: 8px; background: rgba(141, 179, 106, 0.18); overflow: hidden; }
+.garden-meter i { display: block; height: 100%; width: 0; border-radius: 8px; background: linear-gradient(90deg, #8db36a, #f2c230, #f4a7bf, #b9a2de); transition: width 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+/* critters */
+.critter { position: absolute; left: 0; top: 0; bottom: auto; z-index: 3; cursor: pointer; will-change: transform; }
+.critter.bird { z-index: 4; }
+.critter.flutter { z-index: 4; pointer-events: none; }
+.critter.deer { z-index: 4; transition: opacity 0.6s ease; }
+.critter.deer.faded { opacity: 0; }
+.critter:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 8px; }
+.critter .c-body { transform-origin: bottom center; }
+.critter svg { display: block; overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.18)); }
+.critter.bunny svg { width: 46px; height: 40px; }
+.critter.snail svg { width: 40px; height: 26px; }
+.critter.flutter svg { width: 26px; height: 22px; filter: none; }
+.critter.caterpillar svg { width: 44px; height: 22px; }
+.critter.deer svg { width: 108px; height: 97px; }
+.critter.flutter .bf-wing-l, .critter.flutter .bf-wing-r { animation-duration: 0.16s; }
+.critter.flutter.perch .bf-wing-l, .critter.flutter.perch .bf-wing-r { animation-duration: 0.9s; }
+.critter.bunny.moving .c-body { animation: hop 0.42s ease-in-out infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px) rotate(-4deg); } }
+.critter.snail.moving .c-body { animation: creep 1s ease-in-out infinite; }
+@keyframes creep { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(1.07); } }
+.critter.bunny.eating .c-body, .critter.snail.eating .c-body, .critter.caterpillar.eating .c-body { animation: nibble 0.22s ease-in-out infinite; }
+.critter.caterpillar.moving .c-body { animation: inch 0.7s ease-in-out infinite; transform-origin: left bottom; }
+@keyframes inch { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86) translateY(-2px); } }
+/* shooed: a startled hop before running off */
+.critter.startled svg { animation: startle 0.4s cubic-bezier(0.34, 1.8, 0.64, 1); }
+@keyframes startle { 0%, 100% { transform: none; } 35% { transform: translateY(-14px) scale(1.15, 0.9) rotate(-8deg); } }
+/* deer: legs swing in pairs while walking, it looks around when it arrives, and lowers its head to nibble */
+.critter.deer .leg { transform-box: view-box; }
+.critter.deer.moving .leg.la { animation: deerLeg 0.56s ease-in-out infinite; }
+.critter.deer.moving .leg.lb { animation: deerLeg 0.56s ease-in-out -0.28s infinite; }
+@keyframes deerLeg { 0%, 100% { transform: rotate(13deg); } 50% { transform: rotate(-13deg); } }
+.critter.deer.moving .c-body { animation: deerStep 0.28s ease-in-out infinite; }
+@keyframes deerStep { 50% { transform: translateY(-1.5px); } }
+.deer-head { transform-box: view-box; transform-origin: 63px 47px; transition: transform 0.45s ease; }
+.deer-ear { transform-box: fill-box; transform-origin: 50% 100%; }
+.critter.deer.moving .deer-head { animation: deerNod 0.56s ease-in-out infinite; }
+@keyframes deerNod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg); } }
+.critter.deer.sniff .deer-head { animation: deerLook 1.8s ease-in-out infinite; }
+@keyframes deerLook { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-7deg); } 65% { transform: rotate(6deg); } }
+.critter.deer.sniff .deer-ear { animation: earTwitch 0.9s ease-in-out infinite; }
+.critter.deer.eating .deer-head { transform: rotate(var(--er, 32deg)); animation: deerNibble 0.42s ease-in-out infinite; }
+@keyframes deerNibble { 0%, 100% { transform: rotate(calc(var(--er, 32deg) - 2deg)); } 50% { transform: rotate(calc(var(--er, 32deg) + 3deg)); } }
+.critter.deer.eating .e2 { animation: earTwitch 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .critter.deer .leg, .critter.deer .c-body, .critter.deer .deer-ear, .critter.deer .deer-head { animation: none !important; } .critter.deer.eating .deer-head { transform: rotate(var(--er, 32deg)); } }
+.garden-bed.deer-alert { animation: deerAlert 1.6s ease-in-out infinite; }
+@keyframes deerAlert { 0%, 100% { box-shadow: inset 0 0 0 0 rgba(194, 69, 126, 0); } 50% { box-shadow: inset 0 -30px 40px -20px rgba(194, 69, 126, 0.22); } }
+@keyframes nibble { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(5deg) translateY(1px); } }
+.shoo-pop { position: absolute; z-index: 6; font-family: var(--font-hand); font-size: 1.2rem; color: var(--cyan); pointer-events: none; white-space: nowrap; animation: shooUp 1.1s ease-out forwards; }
+@keyframes shooUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -30px); } }
+@media (max-width: 768px) { .garden-bed { height: 245px; } .g-stats { flex-basis: 100%; text-align: center; } }
+
+@media (prefers-reduced-motion: reduce) { .g-pop { transform: none; } .vine-hit { display: none !important; } .mote { display: none; } }
+/* =====================================================
+   v8: cursor breeze, starblooms, rain cloud, badges,
+   tag pop-ins
+   ===================================================== */
+.g-sway { transform: rotate(var(--lean, 0deg)); transition: transform 0.4s ease-out; }
+
+/* rare starbloom: shimmers through colors with a soft glow */
+.g-plant.rare .g-head use { animation: rareColor 4s linear infinite; }
+@keyframes rareColor { 0%, 100% { color: #f79cc0; } 25% { color: #f8c76a; } 50% { color: #9fd7a0; } 75% { color: #9fc4f0; } }
+.g-plant.rare::before { content: ''; position: absolute; left: 50%; top: -16px; width: 60px; height: 60px; margin-left: -30px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255, 236, 160, 0.8), rgba(249, 184, 207, 0.35) 45%, transparent 70%); animation: rareGlow 2.4s ease-in-out infinite; }
+@keyframes rareGlow { 0%, 100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.12); } }
+.bloom-ring.rare-ring { border-color: rgba(242, 194, 48, 0.9); border-width: 3px; }
+
+/* rain cloud */
+.g-cloud { position: absolute; left: 0; top: 0; z-index: 6; width: 110px; height: 62px; cursor: pointer; will-change: transform, opacity; opacity: 0; filter: drop-shadow(0 4px 6px rgba(120, 140, 170, 0.16)); }
+.g-cloud svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.g-cloud .cl-body { fill: #fff; stroke: #bcd0ea; stroke-width: 2; stroke-linejoin: round; transition: fill 0.6s, stroke 0.6s; }
+.g-cloud.raining .cl-body { fill: #dfe9f7; stroke: #92afd6; }
+.g-cloud:hover, .g-cloud:focus-visible { outline: none; filter: drop-shadow(0 0 9px rgba(169, 216, 234, 0.95)); }
+/* raindrops: small soft teardrops (length and width are set per drop) */
+.raindrop { z-index: 5; width: 2.4px; height: 10px; margin-left: -1.2px; border-radius: 50% 50% 50% 50% / 35% 35% 65% 65%; background: linear-gradient(rgba(120, 180, 224, 0.3), #7ab6e0 50%, #5fa6d8); }
+.splash { width: 9px; height: 3.5px; border: 1.3px solid rgba(140, 196, 230, 0.75); border-radius: 50%; }
+.g-sun { position: absolute; top: 4px; right: 7%; z-index: 1; width: 56px; height: 56px; pointer-events: none; opacity: 0; transform: translateY(-80px) scale(0.6); transition: transform 1.1s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.8s ease; }
+.garden-bed.sunny .g-sun { opacity: 1; transform: none; }
+.g-sun svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* the sun bobs gently and its glow breathes; rays turn slowly */
+.garden-bed.sunny .g-sun svg { animation: sunBob 5.5s ease-in-out infinite; }
+@keyframes sunBob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
+.sun-glow { fill: #ffe9a0; transform-box: fill-box; transform-origin: center; animation: sunGlow 3.6s ease-in-out infinite; }
+@keyframes sunGlow { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 0.7; transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .garden-bed.sunny .g-sun svg, .sun-glow, .sun-rays { animation: none !important; } }
+.sun-rays { stroke: #f6c544; stroke-width: 3.2; stroke-linecap: round; transform-box: view-box; transform-origin: 0 0; animation: spinSlow 18s linear infinite; }
+/* the garden visibly fills out as it grows: hedge, wildflowers and glow follow data-stage (0 fresh .. 5 overflowing) */
+.g-hedge { position: absolute; left: 2%; bottom: 14px; width: 96%; height: 70px; z-index: 0; pointer-events: none; opacity: 0; transform: scaleY(0.4); transform-origin: bottom; transition: opacity 1.4s ease, transform 1.4s cubic-bezier(0.34, 1.3, 0.64, 1); }
+.g-hedge .h1 { fill: #c3dca8; } .g-hedge .h2 { fill: #a6c986; }
+.garden-bed[data-stage="1"] .g-hedge { opacity: 0.35; transform: scaleY(0.45); }
+.garden-bed[data-stage="2"] .g-hedge { opacity: 0.6; transform: scaleY(0.62); }
+.garden-bed[data-stage="3"] .g-hedge { opacity: 0.85; transform: scaleY(0.8); }
+.garden-bed:is([data-stage="4"], [data-stage="5"]) .g-hedge { opacity: 1; transform: none; }
+.g-meadow { transition: opacity 1.2s ease; }
+.garden-bed[data-stage="0"] .g-meadow { opacity: 0.3; } .garden-bed[data-stage="1"] .g-meadow { opacity: 0.5; } .garden-bed[data-stage="2"] .g-meadow { opacity: 0.7; } .garden-bed[data-stage="3"] .g-meadow { opacity: 0.88; }
+.g-meadow i.t1, .g-meadow i.t2 { opacity: 0; transition: opacity 1s ease; }
+.garden-bed:is([data-stage="2"], [data-stage="3"], [data-stage="4"], [data-stage="5"]) .g-meadow i.t1, .garden-bed:is([data-stage="3"], [data-stage="4"], [data-stage="5"]) .g-meadow i.t2 { opacity: 1; }
+.garden-bed:is([data-stage="4"], [data-stage="5"])::before { background: radial-gradient(ellipse at 50% 100%, rgba(242, 194, 48, 0.24), rgba(141, 179, 106, 0.2) 45%, transparent 72%); }
+.garden-bed[data-stage="5"] .mote { width: 8px; height: 8px; }
+@media (max-width: 768px) { .g-cloud { width: 86px; height: 49px; } .g-sun { width: 44px; height: 44px; } }
+
+/* badge toast + start over */
+.g-toast { position: absolute; left: 50%; top: 68px; z-index: 8; display: flex; align-items: center; gap: 0.45rem; padding: 0.3rem 1rem 0.4rem; border-radius: 30px; background: rgba(255, 255, 255, 0.93); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.16); font-family: var(--font-hand); font-size: 1.15rem; color: var(--white); white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -14px) scale(0.9); transition: opacity 0.35s, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.g-toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.g-toast b { color: var(--cyan); font-weight: 600; }
+.g-badge .tiny-fl { width: 1.25em; height: 1.25em; animation: spinSlow 4s linear infinite; }
+.g-reset { font-family: var(--font-body); font-size: 0.72rem; color: var(--text-dim); background: none; border: 1px dashed rgba(140, 127, 146, 0.4); border-radius: 20px; padding: 0.15rem 0.7rem; cursor: pointer; transition: color 0.3s, border-color 0.3s; }
+.g-reset:hover { color: var(--cyan); border-color: var(--cyan); }
+.g-reset.armed { color: #fff; background: var(--cyan); border-color: var(--cyan); border-style: solid; }
+.g-badges { display: inline-flex; align-items: center; gap: 3px; }
+.g-bdg { display: inline-block; width: 17px; height: 17px; color: #cfc6d4; opacity: 0.5; filter: grayscale(1); cursor: help; transition: opacity 0.4s, filter 0.4s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.g-bdg svg { display: block; width: 100%; height: 100%; overflow: visible; --center: #fff; }
+.g-bdg.on { color: var(--bc); opacity: 1; filter: none; }
+.g-bdg.on svg { --center: #f2c230; }
+.g-bdg:hover { transform: scale(1.3) rotate(-10deg); }
+
+/* tags and info pop in one by one */
+@keyframes chipIn { from { opacity: 0; transform: translateY(12px) scale(0.6) rotate(-8deg); } to { opacity: 1; transform: none; } }
+@keyframes liIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+.hero-tag { animation: chipIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; animation-delay: calc(1.5s + var(--ci, 0) * 110ms); }
+
+
+
+.reveal.visible .social-link, .reveal.visible .fact { animation: chipIn 0.6s cubic-bezier(0.34, 1.6, 0.64, 1) backwards; animation-delay: calc(0.5s + var(--ci, 0) * 120ms); }
+@media (prefers-reduced-motion: reduce) { .hero-tag, .social-link, .fact { animation: none !important; } .g-sway { transform: none; } }
+

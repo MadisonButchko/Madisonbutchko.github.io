@@ -1,0 +1,508 @@
+/* ======================================================================
+   botanical interface: navigation, Experience garden, Skills herbarium,
+   the open-plant stage, the discovery bouquet, and small creatures
+   ====================================================================== */
+
+:root {
+    --nav-h: 72px;
+    --paper: #fffcf5;
+    --paper-edge: #eadfcd;
+    --ink: #2e2236;
+    --ink-mid: #54475e;
+    --focus: #c2457e;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+    --spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+    --glide: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html { scroll-padding-top: calc(var(--nav-h) + 12px); }
+.vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+:where(a, button, [role="button"], [tabindex]):focus-visible { outline: 2.5px solid var(--focus); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------------
+   Breeze: decorative flowers sway and bob as if in moving air. Each one
+   keeps its own rhythm so nothing moves in lockstep, and nothing spins.
+   --------------------------------------------------------------------- */
+@property --sway { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes breeze { 0% { rotate: -6deg; translate: 0 0; } 45% { translate: 0 -2px; } 100% { rotate: 5deg; translate: 0 1px; } }
+@keyframes breezeSoft { from { rotate: -3deg; } to { rotate: 3.5deg; } }
+@keyframes gardenSway { from { rotate: -1.4deg; } to { rotate: 1.6deg; } }
+@keyframes specimenSway { from { --sway: -1.2deg; } to { --sway: 1.3deg; } }
+.bloom { animation-name: bloomIn, breeze; animation-duration: 1.4s, 7s; animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-fill-mode: forwards, none; }
+.hero-flowers .bloom.f2 { animation-duration: 1.4s, 8.5s; } .hero-flowers .bloom.f4 { animation-duration: 1.4s, 9.5s; }
+.hero-flowers .bloom.f6 { animation-duration: 1.4s, 6.2s; } .hero-flowers .bloom.f3 { animation-duration: 1.4s, 7.8s; }
+.about-bloom { animation: breeze 8s ease-in-out infinite alternate; }
+.about-bloom.ab2 { animation-duration: 6.4s; animation-delay: -2s; } .about-bloom.ab3 { animation-duration: 9.2s; animation-delay: -4s; animation-direction: alternate-reverse; }
+.title-bloom { animation: breeze 6s ease-in-out infinite alternate; }
+.section-head:hover .title-bloom { animation-duration: 1.4s; }
+.footer-flowers svg { animation: breeze 5s ease-in-out infinite alternate; }
+.footer-flowers svg:nth-child(2) { animation-delay: -1.7s; animation-duration: 6s; } .footer-flowers svg:nth-child(3) { animation-delay: -3.1s; }
+.sc-bloom svg { animation: breeze calc(var(--spin, 40s) / 6) ease-in-out var(--sdl, 0s) infinite alternate; }
+.nav a.active .nav-fl { animation: breezeSoft 3.6s ease-in-out infinite alternate; }
+.reveal.visible .hello-flower { animation: popBloom 0.8s var(--spring) 1.8s forwards, breeze 6s ease-in-out 2.6s infinite alternate !important; }
+/* the Experience flowers and Skills specimens breathe very slightly, out of step with each other */
+.g-cat:nth-child(2) .g-art { animation-duration: 8.3s; animation-delay: -3s; } .g-cat:nth-child(3) .g-art { animation-duration: 6.4s; animation-delay: -1.2s; }
+.g-cat:nth-child(4) .g-art { animation-duration: 9.1s; animation-delay: -5s; } .g-cat:nth-child(5) .g-art { animation-duration: 7.6s; animation-delay: -2.4s; }
+.h-art { rotate: calc(var(--r) + var(--sway));  }
+.h-spec:nth-child(odd) .h-art { animation-duration: 11s; animation-delay: -4s; } .h-spec:nth-child(3n) .h-art { animation-duration: 8s; animation-delay: -2s; }
+@media (prefers-reduced-motion: reduce) {
+    .bloom { animation: none; opacity: 1; }
+    .about-bloom, .title-bloom, .footer-flowers svg, .vine-item.on.spin > use, .vine-sprout .sp-spin, .sc-bloom svg, .nav a.active .nav-fl, .g-art, .h-art { animation: none !important; }
+    .reveal.visible .hello-flower { animation: none !important; scale: 1; }
+}
+.gb-body { animation-duration: 3.8s !important; }
+.gb-wing { animation-duration: 0.8s !important; }
+/* drifting critters pass behind the reading layer instead of over text */
+.butterfly, .flyby-bird { z-index: 0 !important; }
+html body .page-bg::before { animation-duration: 32s !important; }
+html body .sky-shift i { animation-duration: 60s !important; }
+
+main > section:not(.hero) { padding-top: 3.25rem; padding-bottom: 3rem; }
+/* decorations near the edges can never push the page sideways (clip, unlike hidden, keeps sticky controls working) */
+/* Decorations may cross section edges; photo and gallery crops stay local. */
+main > section, footer { overflow: visible; }
+.section-head { margin-bottom: 0.35rem !important; }
+.section-hint { margin-top: 0.7rem; margin-bottom: 1.1rem !important; font-size: 1.2rem; }
+
+/* hero: the interests sit right under the intro now that the two buttons are gone */
+.hero-intro { margin-bottom: 1.35rem !important; }
+.hero-tags { gap: 0.5rem; }
+.hero-tag { min-height: 36px; display: inline-flex; align-items: center; font-size: 0.82rem !important; }
+
+/* ---------------------------------------------------------------------
+   Navigation: the same word-based pill at every width, never a menu icon
+   --------------------------------------------------------------------- */
+.nav { top: calc(0.85rem + var(--safe-t)); z-index: 130; max-width: calc(100vw - 16px); flex-wrap: nowrap; }
+.nav.small { top: calc(0.55rem + var(--safe-t)); }
+.nav a { white-space: nowrap; min-height: 38px; padding: 0.5rem clamp(0.6rem, 1.1vw, 0.95rem) 0.5rem clamp(0.5rem, 0.8vw, 0.7rem) !important; font-size: clamp(0.76rem, 0.72rem + 0.12vw, 0.82rem) !important; }
+@media (max-width: 640px) {
+    :root { --nav-h: calc(62px + var(--safe-t)); }
+    .nav { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); transform: none; max-width: none; justify-content: space-between; gap: 0 !important; padding: 0.28rem !important; }
+    .nav a { flex: 1 1 auto; justify-content: center; gap: 0.2rem !important; min-height: 40px; padding: 0.35rem 0.3rem !important; font-size: 0.8rem !important; }
+    .nav a .nav-fl { display: none; }
+    .nav a.active .nav-fl { display: block; width: 11px; height: 11px; }
+    .nav-bug { display: none; }
+    .hero { padding-top: calc(var(--nav-h) + 1.4rem) !important; }
+}
+@media (max-width: 400px) {
+    .nav a { font-size: 0.75rem !important; padding: 0.35rem 0.2rem !important; }
+    .nav a.active .nav-fl { display: none; }
+}
+
+/* ---------------------------------------------------------------------
+   Experience colours (shared by the row, the open plant and its note)
+   --------------------------------------------------------------------- */
+[data-cat="research"] { --c-soft: #fff1c4; --c-soft2: #fffaf0; --c-edge: #e8b923; --c-ink: #7d5600; }
+[data-cat="teaching"] { --c-soft: #fde1eb; --c-soft2: #fff8fa; --c-edge: #e07fa3; --c-ink: #9c2f63; }
+[data-cat="writing"] { --c-soft: #ece4f8; --c-soft2: #fbf9ff; --c-edge: #9d7fd0; --c-ink: #62428f; }
+[data-cat="leadership"] { --c-soft: #e3eedb; --c-soft2: #f9fcf4; --c-edge: #7fa65c; --c-ink: #3f6728; }
+[data-cat="exploration"] { --c-soft: #fde3d2; --c-soft2: #fffaf5; --c-edge: #e8956a; --c-ink: #97461f; }
+
+/* ---------------------------------------------------------------------
+   Experience heading + seed packet
+   --------------------------------------------------------------------- */
+.xp-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; }
+.xp-head .section-head { grid-column: 2; margin-bottom: 0 !important; }
+.seed-wrap { grid-column: 3; justify-self: start; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; max-width: 300px; }
+.seed-packet { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.8rem 0.3rem 0.35rem; border: 0; border-radius: 18px; background: none; cursor: pointer; text-align: left; font: inherit; color: var(--ink); transition: transform 0.35s var(--spring); }
+.seed-art { width: 42px; height: 54px; flex: none; overflow: visible; rotate: -6deg; filter: drop-shadow(0 3px 4px rgba(140, 100, 50, 0.18)); }
+.seed-art .sp-back { fill: #f3dcbd; stroke: #c9a06a; stroke-width: 1.2; }
+.seed-art .sp-flap { fill: #ead0ab; stroke: #c9a06a; stroke-width: 1.2; transform-box: fill-box; transform-origin: 50% 0%; transition: transform 0.45s ease; }
+.seed-art .sp-window { fill: #fffaf0; stroke: #e0c79f; stroke-width: 1; }
+.seed-art .sp-stem { fill: none; stroke: #7fa65c; stroke-width: 1.8; stroke-linecap: round; }
+.seed-art .sp-leaf { fill: #8db36a; }
+.seed-art .sp-bud { fill: #f4a7bf; }
+.seed-art .sp-seed { fill: #9a6b3a; }
+.seed-art .sp-edge { stroke: #c9a06a; stroke-width: 1.2; }
+.seed-packet.opening .sp-flap { transform: scaleY(-1); }
+.seed-text { display: flex; flex-direction: column; line-height: 1.15; }
+.seed-title { font-family: var(--font-hand); font-size: 1.28rem; color: #8a5a1f; }
+.seed-sub { font-size: 0.78rem; color: var(--ink-mid); }
+.seed-status:empty { display: none; }
+.seed-status { width: 100%; }
+.seed-note { font-family: var(--font-hand); font-size: 1.15rem; color: #8a5a1f; padding: 0.15rem 0.2rem; }
+.seed-preview { position: relative; background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 14px; padding: 0.8rem 2.4rem 0.8rem 0.95rem; box-shadow: 0 10px 26px rgba(120, 72, 96, 0.1); text-align: left; }
+.seed-preview .sv-kicker { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8a5a1f; font-weight: 600; }
+.seed-preview .sv-title { font-family: var(--font-display); font-size: 1.02rem; color: var(--ink); margin: 0.15rem 0 0.25rem; line-height: 1.25; }
+.seed-preview .sv-desc { font-size: 0.84rem; color: var(--ink-mid); margin-bottom: 0.55rem; }
+.seed-preview .sv-link { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 38px; padding: 0.4rem 0.9rem; border-radius: 999px; background: #fff; border: 1.5px solid rgba(201, 137, 60, 0.5); color: #7d4e14; font-size: 0.84rem; font-weight: 600; text-decoration: none; }
+.seed-preview .sv-close { position: absolute; top: 0.4rem; right: 0.4rem; width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: #8a5a1f; font-size: 1.2rem; cursor: pointer; }
+@media (max-width: 900px) {
+    .xp-head { grid-template-columns: 1fr; justify-items: center; gap: 0.4rem; }
+    .xp-head .section-head, .seed-wrap { grid-column: 1; }
+    .seed-wrap { justify-self: center; align-items: center; }
+}
+
+/* ---------------------------------------------------------------------
+   Visited marks (space always reserved, so nothing shifts)
+   --------------------------------------------------------------------- */
+.mark-slot { display: inline-grid; place-items: center; flex: none; width: 14px; height: 14px; }
+.mark-slot svg { width: 14px; height: 14px; overflow: visible; color: color-mix(in srgb, var(--c-edge, var(--sk, #c2457e)) 60%, #b9a99a); --center: #fff6d8; opacity: 0.9; rotate: -18deg; }
+.mark-slot svg.fresh { animation: markIn 0.7s var(--spring); }
+@keyframes markIn { from { transform: scale(0) rotate(-90deg); } to { transform: none; } }
+
+/* ---------------------------------------------------------------------
+   Experience: a row of flowers (only the categories are visible)
+   --------------------------------------------------------------------- */
+.garden, .herbarium { position: relative; max-width: 1100px; margin: 0 auto; }
+.g-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(0.4rem, 2vw, 1.8rem); max-width: 980px; margin: 0 auto; padding: 0.4rem 0 0.2rem; transition: max-width 0.5s var(--glide), gap 0.5s var(--glide); }
+.g-cat { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.3rem 0.1rem 0.5rem; border: 0; border-radius: 24px; background: none; cursor: pointer; font: inherit; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.g-cat::before { content: ''; position: absolute; inset: 4% 8% 26%; z-index: -1; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--c-soft) 95%, transparent), transparent 70%); opacity: 0; transition: opacity 0.4s; }
+.g-cat:hover::before, .g-cat:focus-visible::before { opacity: 1; }
+.g-art { display: block; width: 100%; max-width: 156px; aspect-ratio: 120 / 110; height: auto; overflow: visible; transform-origin: 50% 100%;  }
+.g-cat:hover .g-art, .g-cat:focus-visible .g-art { transform: translateY(-4px) rotate(-1.5deg); }
+.g-label { display: inline-flex; align-items: center; gap: 0.35rem; }
+.g-name { font-family: var(--font-display); font-size: 1.14rem; font-weight: 500; color: var(--ink); line-height: 1.2; transition: font-size 0.4s var(--glide), color 0.3s; }
+/* while a flower is open the others recede into a small row above it */
+.g-row.compact { max-width: 600px; gap: clamp(0.2rem, 1.4vw, 1.1rem); }
+.g-row.compact .g-art { max-width: 58px; opacity: 0.6; }
+.g-row.compact .g-name { font-size: 0.86rem; color: var(--ink-mid); }
+.g-row.compact .mark-slot, .h-row.compact .mark-slot { display: none; }
+.g-row.compact .g-cat:hover .g-art, .g-row.compact .g-cat:focus-visible .g-art { opacity: 1; }
+.g-cat.is-current .g-art { opacity: 0 !important; }
+.g-cat.is-current .g-name { color: var(--c-ink); font-weight: 600; }
+.g-row.no-anim, .g-row.no-anim * { transition: none !important; }
+.g-cat.just-home .g-art { animation: homeSettle 0.6s var(--spring); }
+@keyframes homeSettle { 0% { transform: scale(1.06); } 100% { transform: none; } }
+.g-cat.is-nibbled .g-art { animation: nibbled 0.32s ease-in-out 7; }
+@keyframes nibbled { 50% { transform: rotate(2.5deg) translateY(1px); } }
+.g-cat.is-visited-by .g-art, .g-art.is-visited-by { animation: visitedBob 2.8s ease-in-out; }
+@keyframes visitedBob { 30% { transform: rotate(-2deg); } 60% { transform: rotate(1.5deg); } }
+
+
+/* ---------------------------------------------------------------------
+   Skills: a pressed collection laid out on the page, no boxes
+   --------------------------------------------------------------------- */
+.h-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem clamp(0.6rem, 2.4vw, 2.2rem); max-width: 980px; margin: 0 auto; padding: 0.6rem 0 0.2rem; transition: max-width 0.5s var(--glide), gap 0.5s var(--glide); }
+.h-spec { --r: 0deg; position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.3rem 0.2rem 0.4rem; border: 0; border-radius: 20px; background: none; cursor: pointer; font: inherit; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.h-spec:nth-child(4n+1) { --r: -3deg; } .h-spec:nth-child(4n+2) { --r: 2.5deg; } .h-spec:nth-child(4n+3) { --r: -1.5deg; } .h-spec:nth-child(4n) { --r: 3deg; }
+.h-row:not(.compact) .h-spec:nth-child(n+5) { translate: 0 0.8rem; }
+.h-art { display: block; width: 100%; max-width: 136px; aspect-ratio: 1; height: auto; overflow: visible; rotate: var(--r); filter: drop-shadow(0 1px 0.5px rgba(90, 67, 50, 0.2));  }
+/* a strip of translucent tape holds each specimen to the page */
+.h-spec::before { content: ''; position: absolute; top: calc(min(136px, 100%) * 0.66); left: 50%; width: 34px; height: 11px; translate: -60% 0; rotate: calc(var(--r) * -2 - 6deg); border-radius: 1.5px; background: color-mix(in srgb, var(--sk) 18%, rgba(255, 255, 255, 0.75)); box-shadow: 0 1px 2px rgba(110, 80, 60, 0.12); opacity: 0.85; pointer-events: none; transition: opacity 0.4s; }
+.h-spec:hover .h-art, .h-spec:focus-visible .h-art { transform: translateY(-5px) rotate(-2deg) scale(1.04); }
+.h-label { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 0.3rem; line-height: 1.15; text-align: center; }
+.h-no { flex-basis: 100%; font-family: var(--font-hand); font-size: 1rem; color: color-mix(in srgb, var(--sk) 70%, #8c7f92); }
+.h-name { font-family: var(--font-display); font-size: 1.06rem; font-weight: 500; color: var(--ink); transition: font-size 0.4s var(--glide); }
+.h-row.compact { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.4rem; max-width: 820px; }
+.h-row.compact .h-art { max-width: 50px; opacity: 0.6; }
+.h-row.compact .h-no, .h-row.compact .h-spec::before { display: none; }
+.h-row.compact .h-name { font-size: 0.74rem; color: var(--ink-mid); }
+.h-row.compact .h-spec:hover .h-art, .h-row.compact .h-spec:focus-visible .h-art { opacity: 1; }
+.h-spec.is-current .h-art { opacity: 0 !important; }
+.h-spec.is-current .h-name { color: color-mix(in srgb, var(--sk) 60%, var(--ink)); font-weight: 600; }
+.h-row.no-anim, .h-row.no-anim * { transition: none !important; }
+.h-spec.just-home .h-art { animation: homeSettle 0.6s var(--spring); }
+
+/* ---------------------------------------------------------------------
+   The open plant (shared stage). It keeps one size whatever it holds:
+   pieces sit on a ring, and the note shows one thing at a time.
+   --------------------------------------------------------------------- */
+.g-stage { position: relative; max-width: 1080px; margin: 0.4rem auto 0; }
+.g-stage[hidden] { display: none; }
+.gs-inner { --stage-h: clamp(340px, calc(100vh - var(--nav-h) - 130px), 560px); position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(270px, 0.85fr); grid-template-rows: 0 1fr; align-items: center; column-gap: clamp(1rem, 3vw, 2.6rem); height: var(--stage-h); padding: 0 clamp(0.4rem, 2vw, 1.4rem); }
+.gs-close-wrap { grid-column: 1 / -1; grid-row: 1; position: sticky; top: calc(var(--nav-h) + 6px); z-index: 8; height: 0; align-self: start; }
+.gs-close { position: absolute; right: 0; top: 0.2rem; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--c-edge, var(--sk)) 45%, var(--paper-edge)); background: rgba(255, 252, 246, 0.96); color: var(--ink); font-size: 1.55rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 16px rgba(120, 72, 96, 0.14); transition: transform 0.3s var(--spring), background 0.25s; }
+.gs-close:hover { transform: rotate(90deg); background: #fff; }
+.gs-plant { position: relative; grid-row: 2; justify-self: center; width: min(100%, 540px, calc((var(--stage-h) - 0.5rem) * 400 / 380)); aspect-ratio: 400 / 380; }
+.gs-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.gs-stem, .gs-branch { fill: none; stroke: #8db36a; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.gs-stem { stroke-width: 2.6; transition: stroke-dashoffset 0.5s ease 0.15s; }
+.gs-branch { stroke: #9cbd7a; stroke-width: 1.7; transition: stroke-dashoffset 0.38s ease calc(var(--ri) * 30ms); }
+.grown .gs-stem { stroke-dashoffset: 0; transition: stroke-dashoffset 0.6s ease; }
+.grown .gs-branch { stroke-dashoffset: 0; transition: stroke-dashoffset 0.6s var(--glide) calc(140ms + var(--i) * 70ms); }
+.gs-leaf { transform-box: fill-box; transform-origin: center; transform: scale(0); transition: transform 0.3s ease; }
+.grown .gs-leaf { transform: scale(1); transition: transform 0.5s var(--spring) calc(320ms + var(--i) * 60ms); }
+/* skills: dotted pin lines instead of growing branches */
+.gs-skill .gs-branch { stroke: color-mix(in srgb, var(--sk) 50%, #b9a99a); stroke-width: 1; stroke-dasharray: 0.012 0.022; stroke-dashoffset: 0; opacity: 0; transition: opacity 0.3s ease; }
+.gs-skill .grown .gs-branch { opacity: 0.85; transition: opacity 0.5s ease calc(200ms + var(--i) * 60ms); }
+.gs-tape { fill: color-mix(in srgb, var(--sk) 22%, #fff); opacity: 0; transition: opacity 0.4s; }
+.grown .gs-tape { opacity: 0.8; }
+
+.gs-head { --lean: 0deg; position: absolute; z-index: 2; padding: 0; border: 0; border-radius: 42%; background: none; cursor: zoom-out; transform: translate(var(--nx, 0px), var(--ny, 0px)) rotate(calc(var(--lean) + var(--nr, 0deg))); transition: transform 0.6s var(--spring); -webkit-tap-highlight-color: transparent; }
+.gs-head-art { display: block; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 85%; }
+.gs-skill .gs-head { cursor: grab; }
+.gs-skill .gs-head-art { filter: drop-shadow(0 6px 10px rgba(90, 67, 50, 0.16)); }
+.gs-head.dragging { cursor: grabbing; transition: none; }
+.gs-head.is-landing .gs-head-art { opacity: 0; }
+.grown .gs-head-art { animation: headBloom 0.9s var(--spring) 0.05s; }
+@keyframes headBloom { 40% { transform: scale(1.07) rotate(-1.5deg); } 100% { transform: none; } }
+.folding .gs-head-art { transform: scale(0.95); transition: transform 0.3s ease; }
+.gs-head:hover .gs-head-art { transform: scale(1.02); transition: transform 0.4s var(--spring); }
+/* a new little bud appears on plants you come back to */
+.gs-extra i { position: absolute; width: 15px; height: 15px; color: color-mix(in srgb, var(--c-edge, var(--sk)) 70%, #fff); --center: #fff6d8; transform: scale(0); transition: transform 0.5s var(--spring) 0.9s; }
+.gs-extra i svg { width: 100%; height: 100%; overflow: visible; }
+.gs-extra i:nth-child(1) { right: 6%; top: 18%; } .gs-extra i:nth-child(2) { left: 4%; top: 30%; } .gs-extra i:nth-child(3) { left: 46%; top: -2%; }
+.grown .gs-extra i { transform: scale(1); }
+
+/* buds (Experience) and specimen pieces (Skills) */
+.gs-bud { --open: 0.56; --lean: 0deg; position: absolute; z-index: 3; width: 58px; height: 58px; margin: -29px 0 0 -29px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    opacity: 0; transform: translate(var(--fx, 0px), var(--fy, 0px)) scale(0.2);
+    transition: transform 0.4s ease calc(var(--ri) * 30ms), opacity 0.3s ease calc(var(--ri) * 30ms); }
+.grown .gs-bud { opacity: 1; transform: translate(var(--px, 0px), var(--py, 0px)) rotate(calc(var(--tilt0) + var(--lean))) scale(1);
+    transition: transform 0.65s var(--spring) calc(260ms + var(--i) * 75ms), opacity 0.4s ease calc(260ms + var(--i) * 75ms); }
+.gs-measure .gs-bud { transform: translate(var(--px, 0px), var(--py, 0px)) !important; transition: none !important; }
+.settled .gs-bud { transition: transform 0.5s var(--spring), opacity 0.3s ease; }
+.gs-bud.is-minor { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.gs-bud .gb-art { display: block; width: 100%; height: 100%; overflow: visible; transition: transform 0.5s var(--spring); }
+.gs-bud:hover, .gs-bud:focus-visible { --open: 0.8; }
+.gs-bud.is-seen { --open: 0.72; }
+.gs-bud.is-active { --open: 1; z-index: 4; }
+.gs-bud.is-active .gb-art { transform: scale(1.3); filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--c-edge) 40%, transparent)); }
+.gs-bud:focus-visible { outline-offset: 1px; }
+.b-pet, .b-core { transform-box: view-box; transform-origin: 50% 50%; transform: scale(var(--open)); transition: transform 0.55s var(--spring); }
+.b-pet ellipse { fill: color-mix(in srgb, var(--c-edge) 50%, #fff); stroke: color-mix(in srgb, var(--c-edge) 85%, #5a4366); stroke-width: 0.7; }
+.b-pet ellipse:nth-child(even) { fill: color-mix(in srgb, var(--c-edge) 32%, #fff); }
+.b-core { fill: #fff3c4; stroke: color-mix(in srgb, var(--c-edge) 60%, #c99a1a); stroke-width: 0.6; }
+.b-sepals path { fill: #8db36a; }
+.b-spark { fill: #f2c230; opacity: 0; transition: opacity 0.4s; }
+.gs-bud.is-seen:not(.is-active) .b-spark { opacity: 0.9; }
+.gs-bud.is-visited-by .gb-art { animation: visitedBob 2.8s ease-in-out; }
+
+.gs-skill .gs-bud { width: 54px; height: 54px; margin: -27px 0 0 -27px; }
+.gs-skill .gs-bud.is-minor { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.gs-skill .gb-art g > :not(.p-rib):not(.p-vein):not(.p-core):not(.p-leaf) { fill: color-mix(in srgb, var(--sk) 42%, #fff); stroke: color-mix(in srgb, var(--sk) 80%, #3a2b33); stroke-width: 0.7; }
+.gs-skill .p-rib { fill: none; stroke: color-mix(in srgb, var(--sk) 70%, #6b5a3a); stroke-width: 1.3; stroke-linecap: round; }
+.gs-skill .p-rib.thin { stroke-width: 0.8; }
+.gs-skill .p-vein { fill: none; stroke: rgba(255, 255, 255, 0.75); stroke-width: 0.8; }
+.gs-skill .p-core { fill: #fff3c4; } .gs-skill .p-core.gold { fill: #e0a020; } .gs-skill .p-leaf { fill: #9fbe88; }
+.gs-skill .gs-bud:hover .gb-art, .gs-skill .gs-bud:focus-visible .gb-art { transform: scale(1.12) rotate(var(--lean)); }
+.gs-skill .gs-bud.is-active .gb-art { transform: scale(1.3); filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--sk) 35%, transparent)); }
+.gs-skill .gs-bud.is-seen:not(.is-active) .gb-art { transform: scale(1.04); }
+.gs-lab { position: absolute; width: max-content; max-width: 8.5em; font-family: var(--font-hand); font-size: 1.12rem; line-height: 1; color: var(--ink); pointer-events: none; transform: translateX(var(--shift, 0px)); opacity: 0; transition: opacity 0.4s ease, color 0.3s; }
+.gs-lab[data-side="l"] { right: 100%; top: 50%; translate: -1px -50%; text-align: right; }
+.gs-lab[data-side="r"] { left: 100%; top: 50%; translate: 1px -50%; text-align: left; }
+.gs-lab[data-side="t"] { bottom: 100%; left: 50%; translate: -50% -1px; text-align: center; }
+.gs-lab[data-side="tl"] { right: 64%; bottom: 66%; text-align: right; }
+.gs-lab[data-side="tr"] { left: 64%; bottom: 66%; text-align: left; }
+.grown .gs-lab { opacity: 1; transition-delay: calc(420ms + var(--i) * 70ms); }
+.settled .gs-lab { transition-delay: 0s; }
+.gs-bud.is-active .gs-lab { color: color-mix(in srgb, var(--sk) 70%, var(--ink)); font-weight: 600; }
+.gs-bud.is-minor .gs-lab { font-size: 1rem; color: var(--ink-mid); }
+
+/* the short label that floats over a bud on hover / keyboard focus */
+.gs-tip { position: absolute; left: 0; top: 0; z-index: 6; padding: 0.1rem 0.6rem 0.15rem; border-radius: 10px; background: rgba(255, 252, 246, 0.96); box-shadow: 0 4px 12px rgba(120, 72, 96, 0.12); font-family: var(--font-hand); font-size: 1.05rem; color: var(--c-ink); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+.gs-tip.on { opacity: 1; }
+
+/* the field note: one entry at a time, then switch */
+.gs-note { position: relative; grid-row: 2; align-self: center; max-height: calc(var(--stage-h) - 1rem); overflow: auto; padding: 0.4rem 0.4rem 3.4rem 1.4rem; scrollbar-width: thin; }
+.gs-note::before { content: ''; position: absolute; left: 0.3rem; top: 0.5rem; bottom: 3.6rem; width: 2px; border-radius: 2px; background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--c-edge, var(--sk)) 65%, transparent) 0 7px, transparent 7px 12px); }
+.gs-skill .gs-note { padding: 1rem 1.1rem 3.6rem; background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 4px; box-shadow: 0 1px 0 #fff inset, 0 10px 24px rgba(110, 80, 60, 0.08);  }
+.gs-skill .gs-note::before { inset: 5px; width: auto; bottom: 5px; background: none; border: 1px solid color-mix(in srgb, var(--sk) 22%, transparent); border-radius: 2px; pointer-events: none; }
+.gs-note.swap .gn-body { animation: noteIn 0.45s var(--glide); }
+@keyframes noteIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.gn-kicker { font-family: var(--font-hand); font-size: 1.28rem; line-height: 1.1; color: var(--c-ink, color-mix(in srgb, var(--sk) 75%, var(--ink))); }
+.gn-title { margin-top: 0.15rem; font-family: var(--font-display); font-size: clamp(1.2rem, 1.02rem + 0.6vw, 1.55rem); font-weight: 500; line-height: 1.2; color: var(--ink); }
+.gn-title:focus { outline: none; }
+.gn-org { margin-top: 0.25rem; font-size: 0.9rem; font-weight: 600; color: var(--c-ink); }
+.gn-text { margin-top: 0.7rem; font-size: 0.96rem; line-height: 1.6; color: var(--ink-mid); }
+.gn-quiet { font-style: italic; color: #8c7f92; }
+.gn-notes { list-style: none; display: grid; gap: 0.45rem; margin-top: 0.75rem; }
+.gn-notes li { position: relative; padding-left: 1.1rem; font-size: 0.92rem; line-height: 1.5; color: var(--ink-mid); }
+.gn-notes li::before { content: ''; position: absolute; left: 0.1rem; top: 0.5em; width: 7px; height: 7px; border-radius: 50% 0; rotate: 45deg; background: color-mix(in srgb, var(--c-edge) 70%, #fff); }
+.gn-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.7rem; }
+.gn-chips li { padding: 0.15rem 0.55rem; border-radius: 999px; background: rgba(255, 255, 255, 0.8); border: 1px solid color-mix(in srgb, var(--c-edge) 35%, transparent); font-size: 0.76rem; color: var(--ink-mid); }
+.gn-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.9rem; }
+.gn-more, .gn-link, .gn-text a, .gn-text button, .gn-sprigs a { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 34px; padding: 0.2rem 0.75rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--c-edge, var(--sk)) 45%, transparent); background: rgba(255, 255, 255, 0.85); color: var(--c-ink, color-mix(in srgb, var(--sk) 70%, var(--ink))); font: 600 0.8rem var(--font-body); text-decoration: none; cursor: pointer; vertical-align: middle; margin: 0.15rem 0.1rem; transition: background 0.25s, border-color 0.25s; }
+.gn-more { font-family: var(--font-hand); font-size: 1.05rem; font-weight: 500; border-style: dashed; }
+.gn-more::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; rotate: -45deg; transition: rotate 0.3s; }
+.gn-more[aria-expanded="true"]::before { rotate: 135deg; }
+.gn-more:hover, .gn-link:hover, .gn-text a:hover, .gn-text button:hover, .gn-sprigs a:hover { background: #fff; border-color: var(--c-edge, var(--sk)); }
+.gn-text a::after, .gn-text button::after { content: '\2192'; }
+.gn-sprigs { display: contents; }
+.gn-sprigs a { border-style: dashed; color: #6b4f2a; border-color: #d8c3a0; }
+.gn-sprigs a::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #c9a06a; }
+.gn-nav { position: absolute; left: 1.4rem; right: 0.4rem; bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.gs-skill .gn-nav { left: 1rem; right: 1rem; bottom: 0.6rem; }
+.gn-nav button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--c-edge, var(--sk)) 40%, transparent); background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 1.5rem; line-height: 1; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
+.gn-nav button:hover:not(:disabled) { background: #fff; }
+.gn-nav button:disabled { opacity: 0.3; cursor: default; }
+.gn-count { font-family: var(--font-hand); font-size: 1.1rem; color: #8c7f92; }
+
+/* the flower in flight between the row and the stage */
+.gs-fly { position: absolute; z-index: 125; overflow: visible; pointer-events: none; transform-origin: 0 0; will-change: transform; }
+
+/* tablets and half-width windows: same composition, a little tighter */
+@media (max-width: 1000px) {
+    .gs-inner { grid-template-columns: minmax(0, 1fr) minmax(250px, 0.8fr); --stage-h: clamp(340px, calc(100vh - var(--nav-h) - 130px), 520px); }
+    .h-row:not(.compact) { gap: 1.6rem 0.8rem; }
+}
+/* phones and narrow windows: flower on top, its note underneath, the close button always in reach */
+@media (max-width: 700px) {
+    .g-row { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 0.4rem; }
+    .g-row:not(.compact) .g-cat { grid-column: span 2; }
+    .g-row:not(.compact) .g-cat:nth-child(4) { grid-column: 2 / span 2; }
+    .g-row:not(.compact) .g-art { max-width: 110px; }
+    .g-name { font-size: 1.02rem; }
+    .g-row.compact { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .g-row.compact .g-art { max-width: 46px; }
+    .g-row.compact .g-name { font-size: 0.7rem; }
+    .h-row:not(.compact) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem 0.6rem; }
+    .h-row:not(.compact) .h-spec:nth-child(n+5) { translate: none; }
+    .h-row:not(.compact) .h-spec:nth-child(even) { translate: 0 0.7rem; }
+    .h-art { max-width: 118px; }
+    .h-row.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.2rem 0.3rem; }
+    .h-row.compact .h-art { max-width: 40px; }
+    .h-row.compact .h-name { font-size: 0.68rem; }
+    .gs-inner { grid-template-columns: 1fr; grid-template-rows: 0 auto auto; height: auto; --stage-h: 100vw; padding: 0; }
+    .gs-plant { width: min(100%, 440px); margin-top: 2.9rem; }   /* headroom so the sticky close never covers a label */
+    .gs-note { grid-row: 3; max-height: none; min-height: 15.5rem; margin-top: 0.2rem; overflow: visible; }
+    .gs-close { right: -0.2rem; }
+    .gs-lab { font-size: 0.98rem; max-width: 6.5em; }
+    .gs-bud { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
+    .gs-bud.is-minor { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+    .gs-skill .gs-bud { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+}
+
+/* ---------------------------------------------------------------------
+   The discovery bouquet
+   --------------------------------------------------------------------- */
+.mb-bouquet { position: fixed; left: calc(14px + var(--safe-l)); bottom: calc(14px + var(--safe-b)); z-index: 116; }
+.mb-bouquet[hidden] { display: none; }
+.bq-btn { position: relative; display: grid; place-items: end center; width: 84px; height: 100px; padding: 0; border: 0; border-radius: 42px 42px 50% 50%; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* a small paper medallion behind the posy, so it never melts into the vines */
+.bq-disc { position: absolute; left: 50%; bottom: 0; width: 82px; height: 82px; translate: -50% 0; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #fffdf8 0%, #fff5e6 62%, #fbe8cf 100%); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.16), 0 0 0 1px rgba(201, 160, 106, 0.32); transition: transform 0.4s var(--spring), box-shadow 0.4s; }
+.bq-disc::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; border: 1px dashed rgba(201, 160, 106, 0.5); }
+.bq-btn:hover .bq-disc, .bq-btn[aria-expanded="true"] .bq-disc { transform: scale(1.05); box-shadow: 0 10px 26px rgba(120, 72, 96, 0.2), 0 0 0 1px rgba(201, 160, 106, 0.45); }
+.bq-art { position: relative; display: block; width: 66px; height: 86px; margin-bottom: 4px; overflow: visible; filter: drop-shadow(0 3px 4px rgba(110, 80, 60, 0.18)); transform-origin: 50% 100%; transition: transform 0.4s var(--spring); }
+.bq-btn:hover .bq-art { transform: rotate(-3deg) translateY(-2px); }
+.bq-btn.sway .bq-art { animation: bqSway 1.1s var(--spring); }
+@keyframes bqSway { 20% { transform: rotate(-6deg) scale(1.06); } 50% { transform: rotate(4deg); } 75% { transform: rotate(-1.5deg); } }
+.bq-stem { transform-box: view-box; }
+@keyframes bqNew { from { opacity: 0; transform: translateY(14px) scale(0.6); } to { opacity: 1; transform: none; } }
+.mb-bouquet.is-full .bq-art { transform: scale(1.06); }
+.bq-label { position: absolute; left: calc(100% - 6px); bottom: 64px; display: flex; align-items: flex-start; gap: 0.1rem; font-family: var(--font-hand); font-size: 1.12rem; line-height: 1; color: #9a5a2a; white-space: nowrap; pointer-events: none; opacity: 0; translate: -6px 4px; transition: opacity 0.5s ease, translate 0.5s var(--glide); }
+.bq-label svg { width: 30px; height: 18px; margin-top: 0.5rem; flex: none; }
+.mb-bouquet:hover .bq-label, .mb-bouquet.show-label .bq-label, .bq-btn:focus-visible ~ .bq-label { opacity: 0.95; translate: 0 0; }
+.mb-bouquet.is-open .bq-label { opacity: 0 !important; }
+.bq-fan { position: absolute; left: 4px; bottom: calc(100% + 10px); min-width: 210px; max-width: min(290px, calc(100vw - 28px)); max-height: calc(100vh - var(--nav-h) - 150px); overflow: auto; padding: 0.7rem 0.7rem 0.6rem 1.35rem; border-radius: 18px; background: rgba(255, 252, 246, 0.97); box-shadow: 0 16px 36px rgba(90, 60, 70, 0.16), 0 0 0 1px rgba(201, 160, 106, 0.3); transform-origin: 20% 100%; animation: fanOpen 0.35s var(--glide); }
+.bq-fan[hidden] { display: none; }
+@keyframes fanOpen { from { opacity: 0; transform: translateY(10px) scale(0.94); } }
+/* a little vine runs down the list, back toward the bouquet */
+.bq-fan::before { content: ''; position: absolute; left: 0.7rem; top: 2.1rem; bottom: 2.6rem; width: 2px; border-radius: 2px; background: #a3c47f; opacity: 0.7; }
+.bq-title { font-family: var(--font-hand); font-size: 1.2rem; color: #9a5a2a; margin-bottom: 0.2rem; }
+.bq-list { list-style: none; display: grid; gap: 0.1rem; }
+.bq-list button { position: relative; display: flex; align-items: center; gap: 0.5rem; width: 100%; min-height: 40px; padding: 0.15rem 0.5rem 0.15rem 0.2rem; border: 0; border-radius: 12px; background: none; color: var(--ink); font: inherit; font-size: 0.9rem; text-align: left; cursor: pointer; }
+.bq-list li { animation: fanItem 0.4s var(--glide) backwards; animation-delay: calc(var(--n, 0) * 35ms); }
+@keyframes fanItem { from { opacity: 0; transform: translateX(-8px); } }
+.bq-list button:hover { background: #fbf2e4; }
+.bq-list svg { width: 30px; height: 30px; flex: none; overflow: visible; }
+.bq-kind { margin-left: auto; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8c7f92; }
+.bq-reset { margin-top: 0.45rem; min-height: 32px; padding: 0.15rem 0.2rem; border: 0; background: none; color: #8a6a4a; font: 500 0.74rem var(--font-body); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.bq-traveler { position: fixed; z-index: 140; pointer-events: none; }
+.bq-traveler svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 4px rgba(120, 72, 96, 0.2)); }
+@media (max-width: 1239px) {
+    .mb-bouquet { left: calc(8px + var(--safe-l)); bottom: calc(10px + var(--safe-b)); }
+    .bq-btn { width: 62px; height: 76px; }
+    .bq-disc { width: 60px; height: 60px; }
+    .bq-art { width: 48px; height: 63px; margin-bottom: 3px; }
+    .bq-label { bottom: 46px; font-size: 1.02rem; }
+}
+/* phones: the bouquet peeks in from the edge while you read, and steps out when it has news or you reach for it */
+@media (max-width: 700px) {
+    .mb-bouquet { left: 0; transform: translateX(-30%); transition: transform 0.5s var(--glide); }
+    .mb-bouquet.show-label, .mb-bouquet.is-open, .mb-bouquet:focus-within { transform: translateX(calc(8px + var(--safe-l))); }
+    .bq-label { display: none; }
+    .mb-bouquet.show-label .bq-label { display: flex; }
+}
+
+/* ---------------------------------------------------------------------
+   Visitors: a butterfly or bee that comes to what you opened, a ladybug
+   on a leaf, fireflies after dark
+   --------------------------------------------------------------------- */
+.visitor { position: fixed; left: 0; top: 0; z-index: 112; width: 30px; height: 25px; margin: -12px 0 0 -15px; pointer-events: none; will-change: transform; }
+.visitor svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.2)); }
+.visitor .bf-wing-l, .visitor .bf-wing-r { animation-duration: 0.14s; }
+.visitor.perched .bf-wing-l, .visitor.perched .bf-wing-r { animation-duration: 0.9s; }
+.visitor.is-bee { width: 26px; height: 22px; margin: -11px 0 0 -13px; }
+.bee-wings { transform-box: fill-box; transform-origin: 50% 100%; animation: buzz 0.06s linear infinite alternate; }
+@keyframes buzz { to { transform: scaleY(0.6); } }
+.ladybug { position: absolute; left: 18%; top: 38%; z-index: 5; width: 15px; height: 13px; pointer-events: none; animation: crawl 3.4s ease-in-out forwards; }
+.ladybug svg { display: block; width: 100%; height: 100%; overflow: visible; }
+@keyframes crawl { 0% { opacity: 0; transform: translate(-8px, 10px) rotate(-30deg); } 15% { opacity: 1; } 55% { transform: translate(10px, -2px) rotate(-12deg); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(28px, -14px) rotate(-38deg); } }
+.sc-leaf { pointer-events: auto; cursor: default; }
+.contact-section { position: relative; }
+.fireflies { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.fireflies i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff6a8; box-shadow: 0 0 10px 4px rgba(255, 228, 120, 0.55); opacity: 0; }
+.fireflies.on i { animation: firefly 7s ease-in-out infinite; animation-delay: calc(var(--k) * -1.4s); }
+@keyframes firefly { 0%, 100% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 0.9; } 50% { transform: translate(18px, -14px); opacity: 0.2; } 70% { opacity: 0.85; transform: translate(-10px, -24px); } }
+
+/* ---------------------------------------------------------------------
+   Fixed controls, garden notes, contact links
+   --------------------------------------------------------------------- */
+.to-top { right: calc(22px + var(--safe-r)) !important; bottom: calc(12px + var(--safe-b)) !important; }
+.g-notes-btn { min-height: 32px; padding: 0.15rem 0.75rem; border-radius: 999px; border: 1px dashed rgba(110, 154, 76, 0.5); background: rgba(255, 255, 255, 0.6); color: #4f7a34; font: 600 0.74rem var(--font-body); cursor: pointer; }
+.g-notes-btn[aria-expanded="true"] { border-style: solid; background: #fff; }
+.g-notes { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.9rem; }
+.g-notes[hidden] { display: none; }
+.g-hl { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.9rem; }
+.g-notes-btn { position: relative; margin-top: 0.15rem; }
+.g-notes-btn::before, .g-notes-btn::after { content: ''; position: absolute; top: 50%; width: 22px; border-top: 1px dashed rgba(110, 154, 76, 0.45); }
+.g-notes-btn::before { right: calc(100% + 8px); } .g-notes-btn::after { left: calc(100% + 8px); }
+.social-links { flex-wrap: wrap; gap: 0.6rem; }
+.social-link { width: auto !important; height: auto !important; min-height: 44px; padding: 0.5rem 1.15rem !important; border-radius: 999px !important; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.01em; text-decoration: none; }
+.gallery-preview:focus-visible { outline: 3px solid var(--focus); outline-offset: 6px; border-radius: 22px; }
+@media (max-width: 1239px) and (min-width: 701px) {
+    .to-top { width: 46px !important; height: 76px !important; right: calc(6px + var(--safe-r)) !important; }
+}
+@media (max-width: 700px) {
+    main > section:not(.hero) { padding-top: 2.6rem; padding-bottom: 2.4rem; padding-left: 1rem; padding-right: 1rem; }
+    .to-top { width: 38px !important; height: 63px !important; right: calc(2px + var(--safe-r)) !important; bottom: calc(6px + var(--safe-b)) !important; }
+    .to-top::after { content: ''; position: absolute; inset: -6px -2px -6px -8px; }
+    footer { padding-bottom: calc(100px + var(--safe-b)) !important; }
+    .bloom.f1, .bloom.f5 { display: none; }
+}
+
+/* ---------------------------------------------------------------------
+   Reduced motion: the same reveal, as simple fades and state changes
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    .g-row, .h-row, .g-art, .h-art, .g-name, .h-name, .seed-packet, .seed-art .sp-flap, .bq-disc, .bq-art, .gs-head, .gs-close { transition: none !important; }
+    .gs-bud, .grown .gs-bud, .gs-leaf, .grown .gs-leaf, .gs-branch, .grown .gs-branch, .gs-stem, .grown .gs-stem, .gs-lab, .gs-extra i { transition: opacity 0.25s ease !important; transition-delay: 0s !important; }
+    .gs-bud, .grown .gs-bud { transform: translate(var(--px, 0px), var(--py, 0px)) rotate(var(--tilt0)) !important; }
+    .gs-stem, .gs-branch { stroke-dashoffset: 0; }
+    .gs-leaf { transform: none; }
+    .g-stage:not([hidden]) .gs-inner { animation: noteIn 0.25s ease; }
+    .grown .gs-head-art, .gs-note.swap .gn-body, .bq-stem.new, .mark-slot svg.fresh, .bq-fan, .bq-list li, .g-cat.just-home .g-art, .h-spec.just-home .h-art { animation: none !important; }
+    .h-spec { --r: 0deg; }
+}
+
+/* "hello, I'm Madison" always shifts to a different colour on hover (its own colour, independent of the
+   rotating palette the other text uses), and briefly on tap for touch screens */
+.about-hello.hc-text { --hc: #8a63b8; transition: color 0.6s ease; }
+.about-hello.hc-text:hover, .about-hello.is-tapped { color: #8a63b8 !important; }
+
+/* side-vine flowers a bird is pecking tremble; once eaten they fade away and regrow later */
+.vine-item.pecked, .sprout.pecked { animation: nibbleShake 0.26s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.vine-item > use { transition: opacity 0.7s ease, scale 0.7s ease; }
+.vine-item.eaten > use { opacity: 0; scale: 0.15; }
+
+/* bouquet ribbon (chosen once the bouquet is full enough) */
+.bq-band { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e); transition: fill 0.5s, stroke 0.5s; }
+/* the bow: its own button, sitting where the stems are gathered */
+.bq-bowbtn { position: absolute; left: 50%;  z-index: 2;   padding: 0; border: 0; background: none; translate: -50% -50%; cursor: pointer; -webkit-tap-highlight-color: transparent; transform-origin: 50% 50%; transition: transform 0.35s var(--spring); }
+.bq-bowbtn::before { content: ''; position: absolute; inset: -6px -8px; }   /* comfortable touch target */
+.bq-bowbtn:hover, .bq-bowbtn[aria-expanded="true"] { transform: scale(1.1) rotate(-3deg); }
+.bq-bowbtn:focus-visible { outline: 2px dashed var(--focus); outline-offset: 3px; border-radius: 10px; }
+.bq-bowbtn.wiggle { animation: bqSway 0.9s var(--spring); }
+.bq-bow { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(110, 80, 60, 0.28)); }
+.bw-loop, .bw-tail, .bw-knot { fill: var(--ribbon, #f4a7bf); stroke: var(--ribbon-edge, #d9789e);  stroke-linejoin: round; transition: fill 0.5s, stroke 0.5s; }
+.bw-knot { fill: var(--ribbon-edge, #d9789e); }
+.bw-fold {   stroke-opacity: 0.55;   }
+.bq-pick { position: absolute; left: calc(50% + 18px);  z-index: 3; display: flex; align-items: center; gap: 0.2rem; padding: 0.3rem 0.5rem; translate: 0 -50%; border-radius: 999px; background: rgba(255, 253, 248, 0.97); border: 1px solid rgba(201, 160, 106, 0.45); box-shadow: 0 8px 22px rgba(120, 72, 96, 0.18); animation: fanItem 0.35s var(--glide); }
+.bq-pick[hidden] { display: none; }
+.bq-pick::before { content: ''; position: absolute; left: -5px; top: 50%; width: 9px; height: 9px; translate: 0 -50%; rotate: 45deg; background: inherit; border-left: 1px solid rgba(201, 160, 106, 0.45); border-bottom: 1px solid rgba(201, 160, 106, 0.45); }
+.bq-pick button { position: relative; width: 34px; height: 28px; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer; transition: transform 0.3s var(--spring), background 0.2s; --ribbon: var(--rc); --ribbon-edge: var(--re); }
+.bq-pick button::before { content: ''; position: absolute; inset: -8px -2px; }
+.bq-pick button svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.bq-pick button:hover { transform: translateY(-2px) scale(1.12); }
+.bq-pick button[aria-checked="true"] { background: rgba(244, 167, 191, 0.2); box-shadow: 0 0 0 2px var(--re); }
+.bq-pick button:focus-visible { outline: 2px dashed var(--focus); outline-offset: 2px; }
+@media (max-width: 1239px) { .bq-bowbtn { width: 32px; height: 24px; top: 72%; } .bq-pick { left: calc(50% + 14px); top: 72%; } }
+@media (max-width: 700px) { .mb-bouquet.is-picking { transform: translateX(calc(8px + var(--safe-l))); } }
+@media (max-width: 400px) { .bq-pick button { width: 30px; } }
+@media (prefers-reduced-motion: reduce) { .bq-bowbtn, .bq-bowbtn.wiggle, .bq-pick { animation: none !important; transition: none !important; } }
+
