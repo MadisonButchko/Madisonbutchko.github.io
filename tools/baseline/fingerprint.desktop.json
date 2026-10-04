@@ -1,0 +1,199 @@
+{
+ "env": {
+  "innerWidth": 1440,
+  "innerHeight": 900,
+  "dpr": 1,
+  "reducedMotion": false,
+  "finePointer": true,
+  "url": "/index.html?gardendebug&worlddebug&v11debug"
+ },
+ "before": {
+  "counts": {
+   "nav": 1,
+   "mobileHeader": 0,
+   "sections": 6,
+   "hero": 1,
+   "fanCards": 3,
+   "petalCanvases": 2,
+   "pageBg": 1,
+   "toTop": 1,
+   "expFlowers": 5,
+   "skillSpecimens": 8,
+   "previewItems": 36,
+   "vines": 2,
+   "gardenBed": 1,
+   "reveal": 13,
+   "revealVisible": 13,
+   "svgSymbols": 19,
+   "templates": 2,
+   "scatter": 7,
+   "letters": 14,
+   "guideBird": 1,
+   "bouquet": 1,
+   "dandelions": 6,
+   "collageItems": 0
+  },
+  "nodes": 5579,
+  "docHeight": 4670
+ },
+ "afterScroll": {
+  "counts": {
+   "nav": 1,
+   "mobileHeader": 0,
+   "sections": 6,
+   "hero": 1,
+   "fanCards": 3,
+   "petalCanvases": 2,
+   "pageBg": 1,
+   "toTop": 1,
+   "expFlowers": 5,
+   "skillSpecimens": 8,
+   "previewItems": 36,
+   "vines": 2,
+   "gardenBed": 1,
+   "reveal": 13,
+   "revealVisible": 13,
+   "svgSymbols": 19,
+   "templates": 2,
+   "scatter": 7,
+   "letters": 14,
+   "guideBird": 1,
+   "bouquet": 1,
+   "dandelions": 6,
+   "collageItems": 0
+  },
+  "nodes": 5560
+ },
+ "steps": {
+  "scrollWholePage": {
+   "docHeightAtBottom": 4670
+  },
+  "gallery": {
+   "modalOpen": true,
+   "tilesAll": 54,
+   "tilesByFilter": {
+    "all": 54,
+    "mandala": 13,
+    "digital": 21,
+    "calligraphy": 11,
+    "fineart": 9
+   },
+   "lightboxOpen": true,
+   "lightboxTitle": "Tulips",
+   "lightboxCounterAfterNext": "2 / 54",
+   "lightboxClosedByEscape": true,
+   "modalClosedByEscape": true,
+   "bodyScrollRestored": true
+  },
+  "experience": {
+   "stageVisible": true,
+   "buds": 6,
+   "noteText": "Mechanical Engineering ResearcherOakland University \u00b7 Prof. ",
+   "closedByEscape": true
+  },
+  "skills": {
+   "stageVisible": true,
+   "buds": 7,
+   "noteText": "",
+   "closedByEscape": true
+  },
+  "debugHooks": {
+   "world.seed": "ok",
+   "world.steal": "ok",
+   "world.rain": "ok",
+   "world.nestVisit": "ok",
+   "worldState": {
+    "explored": 4,
+    "story": 0,
+    "storyAt": 0,
+    "nest": 0,
+    "nestShown": 0,
+    "ribbon": "",
+    "sprouts": [],
+    "blownAt": 0
+   },
+   "story": "ok",
+   "garden.spawnPest": "ok",
+   "garden.spawnDeer": "ok",
+   "gardenState": {
+    "count": 9,
+    "goal": 60,
+    "cap": 233,
+    "stage": "2",
+    "stats": {
+     "planted": 0,
+     "shooed": 0,
+     "watered": 0,
+     "rare": 0,
+     "lost": 3,
+     "deer": 0
+    },
+    "badges": [
+     "pollen"
+    ],
+    "fullReached": false,
+    "regrowing": false,
+    "critters": [
+     "flutter:coming",
+     "bunny:eating",
+     "deer:coming"
+    ],
+    "cloud": null,
+    "deer": "coming",
+    "sunny": true,
+    "rows": [
+     1,
+     5,
+     3
+    ]
+   }
+  }
+ },
+ "domNodes": {
+  "start": 5579,
+  "afterScroll": 5560,
+  "idleA": 6215,
+  "idleB": 6110,
+  "idleDrift": -105
+ },
+ "errorsDuringRun": [],
+ "storage": {
+  "local": {
+   "mb-garden-v1": 11415,
+   "mb-world-v1": 96
+  },
+  "session": {
+   "mb-visits-v1": 40,
+   "mb-grown-v1": 242,
+   "mb-discoveries-v2": 36
+  }
+ },
+ "globalsPresent": {
+  "Life": "object",
+  "World": "object",
+  "GardenLog": "object",
+  "__fx": "object",
+  "__eco": "object",
+  "__rainbow": "function",
+  "__spin": "object",
+  "__story": "object",
+  "__guideBird": "object",
+  "__visitFlower": "function",
+  "__vineUpdate": "function",
+  "__vineQ": "function",
+  "__vineBonus": "function",
+  "__vineSprigs": "function",
+  "__onVineLayout": "function",
+  "__onVineTick": "function",
+  "__birdSVG": "string",
+  "__cloudSVG": "string",
+  "__gm": "object",
+  "__deerSVG": "string",
+  "__scatterPlace": "function",
+  "__adoptFlowers": "function",
+  "__garden": "object",
+  "__world": "object",
+  "__dand": "object",
+  "__vineDebug": "object"
+ }
+}

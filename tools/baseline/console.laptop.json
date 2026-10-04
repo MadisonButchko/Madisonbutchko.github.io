@@ -1,0 +1,13 @@
+{
+ "env": {
+  "w": 1024,
+  "h": 768,
+  "hidden": false,
+  "fine": true,
+  "touch": 0,
+  "rm": false,
+  "docH": 4882
+ },
+ "duringLoad": [],
+ "duringRun": []
+}
