@@ -1,13 +1,15 @@
 /* js/animals/birds.js
    Purpose : the world's birds: a visiting bird (for seeds and petals), the seed you can feed a bird, petal/seed theft, material gathering and the nest at the contact photo.
-   Owns    : visitingBird, gather, the seed (spawn/drag/feed/take), sparkle, steal, the nest (render/visit; stays inside this file), WorldState.nest/nestShown/nestBits updates.
-   Uses    : core.utils (rand, f1, $, reduce), core.state (WorldState), core.scheduler (Life), core.safe-zones (clearAt, navBottom, openSpot, whenUnseen, inView), animals.animals; reads window.__birdSVG and window.__guideBird at call time.
+   Owns    : the vine bird and the page flybys (vineBird(), flyby(): each starts its own timer and returns the function, for ?v11debug), visitingBird, gather, the seed (spawn/drag/feed/take), sparkle, steal, the nest (render/visit; stays inside this file), WorldState.nest/nestShown/nestBits updates.
+   Uses    : plants.plants (tween, ease, BIRD_SVG), plants.vine-sprigs (VINE, fadeSprout), core.utils (rand, f1, $, reduce), core.state (WorldState), core.scheduler (Life), core.safe-zones (clearAt, navBottom, openSpot, whenUnseen, inView), animals.animals; reads window.__birdSVG and window.__guideBird at call time.
    Used by : legacy/200-little-world.js (heartbeat: seed spawn, steal, nest render/visit; window.World helpers; ?worlddebug hook) and, through window.World.gather, legacy/140.
    Mobile / reduced motion: unchanged: the seed is a pointer-drag (touch works) or Enter/Space; no visiting birds, theft or nest visits under prefers-reduced-motion (a fed seed is simply eaten).
-   Moved verbatim from legacy/200 (Migration Step 10d); behaviour, order and timing unchanged. */
-MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals'], function (utils, state, scheduler, zones, animals) {
+   Moved verbatim from legacy/200 (Migration Step 10d) and legacy/140 (vine bird + flyby, Step 12e); behaviour, order and timing unchanged. */
+MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals', 'plants.plants', 'plants.vine-sprigs'], function (utils, state, scheduler, zones, animals, plants, sprigs) {
     'use strict';
     const { $, rand, f1, reduce } = utils, { Life } = scheduler;
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    const { tween, ease, BIRD_SVG } = plants, { VINE, fadeSprout } = sprigs;
     const { clearAt, navBottom, openSpot, whenUnseen, inView } = zones;
     const W = state.WorldState.get();
     const save = () => state.WorldState.save();
@@ -169,5 +171,84 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
         return { render, visit };
     })();
 
-    return animals.register('birds', { seed, steal, nest, gather, sparkle, visitingBird });
+    /* ---- vine birds (Migration Step 12e, moved verbatim from legacy/140): one that drops by to snack on a vine flower (click to shoo), and flybys across the page ---- */
+    function vineBirdStart() {
+            /* a bird drops by now and then to snack on a vine flower; click it to scare it off (wide screens) */
+            function vineBird(){
+                if (Life.busy() && !Life.claim('vine-bird-ask', 1, 'preempt')) { setTimeout(vineBird, 6000); return; }   /* someone else is out: try again soon */
+                Life.release('vine-bird-ask');
+                setTimeout(vineBird, rand(18000, 30000));
+                if (document.hidden || innerWidth < 1024 || document.querySelector('.vine-bird')) return;
+                /* anything blooming along the side vines: grown sprigs and the vine's own flowers */
+                const all = [];
+                ['left', 'right'].forEach(side => { const v = VINE[side]; if (v) v.slots.forEach(s => { if (s.sp && !s.sp.gone && !s.sp.leafy){ const h = s.sp.g.querySelector('.sprout.main:not(.bitten)'); if (h) all.push({ side, el: h, sp: s.sp }); } }); });
+                document.querySelectorAll('.vine-item.spin.on:not(.eaten)').forEach(it => all.push({ side: it.closest('.vine-left') ? 'left' : 'right', el: it }));
+                const seen = all.filter(t => { const r = t.el.getBoundingClientRect(); return r.width && r.top > 80 && r.bottom < innerHeight - 30; });
+                if (!seen.length) return;
+                const target = pick(seen), side = target.side, hr = target.el.getBoundingClientRect();
+                if (!Life.claim('vine-bird', 12000)) return;
+                if (target.sp) target.sp.targeted = true;   /* it will not wilt while the bird is on its way */
+                const el = document.createElement('div'); el.className = 'vine-bird flying' + (side === 'left' ? ' left-facing' : '');
+                el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Shoo the bird');
+                el.innerHTML = `<div class="c-flip"><div class="c-body">${BIRD_SVG}</div></div>`; document.body.appendChild(el);
+                const cxh = hr.left + hr.width / 2;
+                let x = side === 'left' ? cxh + 260 : cxh - 300, y = -40, state = 'coming', tok, timer;
+                const set = () => { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`; }; set();
+                const fly = (x1, y1, dur, arc, done) => { const x0 = x, y0 = y; if (tok) tok.stop = true; tok = tween(dur, t => { const e = ease(t); x = x0 + (x1 - x0) * e; y = y0 + (y1 - y0) * e - Math.sin(Math.PI * t) * arc; set(); }, done); };
+                const leave = scared => {
+                    if (state === 'leaving') return; state = 'leaving'; clearTimeout(timer);
+                    target.el.classList.remove('pecked'); if (target.sp) target.sp.targeted = false;
+                    el.classList.remove('eating'); el.classList.add('flying'); el.classList.toggle('left-facing', side !== 'left');
+                    fly(side === 'left' ? x + 300 : x - 300, -90, scared ? 650 : 1300, 20, () => { el.remove(); Life.release('vine-bird'); });
+                };
+                el.addEventListener('click', e => { e.stopPropagation(); leave(true); });
+                fly(side === 'left' ? cxh - 5 : cxh - 31, hr.top - 21, 1500, -45, () => {
+                    if (state !== 'coming') return;
+                    if (target.sp && target.sp.gone) return leave(false);
+                    /* the bird has arrived: it pecks (the flower trembles), and only then is the flower gone */
+                    state = 'eating'; el.classList.remove('flying'); el.classList.add('eating'); target.el.classList.add('pecked');
+                    timer = setTimeout(() => {
+                        if (state !== 'eating') return;
+                        target.el.classList.remove('pecked');
+                        if (target.sp) fadeSprout(target.sp, true);
+                        else { target.el.classList.add('eaten'); setTimeout(() => target.el.classList.remove('eaten'), rand(45000, 80000)); }
+                        leave(false);
+                    }, 2600);
+                });
+            }
+
+            setTimeout(vineBird, 14000);
+            return vineBird;
+    }
+    function flybyStart() {
+            /* now and then a bird (or a pair) flies across the page on a varied path */
+            const TINTS = [['#a9d8ea', '#8fc3dc', '#7fb3cc'], ['#f9c6d6', '#f4a7bf', '#e98fb0'], ['#fbe7a1', '#f6d36b', '#e8b923'], ['#d9cbf3', '#c9b2ec', '#b39ddc']];
+            function flyby(){
+                setTimeout(flyby, rand(35000, 60000));
+                if (document.hidden || document.querySelector('.gallery-modal.active, .lightbox.active')) return;
+                const W = innerWidth, H = innerHeight;
+                if (!Life.claim('flyby', (W + 140) / 42 * 1000 + 1500)) return;
+                const ltr = Math.random() < 0.5, kind = pick(['glide', 'swoop', 'wave']);
+                const n = Math.random() < 0.3 ? 2 : 1, y0 = rand(H * 0.12, H * 0.5), dur = (W + 140) / rand(42, 56) * 1000; /* constant ~50px/s at every width */
+                for (let k = 0; k < n; k++){
+                    const t = pick(TINTS), el = document.createElement('div'); el.className = 'flyby-bird' + (ltr ? '' : ' left-facing'); el.setAttribute('aria-hidden', 'true');
+                    el.innerHTML = `<div class="c-flip"><div class="c-body">${BIRD_SVG.replace(/#a9d8ea/g, t[0]).replace(/#8fc3dc/g, t[1]).replace(/#7fb3cc/g, t[2])}</div></div>`;
+                    el.style.setProperty('--fs', (rand(0.6, 0.8) * (W < 600 ? 0.8 : 1)).toFixed(2));
+                    /* now and then the first bird carries something home for its nest: a twig, a strand of grass, a bit of fluff */
+                    const carries = k === 0 && window.World && World.gather && (World.nestStage ? World.nestStage() < 5 : true) && Math.random() < 0.4;
+                    if (carries){ const it = document.createElement('i'); it.className = 'w-twig is-' + pick(['twig', 'grass', 'fluff']); el.querySelector('.c-body').appendChild(it); el.__carry = true; }
+                    document.body.appendChild(el);
+                    const yy = y0 + k * 22, lag = k * 0.06;
+                    tween(dur * (1 + lag), q => {
+                        const u = Math.max(0, q * (1 + lag) - lag), x = ltr ? -70 + (W + 140) * u : W + 70 - (W + 140) * u;
+                        const y = kind === 'glide' ? yy - u * H * 0.08 + Math.sin(u * 7) * 6 : kind === 'swoop' ? yy + Math.sin(Math.PI * u) * H * 0.16 : yy + Math.sin(u * Math.PI * 3) * 26;
+                        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+                    }, () => { if (el.__carry) World.gather(); el.remove(); });
+                }
+            }
+            setTimeout(flyby, 30000);
+            return flyby;
+    }
+
+    return animals.register('birds', { seed, steal, nest, gather, sparkle, visitingBird, vineBird: vineBirdStart, flyby: flybyStart });
 });

@@ -5,7 +5,7 @@
    Used by : legacy/200-little-world.js (start() at the spot the block ran, advance() from the heartbeat and World.note; replaces window.__story) and legacy/210-v11-polish.js (vineChrysalis(), at the spot that block ran).
    Mobile / reduced motion: unchanged: no butterfly flight under prefers-reduced-motion; stages advance by exploration and sight only.
    Moved verbatim from legacy/200 and legacy/210 (Migration Step 10e); behaviour, order and timing unchanged. */
-MB.define('animals.caterpillar', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals'], function (utils, state, scheduler, zones, animals) {
+MB.define('animals.caterpillar', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals', 'plants.vines'], function (utils, state, scheduler, zones, animals, vines) {
     'use strict';
     const { $, f1, reduce } = utils, { Life } = scheduler, { inView, whenUnseen } = zones;
     const W = state.WorldState.get(), WorldState = state.WorldState;
@@ -86,8 +86,8 @@ MB.define('animals.caterpillar', ['core.utils', 'core.state', 'core.scheduler', 
             svg.appendChild(g); update();
         }
         function update() { if (!g || !path) return; const shown = path.getTotalLength() - (parseFloat(path.style.strokeDashoffset) || 0); g.classList.toggle('on', shown > at + 10); }
-        window.__onVineTick = update;
-        const prev = window.__onVineLayout; window.__onVineLayout = () => { if (prev) prev(); draw(); };
+        vines.onTick(update);
+        vines.onLayout(draw);   /* registered after the sprigs' layout hook, so it still runs after it */
         new MutationObserver(draw).observe(story, { attributes: true, attributeFilter: ['data-stage'] });
         let q = 0; addEventListener('scroll', () => { if (!q) q = requestAnimationFrame(() => { q = 0; update(); }); }, { passive: true });
         draw();

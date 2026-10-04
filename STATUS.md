@@ -1,7 +1,7 @@
 # STATUS (handoff)
 
 ## Status
-- Migration Steps 0–9, **10a–10f** and **11** complete and verified (uncommitted; Step 10 still wants its T2). **Next: Step 12 (plants/vines, high risk, stand alone)**, T2 for step 10, Steps 11–15 remain, then Phase D (consolidation), E (CSS), F (dead code).
+- Migration Steps 0–11 and **12 (a–e)** complete and verified (uncommitted; T2 done for Steps 10 and 12). **Next: Step 13 (botanical, stage high; separate commits in plan order).** Then 14, 15, Phase D (consolidation), E (CSS), F (dead code).
 
 ## Important architecture
 - Classic `<script src defer>` files, **not ES modules** (modules break on `file://`).
@@ -35,7 +35,7 @@
 
 ## Git
 - Branch `main`, up to date with `origin/main`. Restore tag `pre-modular` → `9b824c4` exists **locally only** (not pushed).
-- Uncommitted: `ARCHITECTURE.md`, `MIGRATION_PLAN.md`, `index.html`, legacy/200, legacy/210, `js/plants/`, `js/environment/` (10a–e; commit one per substep if wanted). `__story` and `__eco` globals intentionally gone (the only fingerprint diffs); `ecosystem.js` deleted (unstaged); `js/plants/flowers.js` is the last script.
+- Uncommitted: `ARCHITECTURE.md`, `MIGRATION_PLAN.md`, `index.html`, legacy/200, legacy/210, `js/plants/`, `js/environment/` (10a–e; commit one per substep if wanted). `__story`, `__eco`, `__gm`, `__vineQ/__vineBonus/__vineUpdate/__vineSprigs/__onVineLayout/__onVineTick` globals intentionally gone (the only fingerprint diffs); `ecosystem.js` deleted (unstaged); `js/plants/flowers.js` is the last script.
 
 ## Efficiency
 - Read STATUS.md first; then only the current step of `MIGRATION_PLAN.md`.
@@ -44,4 +44,4 @@
 - Reuse existing tests; no new test infrastructure unless necessary.
 - Keep commentary concise. Targeted tests first; broad baseline only where required.
 
-NEXT: Step 12 (and T2 for Step 10)
+NEXT: Step 13
