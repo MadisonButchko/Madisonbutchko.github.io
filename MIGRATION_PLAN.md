@@ -44,12 +44,24 @@ Policy: after Step 5 every piece of `script.js` lives in an ordered side-effect 
 
 ## Phase A: mechanism and safety (no feature code moves)
 
-### Step 0: safety net · risk none · docs/tools only
-- Tag `pre-modular`; build the tools above; capture baseline screenshots (1440, 1024, 768, 390) and a clean console log.
-- Add a tiny root `CLAUDE.md` ("read ARCHITECTURE.md first; use the routing table"). *(Separate approval; it is not one of the two plan docs.)*
-- Test: baseline recorded.
+### Step 0: safety net · risk none · docs/tools only · **DONE**
+- Tag `pre-modular` (→ `9b824c4`); root `CLAUDE.md` added; tools built in `tools/` (see `tools/README.md`); baseline captured in `tools/baseline/` (see `tools/baseline/BASELINE.md`): console, computed styles, section screenshots at 1440 / 1024 / 768 / 390, and smoke fingerprints for desktop, desktop + reduced motion, and phone (touch).
+- Actual tool names: `capture.py` (headless-Chrome runner, replaces the "console snippet"), `smoke.js`, `style-snapshot.js`, `compare_json.py`, `css_concat_check.py`, `js_concat_check.py`, `serve.py`.
+- **Use `capture.py` + `compare_json.py` for the automatable parts of every T1/T2 test** (command lines in `tools/README.md`). The in-app browser pane is *hidden* from the page (`document.hidden === true`: no IntersectionObserver, scroll or heartbeat), so it is not a valid place to verify scroll/timing behaviour; headless Chrome is.
+- Test: baseline recorded; two repeat runs gave 0 style differences and only the documented random-count jitter in the fingerprint.
 
-### Step 1: load both scripts as ES modules + strict-mode audit · risk **medium**
+### Step 1: load both scripts as ES modules + strict-mode audit · risk **medium** · **REVERTED: BLOCKED ON A DECISION (see below)**
+- **What happened:** the two-line `index.html` switch to `<script type="module">` passed every automated check (all served over `http://`) but **broke the site when `index.html` is opened directly from disk (`file://`)**, which is how the owner views it: browsers refuse to load module scripts from a `file://` origin (CORS, origin `null`). No JavaScript ran, so the 13 `.reveal` sections never became visible and nothing (letters, vines, garden, petals) was built: only the hero showed. `index.html` was restored to the classic scripts (byte-identical to `pre-modular`); `script.js`, `ecosystem.js`, `style.css` were never changed.
+- **Lesson / new requirement:** the site must work when opened by double-clicking `index.html` (and from `http://`, and on GitHub Pages). **Every step must also be verified over `file://`** (`python3 tools/capture.py --url "file://$PWD/index.html" --out /tmp/after`; compare with `--ignore url`). The Step 0 tools assumed `http://`, which is why the failure was missed. The old "module scripts don't run from file://" bullet below was a known risk that should have been treated as a blocker.
+- **Audit findings that remain valid (they will matter if modules are adopted):** 0 strict-mode errors, 0 undeclared assignments, 0 top-level `this`; **22 function declarations in plain blocks** (gallery block 497–693: 9; vine block 1146–1427: 13) are only used inside their blocks, so strict mode is safe for them; ~+20 ms script-effect delay from module deferral, no flash.
+- **The hamburger menu:** the `pre-modular` site has none (`index.html` has only the pill `<nav>` at all widths; the `.mobile-menu` CSS has no markup; it was replaced in `15049ec iphone nav bar` / `56be965 phone fixes`). The pill nav was identical in baseline and Step 1 (0 style differences), so it is unrelated to this step.
+- **Options (owner decides; each keeps `file://` working except A):**
+  A. Keep native ES modules and always view the site through a local server (`python3 -m http.server 8080`) or GitHub Pages: explicit imports, but double-clicking `index.html` stops working.
+  B. **Classic scripts with one namespace (`window.MB`) and an ordered list of `<script src defer>` tags** (no bundler): files still split by responsibility and dependencies are explicit as `MB.core.utils`, etc.; works from `file://`, local server and Pages; keeps the execution-order contract trivially (script order = import order). Recommended if `file://` matters.
+  C. Modules in source, plus a tiny committed bundle step: rejected for now (adds a build step).
+  Steps 2-15 are written module-style; under B they translate mechanically (`export x` becomes `MB.<area>.x = x`, `import {x}` becomes `const { x } = MB.<area>`). Update ARCHITECTURE.md once decided.
+
+*(original step description, now superseded by the above)*
 - **Move:** nothing. `index.html`: `<script type="module" src="script.js">` then `<script type="module" src="ecosystem.js">` (same order; modules are deferred in order, matching today's script + defer).
 - **Strict-mode audit (already partially done in review):** both files compile with `"use strict"` (no early errors: octal, duplicate params, `with`, `delete x`), and a heuristic scan for undeclared assignments found none (the one hit, `qf`, was a comment). **Still to do during this step:** (a) grep for function declarations inside `if/for/{}` blocks that are used outside that block (sloppy mode hoists them; strict does not); (b) top-level `this`; (c) a runtime pass that forces every path (debug hooks, all overlays) watching for `ReferenceError`; (d) module scripts run after parsing: check anything measuring layout at parse time (scroll restore, vines `measureAbout`, garden height reservation).
 - **Files:** `index.html` only. **Depends on:** nothing.
@@ -160,5 +172,5 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - **iCloud path:** the repo lives under iCloud Drive; keep an eye out for sync conflicts during large moves (commit often).
 - **No automated tests exist.** T1/T2 are manual + the Step 0 console snippet; that is why every step is small.
 
-## First step to perform
-**Step 0** (baseline, tools, tag; docs/tooling only). Then **Step 1** (ES module switch + strict audit) as the first commit that touches the site.
+## Next step to perform
+Step 0 is complete. Step 1 is reverted pending the module-loading decision above. Step 2 (`core/utils.js`, `state.js`, `scheduler.js`, `particles.js`) waits on that decision.

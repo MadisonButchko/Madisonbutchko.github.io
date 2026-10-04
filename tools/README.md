@@ -46,6 +46,13 @@ python3 tools/js_concat_check.py --files js/legacy/*.js             # Step 5 (li
 - **`window.* globals present`** in the fingerprint is the migration-debt list; entries are *expected* to disappear as steps remove them (see ARCHITECTURE §4). Debug hooks (`__garden`, `__world`, `__dand`, `__vineDebug`) must remain.
 - **Console:** zero errors/warnings on load and during the run, in every profile.
 
+## Always also run over `file://` (the site is opened by double-clicking `index.html`)
+```bash
+python3 tools/capture.py --url "file://$PWD/index.html" --only desktop,phone --out /tmp/after-file
+python3 tools/compare_json.py tools/baseline/styles.desktop.json /tmp/after-file/styles.desktop.json --ignore url
+```
+Browsers refuse `type="module"` scripts on `file://`; an http-only check cannot catch that (Step 1 failure).
+
 ## Profiles (what `capture.py` emulates)
 `desktop` 1440×900 fine pointer · `desktop-rm` same with `prefers-reduced-motion: reduce` (smoke only) · `laptop` 1024×768 · `tablet` 768×1024 · `phone` 390×844 mobile + touch (coarse pointer, `maxTouchPoints` 5, DPR 2).
 Each profile starts from an empty browser profile (first visit). The page runs *visible* (`document.hidden === false`); the in-app browser pane does not, so scroll/IntersectionObserver/heartbeat behaviour **cannot** be verified there.

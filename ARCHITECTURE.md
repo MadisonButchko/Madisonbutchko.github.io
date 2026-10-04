@@ -3,15 +3,17 @@
 The permanent guide to how this site is organised. **Read this before changing anything.**
 Migration steps (temporary) live in [MIGRATION_PLAN.md](MIGRATION_PLAN.md).
 
-> **STATUS: migration not started.** Today the code is still `script.js` (4,653 lines), `ecosystem.js`
-> (155) and `style.css` (2,769). §1–§10 describe the **target**; §0 says where things live **right now**.
+> **STATUS: migration in progress (Phase A).** Today the code is still `script.js` (4,653 lines), `ecosystem.js`
+> (155) and `style.css` (2,769); the shared namespace loader `js/core/namespace.js` exists but nothing is moved into it yet.
+> §1–§10 describe the **target**; §0 says where things live **right now**.
 > As each migration step lands, update §0 (rows disappear as code reaches its home) and the global-debt table (§4).
 
-Static, build-free GitHub Pages site (`CNAME`, no bundler, no npm). Keep it that way: **native ES modules**
-(`<script type="module">`), plain CSS, plain files. Local dev: `python3 -m http.server 8080` (`.claude/launch.json`;
-`file://` does not work with modules).
+Static, build-free GitHub Pages site (`CNAME`, no bundler, no npm). Keep it that way: plain CSS and plain **classic**
+`<script src defer>` files that share **one controlled namespace, `window.MB`** (§1b). The site must work identically when
+`index.html` is **double-clicked (`file://`)**, through a local server (`python3 -m http.server 8080`, `.claude/launch.json`) and
+on GitHub Pages. Native ES modules (`type="module"`) are **not used**: browsers refuse them on `file://` (this broke the site once).
 
-Decisions already made (do not re-litigate): ES modules · deer lives in `animals/deer.js` and talks to the garden through a
+Decisions already made (do not re-litigate): classic ordered scripts + one `window.MB` namespace (must work from `file://`) · deer lives in `animals/deer.js` and talks to the garden through a
 small garden-facing API · files are split only for real independent logic, never for tidiness · dead-CSS cleanup is a
 separate, later phase (never mixed into structural moves).
 
@@ -36,7 +38,7 @@ separate, later phase (never mixed into structural moves).
 | persistence, random timing, cursor tracking, "is this spot free?" | `core/state.js`, `core/scheduler.js`, `core/pointer.js`, `core/safe-zones.js` |
 | something is mobile- or reduced-motion-specific | §5 below, then the owning file |
 
-**Every module starts with a header** (≤ 8 lines): purpose · owns · uses (imports) · used by · mobile / reduced-motion behaviour ·
+**Every module starts with a header** (≤ 8 lines): purpose · owns · uses (the `MB.define` dependency list) · used by · mobile / reduced-motion behaviour ·
 debug hook if any. Keeping headers true is part of every change; they are what lets a session choose files without opening them.
 
 ---
@@ -82,7 +84,7 @@ v13 living plants (2607). ≈ 72 of 631 class names are never referenced from JS
 ### index.html
 Structure and content only: SVG symbol sprite (≈ 15–37), sections `#home #about #experience #skills #gallery #contact`, footer,
 `#galleryModal`, `#lightbox`, `<template id="xpData">` (~340 lines) and `<template id="skData">`. Loads `style.css?v=28`,
-`script.js?v=33`, `ecosystem.js?v=4 defer`. No inline handlers. Keep it that way.
+`script.js?v=33`, `ecosystem.js?v=4` (all ordered `defer` scripts, see the manifest in §1b). No inline handlers. Keep it that way.
 
 ---
 
@@ -102,8 +104,9 @@ css/                  one file per responsibility; media queries + reduced-motio
   animals.css         every creature
   environment.css     rain, sun, breeze, rainbow
 js/
-  main.js             imports in a fixed, documented order and wires registries. ≤ ~80 lines, no feature code.
+  main.js             LAST script: wires registries and starts managers. ≤ ~80 lines, no feature code.
   core/
+    namespace.js      FIRST script: creates the one global `window.MB` and `MB.define` (§1b)
     utils.js          $, $$, rand, pick, clamp, f1, wait, NS, reduce, fine
     scheduler.js      Life (stage director) + ONE heartbeat (onBeat) + weighted rare-event roll
     state.js          WorldState, GardenLog, session stores, storage-key table
@@ -137,12 +140,46 @@ breakpoints live in `layout.css`.
 
 ---
 
+## 1b. How files load and share code (classic scripts + `window.MB`)
+
+**Loading.** `index.html` lists every script as `<script src="js/<area>/<file>.js?v=N" defer></script>`. Deferred classic scripts download in
+parallel and **execute in the order the tags appear**, after the document is parsed and before `DOMContentLoaded`. **That tag order is the
+dependency/load order and the execution-order contract**; the tags are kept as one commented manifest (`core` → services → managers →
+features → `main.js`). Never `async`, never dynamic `import()`, never `type="module"`.
+
+**Namespace.** `js/core/namespace.js` (always first) creates the read-only, frozen `window.MB` and nothing else is allowed to become a global:
+```js
+MB.define('animals.deer', ['core.utils', 'core.scheduler', 'garden.api'], function (utils, scheduler, garden) {
+    'use strict';
+    /* ...everything private to this file lives in this function scope... */
+    return { init, spawn };           // the module's public API (anything not returned is private)
+});
+```
+- `MB.define(name, deps, factory)` runs `factory` **immediately** with the named dependencies (so the order of tags matters) and stores what it returns.
+  It throws a clear error if a dependency is not loaded yet ("`animals.deer` needs `core.scheduler`, which is not loaded yet; check the `<script>` order")
+  or if the name is already defined. Because deps must already exist, **circular dependencies are impossible by construction**: use hooks (§4) instead.
+- `MB.use(name)` returns a loaded module (for debugging, `main.js`, and late callers); `MB.has(name)`; `MB.modules` lists the load order with each module's deps.
+- Names are `area.file` in lower case matching the path (`js/animals/deer.js` → `animals.deer`). One module per file.
+- During the migration a factory may run its feature code at definition time (it replaces an IIFE that used to run at that point). Later (Phase D) factories only
+  build their API and `main.js` starts them with `init()`.
+- Every file wraps its code in the `MB.define` function (that function is the file's private scope) and starts it with `'use strict'`.
+  The old monolith code is sloppy-mode; code is audited as it moves (22 block-level function declarations in `script.js` were checked: safe).
+- **No other globals.** Allowed: `window.MB`; the `?…debug` hooks; and the *legacy* globals listed in §4 until their owner moves. Anything new on `window`
+  is a bug. (`tools/check_site.py globals` diffs `window` against the baseline.)
+
+**Serving rules (all three must keep working):** `file://` (no module scripts, no fetch/XHR of local files, no service workers); local server; GitHub Pages
+(**case-sensitive paths**: `Js/Core/x.js` ≠ `js/core/x.js` on Pages though macOS finds both; `tools/check_site.py paths` verifies every `src`/`href` exactly
+matches a tracked file). Per-file `?v=N` cache-busting works (each script is its own URL): **bump `N` on the tag of every file you change**.
+
+**Why not ES modules:** they are blocked on `file://`. **Why not one big script:** the point is small files. A tag per file is the price; with `defer`
+and HTTP/2 the cost is negligible and `file://` costs nothing.
+
 ## 2. System responsibilities
 
 One feature, one obvious home. "Not responsible for" matters as much as "responsible for".
 
 **core/** Owns: helpers, stage director, heartbeat, rare-event roll, persistence, pointer tracking, safe-zone checks, particle budget.
-Not: any visible feature. Core imports from nothing above it.
+Not: any visible feature. Core depends on nothing above it.
 
 **navigation/** Nav pill, flower nav (butterfly flying to your section), mobile menu, scroll-spy, corner sunflower scroll indicator /
 back-to-top, in-page links. Not: reveal effects, gallery, garden.
@@ -200,7 +237,7 @@ Replaces helpers re-declared per IIFE (`reduce` ×16, `rand` ×5, `NS` ×9, `cla
   passed `onYield`; `ms` is a safety timeout. `release(name)`, `busy()`, `calm(ms)` (nothing has set off for `ms`). Contract unchanged from today's `Life`.
 - `onBeat(fn)`: the **one** 6 s world heartbeat (skips while `document.hidden`). Never add a `setInterval` for periodic behaviour.
 - `rare(name, weight, fn)`: features register their own rare events; the scheduler rolls **one** random number per beat after `calm(40000)`,
-  exactly as today's world heartbeat (rain 3 %, thief 3 %, nest visit 6 %). The scheduler never imports a feature.
+  exactly as today's world heartbeat (rain 3 %, thief 3 %, nest visit 6 %). The scheduler never depends on a feature.
 - Known intentional exceptions (documented, not duplicates): the garden game's own on-screen-only tick (its critters live inside the bed and do
   not use `Life`), the guide bird's own interval, hero rotator/fan intervals, lightbox slideshow, per-creature animation timers.
   The ecosystem rare visitor (a self-rescheduling 90–170 s timeout) becomes a `rare()` registration only in the consolidation phase (it changes timing).
@@ -237,35 +274,39 @@ belong to the world and may overlap carry `.w-ignore`.
 ## 4. Module communication and dependencies
 
 Allowed, in order of preference:
-1. **Import a shared service** from `core/`.
-2. **Manager registry (host/guest):** the manager exposes `register…()`; guests call it; the manager never imports a guest by name; `main.js` wires them.
+1. **Declare a dependency** on a shared service from `core/` in the module's `MB.define` list.
+2. **Manager registry (host/guest):** the manager exposes `register…()`; guests call it; the manager never depends on a guest by name; `main.js` wires them.
 3. **Hook registration** when a host needs a callback from a guest (`vines.onLayout(fn)`, `vines.onTick(fn)`, `GardenLog.on(fn)`, `onBeat(fn)`, `pointer.subscribe(fn)`).
-4. **A one-way explicit import** when one feature truly depends on another (e.g. `animals/birds.js` imports `plants/vine-sprigs.js`'s `canEat`). Direction must be stated in the file header.
+4. **A one-way declared dependency** when one feature truly needs another (e.g. `animals.birds` lists `plants.vine-sprigs` and uses its `canEat`). Direction must be stated in the file header.
 
-Forbidden: new `window.*` globals (debug hooks behind `?…debug` excepted), importing another feature's internals, reaching into another feature's DOM by
-class name, a second director/heartbeat/pointer tracker, **circular imports** (use hooks instead).
+Forbidden: new `window.*` globals (`MB` and the `?…debug` hooks excepted), using another feature's internals (only its returned API), reaching into another feature's DOM by
+class name, a second director/heartbeat/pointer tracker, **circular dependencies** (`MB.define` cannot express them; use hooks instead).
 
-Layering: `main → features → managers → core`. Core imports nothing above it.
+Layering (= tag order): `namespace → core → managers → features → main`. Core depends on nothing above it.
 
 ### Dependency map (target)
 - `core/*` ← everything (state: botanical, seeds, caterpillar, birds, dandelions · scheduler: all animals, weather, flowers, easter-eggs · safe-zones: decor, dandelions, seeds, birds, guide-bird, weather, easter-eggs · particles: flowers, dandelions, weather, birds · pointer: cursor, breeze).
-- `plants/vines.js` **hosts hooks** (`onLayout`, `onTick`, `onRender`); `vine-sprigs.js` registers into it (today vines↔sprigs call each other through globals: a circular import if copied naively).
+- `plants/vines.js` **hosts hooks** (`onLayout`, `onTick`, `onRender`); `vine-sprigs.js` registers into it (today vines↔sprigs call each other through globals: a circular dependency if copied naively, which `MB.define` would reject).
 - `animals/birds.js`, `vine-caterpillar.js` → read `vine-sprigs.js` (`canEat`, `eat`); `caterpillar.js` → `vines` (chrysalis shows on the vine only when vines are visible).
-- `animals/deer.js`, `garden/critters.js`, `environment/weather.js` (garden rain/sun) → garden-facing API from `garden/garden.js`; the garden never imports them (they register).
+- `animals/deer.js`, `garden/critters.js`, `environment/weather.js` (garden rain/sun) → garden-facing API from `garden/garden.js`; the garden never depends on them (they register).
 - `botanical/stage.js` → `effects/text-effects.js` (`rainbow`), `plants/seeds.js` (`pour`), `botanical/bouquet.js`, `core/state.js`.
-- `plants/flowers.js` → `animals/butterflies.js` (`visitFlower`) via a registry call, not an import cycle.
+- `plants/flowers.js` → `animals/butterflies.js` (`visitFlower`) via a registry call, not a dependency cycle.
 
 ### Window-global debt (today → how each disappears)
+Besides the `window.__x` names below, the classic `script.js` also leaks its **top-level** `const`/`let`/`function` declarations as global bindings
+(`Life`, `WorldState`, `artworks`, `currentFilter`, `filteredArtworks`, `currentLightboxIndex`, `buildCollage`, `updateLightbox`, `openArtwork`, `openLightbox`, `rvIO`…).
+They are legacy: new code must not read them, and each disappears when its code moves into an `MB.define` module (that is also why the legacy slice in
+MIGRATION_PLAN keeps working: sibling classic scripts still see them).
 | Global | Defined (script.js) | Read by | Becomes |
 |---|---|---|---|
-| `Life`, `GardenLog`, `__fx`, `World` | 26, 4211, 4189, 4063 | many | `core/*` imports |
-| `__gm`, `__vineUpdate`, `__vineQ`, `__vineBonus` | 280, 323–326 | 1061, 1055, 1100, 1184 | exports of `plants/vines.js` |
+| `Life`, `GardenLog`, `__fx`, `World` | 26, 4211, 4189, 4063 | many | `core/*` modules (declared dependency) |
+| `__gm`, `__vineUpdate`, `__vineQ`, `__vineBonus` | 280, 323–326 | 1061, 1055, 1100, 1184 | public API of `plants/vines.js` |
 | `__vineSprigs`, `__onVineLayout`, `__onVineTick` | 1075, 1144, 4383 | 303, 252, 319 | hook registration on `vines.js` (breaks the cycle) |
-| `__birdSVG`, `__cloudSVG` | 954, 2288 | 3735, 3997/4002 | shared art import (`animals`, `weather`) |
-| `__guideBird` | 2470 | 3777, 3798, 3804 | `guide-bird.js` export |
-| `__visitFlower` | 2828 | ecosystem.js 148 | `butterflies.js` export |
-| `__eco` | ecosystem.js 154 | 3609 | `plants/seeds.js` export |
-| `__rainbow`, `__spin`, `__story` | 4117, 4165, 3934 | 3112; 3194, 4023, 931, 939; 4052, 4064 | exports of text-effects / flowers / caterpillar |
+| `__birdSVG`, `__cloudSVG` | 954, 2288 | 3735, 3997/4002 | shared art module (`animals`, `weather`) |
+| `__guideBird` | 2470 | 3777, 3798, 3804 | `guide-bird.js` public API |
+| `__visitFlower` | 2828 | ecosystem.js 148 | `butterflies.js` public API |
+| `__eco` | ecosystem.js 154 | 3609 | `plants/seeds.js` public API |
+| `__rainbow`, `__spin`, `__story` | 4117, 4165, 3934 | 3112; 3194, 4023, 931, 939; 4052, 4064 | public API of text-effects / flowers / caterpillar |
 | `__deerSVG`, `__scatterPlace`, `__adoptFlowers` | 2025, 1561, 4359 | **no reader found** | verify, then drop |
 | `__garden`, `__world`, `__dand`, `__vineDebug` | debug-only (`?gardendebug`, `?worlddebug`, `?v11debug`) | tests | **keep** |
 
@@ -292,7 +333,7 @@ Before adding a feature:
 3. Read **only** that system's manager, the relevant module(s), the shared services it uses and its CSS file; use module headers to check what they own.
 4. Create or modify the smallest appropriate module; do not create a file for < ~40 lines of logic.
 5. Reuse shared infrastructure (§3). Do not copy helpers.
-6. Smallest possible integration change (usually one `register…()` line in `main.js`).
+6. Smallest possible integration change (one `<script>` tag in the `index.html` manifest, plus usually one `register…()` line in `main.js`).
 7. Do not refactor unrelated systems; note, don't fix, problems elsewhere.
 8. Test the feature and the neighbours it could affect (MIGRATION_PLAN "Smoke test"); update the module header and, if you added a hook/dependency, §4.
 
@@ -300,8 +341,8 @@ Before adding a feature:
 1. Decide: is it a variation of an existing behaviour (add to `birds.js`, `butterflies.js`…) or does it have meaningful independent logic/state/lifecycle/animation? Only the latter gets `js/animals/<animal>.js`.
 2. Implement only that animal's behaviour: appear, move, interact, leave.
 3. Take the stage with `claim(name, ms, force?, onYield?)`; `release` always (incl. errors/timeouts). Background drifters pass `onYield`. Trigger with `onBeat` or `rare(name, weight, fn)`, never a new interval.
-4. Use `safe-zones.js` for spots, `particles.js` for petals/sparkles, `state.js` for memory. If it interacts with garden plants, use the garden-facing API; with vines, the `vine-sprigs` exports.
-5. Register with `animals.js` (`registerAnimal({ name, init, onBeat? })`) + one import/register line in `main.js`.
+4. Use `safe-zones.js` for spots, `particles.js` for petals/sparkles, `state.js` for memory. If it interacts with garden plants, use the garden-facing API; with vines, the `vine-sprigs` public API.
+5. Register with `animals.js` (`registerAnimal({ name, init, onBeat? })`) + one `<script>` tag in the manifest (after its dependencies) and one register line in `main.js`.
 6. CSS in `css/animals.css` with its own mobile and reduced-motion rules. DOM is created by JS, `aria-hidden="true"`, `pointer-events: none` unless tappable; no `index.html` markup.
 7. Test desktop (mouse), mobile (touch, ≤ 700 px, plus the 1239 px tier if vines/garden are involved), reduced motion (absent or static; no timers left).
 8. Check cleanup: nodes removed, listeners removed, timers/frames cancelled, `release` called; `document.querySelectorAll('*').length` stable after repeats.
@@ -327,15 +368,15 @@ Before adding a feature:
 4. Test touch (no hover), reduced motion, repeated triggering (cooldown), cleanup.
 
 ## 7. `main.js` contract and execution order
-- `main.js` only imports and wires. **Module evaluation order = import order = the old file order.** Several pieces depend on DOM built earlier
-  (title/hero letters before text-effects and rainbow letters; page-bg before layers; flowers placed after layout before late-flower adoption; vines before the garden; the world before "polish").
-  The required order is recorded in a comment block in `main.js`; do not reorder imports without checking it.
-- Feature modules export `init()` (or register with their manager) rather than running at import time, **once they are out of the legacy slice** (MIGRATION_PLAN Phase B/C). Until then they are side-effect modules in the original order.
+- `main.js` is the **last** script. It only wires: registers features with managers and starts them. **Execution order = `<script>` tag order = the old file order.**
+  Several pieces depend on DOM built earlier (title/hero letters before text-effects and rainbow letters; page-bg before layers; flowers placed after layout before
+  late-flower adoption; vines before the garden; the world before "polish"). The required order is the commented manifest in `index.html`; do not reorder tags without checking it.
+- Feature modules run at definition time while they are replacing legacy IIFEs; once out of the legacy slice (MIGRATION_PLAN Phase D) they return an API and `main.js` calls `init()`.
 - If `main.js` grows past ~80 lines or contains feature logic, something belongs in a manager.
 
 ## 8. Architectural rules
 - No feature code in `main.js`. One director, one heartbeat, one pointer tracker, one particle budget. No duplicate global state.
-- No new `window.*` globals (debug hooks aside). No circular imports.
+- No new `window.*` globals (`MB` and debug hooks aside). No circular dependencies.
 - No uncontrolled `setInterval`; prefer `onBeat`, observers, rAF with a cancel path. Pause on `document.hidden`.
 - Feature behaviour in the feature module; shared behaviour in `core/` or a manager. Do not modify unrelated systems.
 - Preserve mobile/touch behaviour and accessibility (decorative DOM `aria-hidden`; interactive things focusable with visible focus; Escape closes overlays; the garden bed keeps its `role="button"` keyboard path).
@@ -343,4 +384,5 @@ Before adding a feature:
 - Clean up temporary DOM, listeners, timers, observers and animation frames.
 - CSS: media queries and reduced-motion rules beside the feature; no new `!important` unless fixing a documented override; later-in-file wins, so **`<link>` order in `index.html` is part of the cascade**.
 - **Move code first, change behaviour later, never both in one commit.** Dead-code/CSS cleanup is its own phase.
-- Cache-busting: module imports do not inherit `?v=` from `main.js`; bump `main.js?v=` and any changed CSS `?v=`; see MIGRATION_PLAN risk note.
+- Cache-busting: bump the `?v=` on the `<script>`/`<link>` tag of every file you change. Paths are case-sensitive on GitHub Pages: match the tracked file name exactly.
+- Everything must work on `file://`, a local server and GitHub Pages: no `type="module"`, no `fetch`/XHR of local files, no service workers, no absolute `/paths`.
