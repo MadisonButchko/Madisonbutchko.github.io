@@ -28,11 +28,15 @@ def normalise(text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--ref', default='pre-modular:script.js')
+    ap.add_argument('--ref-file', help='compare against this file instead of a git rev (e.g. a copy of script.js saved just before a slice)')
     ap.add_argument('--files', nargs='+', required=True)
     a = ap.parse_args()
-    old = subprocess.run(['git', '-C', ROOT, 'show', a.ref], capture_output=True, check=True).stdout.decode('utf-8')
+    if a.ref_file:
+        old = open(a.ref_file, encoding='utf-8').read()
+    else:
+        old = subprocess.run(['git', '-C', ROOT, 'show', a.ref], capture_output=True, check=True).stdout.decode('utf-8')
     new = ''.join(normalise(open(os.path.join(ROOT, f), encoding='utf-8').read()) for f in a.files)
-    print(f'baseline {a.ref}: {len(old)} chars   segments (normalised): {len(new)} chars')
+    print(f'baseline {a.ref_file or a.ref}: {len(old)} chars   segments (normalised): {len(new)} chars')
     if new == old:
         print('IDENTICAL: the slice is a pure cut.')
         return 0

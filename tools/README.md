@@ -13,6 +13,7 @@ when the migration ends if that matters.
 | `compare_json.py` | Diff two fingerprint/style JSON files with numeric tolerance and an ignore list | Python 3 |
 | `css_concat_check.py` | Proves a CSS split is a pure cut (concatenation in `<link>` order == baseline `style.css`) | Python 3, git |
 | `js_concat_check.py` | Proves the Step 5 legacy slice is a pure cut (concatenation minus `import`/`export` == baseline `script.js`) | Python 3, git |
+| `check_site.py` | `paths`: every `src`/`href` and gallery image name matches a file with exactly the same case (GitHub Pages is case-sensitive) and the script manifest has no `module`/`async`; `globals`: diff `window` against `baseline/globals.json` (only `MB` may be new) | Python 3, git, Chrome |
 | `serve.py` | Static no-cache server that works from any cwd (`--dir`), optional `POST /__save/<n>.json` | Python 3 |
 
 ## Run a check against the baseline
@@ -36,7 +37,7 @@ Then look at `/tmp/after/screenshots/<profile>/*.jpg` next to `tools/baseline/sc
 Pure-cut proofs:
 ```bash
 python3 tools/css_concat_check.py                                   # Phase E1
-python3 tools/js_concat_check.py --files js/legacy/*.js             # Step 5 (list files in main.js import order)
+python3 tools/js_concat_check.py --ref-file <copy of script.js saved just before the slice> --files js/legacy/*.js   # Step 5 (done; byte-identical)
 ```
 
 ## What is expected to differ vs. the baseline
@@ -46,12 +47,14 @@ python3 tools/js_concat_check.py --files js/legacy/*.js             # Step 5 (li
 - **`window.* globals present`** in the fingerprint is the migration-debt list; entries are *expected* to disappear as steps remove them (see ARCHITECTURE §4). Debug hooks (`__garden`, `__world`, `__dand`, `__vineDebug`) must remain.
 - **Console:** zero errors/warnings on load and during the run, in every profile.
 
-## Always also run over `file://` (the site is opened by double-clicking `index.html`)
+## Verify in all three serving modes: `file://`, local server, GitHub-Pages-style
+The site is opened by double-clicking `index.html`, so `file://` is the primary mode.
 ```bash
 python3 tools/capture.py --url "file://$PWD/index.html" --only desktop,phone --out /tmp/after-file
 python3 tools/compare_json.py tools/baseline/styles.desktop.json /tmp/after-file/styles.desktop.json --ignore url
 ```
-Browsers refuse `type="module"` scripts on `file://`; an http-only check cannot catch that (Step 1 failure).
+Browsers refuse `type="module"` scripts on `file://`; an http-only check cannot catch that (this broke the first Step 1 attempt).
+GitHub-Pages-style = serve a clean export of only the repo's files, e.g. copy `git ls-files -c -o --exclude-standard` to a scratch folder and `python3 tools/serve.py --dir <folder> --port 8095`, then run `capture.py` against it; plus `python3 tools/check_site.py paths` (case-sensitive names) and `python3 tools/check_site.py globals`.
 
 ## Profiles (what `capture.py` emulates)
 `desktop` 1440×900 fine pointer · `desktop-rm` same with `prefers-reduced-motion: reduce` (smoke only) · `laptop` 1024×768 · `tablet` 768×1024 · `phone` 390×844 mobile + touch (coarse pointer, `maxTouchPoints` 5, DPR 2).

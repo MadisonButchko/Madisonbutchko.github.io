@@ -15,6 +15,7 @@ before any refactor.
 - `console.<profile>.json`: every console message/exception/browser log entry during load and the run. **All five profiles: 0 entries.**
 - `styles.<profile>.json`: computed styles of 46 structural selectors (desktop, laptop, tablet, phone). Re-captured twice: **0 differences** between runs (deterministic).
 - `fingerprint.<profile>.json`: smoke result for desktop, desktop-rm, phone.
+- `globals.json`: the 280 non-standard `window` property names of the pre-modular site (from `check_site.py globals --save` on the tag copy): the reference for "no new globals".
 - `screenshots/<profile>/{home,about,experience,skills,gallery,contact,footer}.jpg`: one viewport screenshot per section after scrolling to it (JPEG q60).
 
 ## Measured facts (baseline values to preserve)

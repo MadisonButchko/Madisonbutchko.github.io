@@ -5,7 +5,7 @@ It must work from `file://` (double-click), a local server (`python3 -m http.ser
 
 ## Read first
 - **`ARCHITECTURE.md`** before any structural or feature work. Its routing table says which files to read for a given request.
-- **`MIGRATION_PLAN.md`** while the migration is in progress (code may still live in `script.js` / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
+- **`MIGRATION_PLAN.md`** while the migration is in progress (code may still live in `js/legacy/*` (the old `script.js`) / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
 
 ## Rules
 - Preserve existing design, content, animation, timing and behavior unless explicitly asked to change it. This is not a redesign.

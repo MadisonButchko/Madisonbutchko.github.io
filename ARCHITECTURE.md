@@ -3,8 +3,8 @@
 The permanent guide to how this site is organised. **Read this before changing anything.**
 Migration steps (temporary) live in [MIGRATION_PLAN.md](MIGRATION_PLAN.md).
 
-> **STATUS: migration in progress (Phase A).** Today the code is still `script.js` (4,653 lines), `ecosystem.js`
-> (155) and `style.css` (2,769); the shared namespace loader `js/core/namespace.js` exists but nothing is moved into it yet.
+> **STATUS: migration in progress (Phase C).** `js/core/` (namespace, utils, scheduler, state, particles), `js/gallery/` (artworks, gallery) and `js/effects/` (petals, flower-fx, scroll-effects, text-effects) are real `MB.define` modules (Steps 1-3, 6).
+> The remaining features live in `js/legacy/` (19 files, the old `script.js`), `ecosystem.js` (155) and `style.css` (2,769).
 > §1–§10 describe the **target**; §0 says where things live **right now**.
 > As each migration step lands, update §0 (rows disappear as code reaches its home) and the global-debt table (§4).
 
@@ -45,20 +45,48 @@ debug hook if any. Keeping headers true is part of every change; they are what l
 
 ## 0. Where things live right now (as of commit `9b824c4`)
 
-Approximate line numbers; valid only until the code is moved. Use them to read only the range you need.
+Approximate line numbers; valid only until the code is moved. Use them to read only the range you need. **The numbers below are the original (`git show pre-modular:script.js`) numbering.** Original numbers are kept only as section identifiers; use the legacy file index above to open the right file.
 
-### script.js
+### js/legacy/ (the old `script.js`, sliced in Step 5; `script.js` no longer exists)
+`js/legacy/NNN-*.js` are plain classic scripts: a pure cut of the old file (their concatenation in tag order is byte-identical to it), loaded as ordered `defer` tags, sharing global `const`/`let` bindings exactly like one script did. They have no module header (that would break the pure cut); a header is written when the code moves into an `MB.define` module. **Find code by file name; the "Lines" column below is the original `script.js` numbering and only identifies the section.**
+
+| Legacy file | Contains | Target home |
+|---|---|---|
+| `010-legacy-lookups.js` | one-line lookups of `Life`, `WorldState`, `artworks`, `openArtwork`, `buildCollage` (+ their `window.Life` alias) | deleted as their last readers move |
+| `020-reveal-scroll-spy.js` | scroll-spy (the `.reveal` observer line is now `effects.scroll-effects.reveal()`) | `navigation/` |
+| ~~`030-petals.js`~~ | **moved in Step 6** → `js/effects/petals.js` (same tag position) | done |
+| `040-hero-letters.js` | hero name letters wave (Flower FX a) | `site/hero.js` |
+| `050-vine-growth.js` | scroll progress + growing vines (Flower FX b) | `plants/vines.js` |
+| ~~`060-click-blooms-photo-pops.js`~~ | **moved in Step 6** → `js/effects/flower-fx.js` (same tag position) | done |
+| `070-drifting-butterfly.js` | the drifting butterfly (Flower FX d) | `animals/butterflies.js` |
+| `080-about-hero.js` | About word-by-word text; hero role rotator, fan shuffle, glow | `site/hero.js` |
+| `090-fx-v2-titles-gallery-fan.js` | `text-effects.titles()` call; the gallery `enhance()` call; hero fan rotation | `site/hero.js` (fan) |
+| `100-fx-v3-cursor.js` | `text-effects.hoverSettle()` call; rainbow glow; butterfly cursor; the gallery `frame()` call | `effects/cursor.js` |
+| `110-v4-background-nav-sunflower.js` | `scroll-effects.pageBg()` call; nav pill; corner sunflower + back-to-top | `navigation/` |
+| `120-flower-nav.js` | flower nav (a flower per link, butterfly to your section) | `navigation/` |
+| `130-vine-stems-butterflies.js` | vine stems + vine butterflies | `plants/vines.js`, `animals/butterflies.js` |
+| `140-side-vines-and-garden.js` | **1,432 lines**: side vines (click sprigs, vine caterpillar, vine/flyby birds), flower patches, scattered blooms, the footer garden game incl. deer and weather | `plants/*`, `animals/*`, `garden/*`, `environment/weather.js` |
+| `150-info-popins-bg-shift.js` | two calls only: `scroll-effects.popins()` and `.bgShift()` | removed with Phase D wiring |
+| `160-guide-bird.js` | red guide bird | `animals/guide-bird.js` |
+| `170-photo-frames.js` | photo floral frames | `site/hero.js` |
+| `180-text-hover-color.js` | one call only: `text-effects.hoverColor()` | removed with Phase D wiring |
+| `190-botanical.js` | Experience garden, Skills herbarium, stage, bouquet, links, seed of curiosity | `botanical/*`, `easter-eggs/` |
+| `200-little-world.js` | world helpers, sunlight, bird + seed feeding, nest, caterpillar story, dandelions, rain cloud, heartbeat, `window.World` | `core/safe-zones.js`, `animals/*`, `plants/*`, `environment/*`, `core/scheduler.js` |
+| `210-v11-polish.js` | `scroll-effects.offscreen()` and `text-effects.rainbowLetters()` calls (`window.__rainbow` is published by that module); `Spin`, touch responses, late-flower adoption, chrysalis, dandelions | `plants/*`, `animals/*` |
+
+Original `script.js` sections, for reference (original numbering):
+
 
 | Lines | What it is | Target home |
 |---|---|---|
-| 1–35 | `Life` (one-creature-at-a-time director), `WorldState` | `core/scheduler.js`, `core/state.js` |
-| 36–116 | **top-level** (not an IIFE): artwork data, lightbox, gallery preview wiring (`let buildCollage`/`updateLightbox` stubs reassigned at 497+), `.reveal` observer, scroll-spy, Escape | `gallery/*`, `effects/scroll-effects.js`, `navigation/` |
+| ~~1–35~~ | ~~`Life`, `WorldState`~~ **moved in Step 2** (`script.js` keeps one-line lookups at lines 2 and 6) | `js/core/scheduler.js`, `js/core/state.js` |
+| 36–116 | ~~artwork data, lightbox, gallery preview wiring, `buildCollage`/`updateLightbox` stubs, gallery Escape key~~ **moved in Step 3** into `js/gallery/` (`script.js` keeps 2 legacy lookups at lines 9–10); **still here:** the `.reveal` observer (`rvIO`) and scroll-spy (original 82–83) | `effects/scroll-effects.js`, `navigation/` |
 | 117–181 | drifting petals (2 canvases) + click bursts | `effects/petals.js` |
-| 183–401 | **mixed IIFE "Flower FX"**: hero name-letter wave (202), vine scroll-growth (214–337), click-bloom stamp (339), photo flower pops (361), drifting butterfly (380) | `site/hero.js`, `plants/vines.js`, `effects/flower-fx.js`, `animals/butterflies.js` |
+| 183–401 | **carved in Step 4** (still in `script.js`, same order) into four blocks: **(a)** hero name-letter wave, **(b)** scroll progress + growing vines (`__gm`, `__vineUpdate`, `__vineQ`, `__vineBonus`), **(c)** click blooms + photo pops, **(d)** the drifting butterfly. Each has its own `reduce`/`NS`/`rand` copies (blocks b and c each carry the small `FLOWERS` palette) | `site/hero.js`, `plants/vines.js`, `effects/flower-fx.js`, `animals/butterflies.js` |
 | 403–451 | About word reveal; hero role rotator, photo fan, glow | `site/hero.js` |
-| 453–711 | **mixed IIFE "FX v2"**: section-title letters + squiggles (463), gallery preview/modal/collage/lightbox extras (486–694), hero fan rotation (697) | `effects/text-effects.js`, `gallery/*`, `site/hero.js` |
-| 713–788 | **mixed**: text hover settle, rainbow cursor glow (735), butterfly cursor + trail (742), gallery rainbow frame (781) | `effects/text-effects.js`, `effects/cursor.js`, `gallery/` |
-| 790–877 | **mixed**: page-bg/ambient layers (792), nav pill (796), corner sunflower scroll indicator + back-to-top (805–876) | `effects/scroll-effects.js`, `navigation/` |
+| 453–711 | **carved in Step 4** into **(a)** animated titles (squiggle gradient, section-title letters, hello squiggle) and **(c)** hero photo fan rotation; between them `script.js` calls `MB.use('gallery.gallery').enhance()` (**Step 3**) | `effects/text-effects.js`, `site/hero.js` |
+| 713–788 | **carved in Step 4** into **(a)** text hover settle, **(b)** rainbow glow, **(c)** butterfly cursor + trail (the gallery rainbow frame moved in Step 3: `MB.use('gallery.gallery').frame()` at that spot) | `effects/text-effects.js`, `effects/cursor.js` |
+| 790–877 | **carved in Step 4** into **(a)** page-bg + ambient layers, **(b)** sliding nav pill, **(c)** corner sunflower scroll indicator + back-to-top | `effects/scroll-effects.js`, `navigation/` |
 | 879–944 | flower nav; vine stems + vine butterflies | `navigation/`, `plants/vines.js`, `animals/butterflies.js` |
 | 946–1428 | **side vines**: slots/sprigs (984–1106), `growVine` + tip hint (1107–1195), vine bird (1196–1239), vine caterpillar (1240–1396), flyby birds (1400–1428) | `plants/vine-sprigs.js`, `animals/birds.js`, `animals/vine-caterpillar.js` |
 | 1429–1563 | flower patches + scattered blooms/leaves in empty margins | `plants/decor.js` |
@@ -68,9 +96,9 @@ Approximate line numbers; valid only until the code is moved. Use them to read o
 | 2522–2701 | photo floral frames; text hover colour | `site/hero.js`, `effects/text-effects.js` |
 | 2703–3643 | **botanical interface**: content (2752), discoveries (2786), visitor butterfly/bee (2821), plant geometry (2892), **Stage** (2929–3358), bouquet (3375), links (3514), seed of curiosity (3562), hidden moments + tap-hover (3620–3640) | `botanical/*`, `animals/butterflies.js`, `easter-eggs/` |
 | 3645–4072 | **the little world**: helpers (3665–3697), sunlight (3699), bird + seed feeding (3729–3853), nest (3855), caterpillar story (3886), dandelion/sprouts (3938–3990), rain cloud (3992), **heartbeat + rare-event roll** (4044), `window.World` | `core/safe-zones.js`, `environment/breeze.js`, `animals/*`, `plants/*`, `environment/weather.js`, `core/scheduler.js` |
-| 4074–4652 | "v11 polish": off-screen pause, rainbow letters, `Spin`, `FX`, `GardenLog`, touch responses, late-flower adoption, chrysalis, **dandelions**, two tap-for-hover handlers | `core/particles.js`, `core/state.js`, `plants/*`, `effects/` |
+| 4074–4652 | "v11 polish": off-screen pause, rainbow letters, `Spin`, ~~`FX`, `GardenLog`~~ (**moved in Step 2**), touch responses, late-flower adoption, chrysalis, **dandelions**, two tap-for-hover handlers | `core/particles.js`, `core/state.js`, `plants/*`, `effects/` |
 
-### ecosystem.js (loaded after script.js)
+### ecosystem.js (loaded after the legacy files)
 Seed-packet pour (→ `plants/seeds.js`); per-flower breathing, off-screen pause, pollen, click-bloom delay, rare visitor
 (→ `plants/flowers.js`); cursor breeze (→ `environment/breeze.js`). Exposes `window.__eco`.
 
@@ -84,7 +112,7 @@ v13 living plants (2607). ≈ 72 of 631 class names are never referenced from JS
 ### index.html
 Structure and content only: SVG symbol sprite (≈ 15–37), sections `#home #about #experience #skills #gallery #contact`, footer,
 `#galleryModal`, `#lightbox`, `<template id="xpData">` (~340 lines) and `<template id="skData">`. Loads `style.css?v=28`,
-`script.js?v=33`, `ecosystem.js?v=4` (all ordered `defer` scripts, see the manifest in §1b). No inline handlers. Keep it that way.
+the `js/core`, `js/gallery`, 21 `js/legacy` files and `ecosystem.js` (all ordered `defer` scripts with `?v=` tags; see the manifest in §1b and the comment in `index.html`). No inline handlers. Keep it that way.
 
 ---
 
@@ -299,14 +327,17 @@ They are legacy: new code must not read them, and each disappears when its code 
 MIGRATION_PLAN keeps working: sibling classic scripts still see them).
 | Global | Defined (script.js) | Read by | Becomes |
 |---|---|---|---|
-| `Life`, `GardenLog`, `__fx`, `World` | 26, 4211, 4189, 4063 | many | `core/*` modules (declared dependency) |
+| `Life`, `GardenLog`, `__fx` | **now `MB.use('core.…')` lookups + the original `window.*` alias lines in `script.js`** (lines 3, ~4143, ~4141) | many (legacy) | delete the alias line when its last legacy reader moves |
+| `World` | 4063 | many | `core/*` modules (declared dependency) |
+| `artworks`, `openArtwork`, `buildCollage` (legacy `const` lookups at the top of `script.js`) | `gallery.artworks` / `gallery.gallery` | the botanical "seed of curiosity" block (feature-detects them with `typeof`; the art pool silently empties without them) | declare `gallery.*` as a dependency of `botanical/links.js` and delete the lookups in Step 13 |
 | `__gm`, `__vineUpdate`, `__vineQ`, `__vineBonus` | 280, 323–326 | 1061, 1055, 1100, 1184 | public API of `plants/vines.js` |
 | `__vineSprigs`, `__onVineLayout`, `__onVineTick` | 1075, 1144, 4383 | 303, 252, 319 | hook registration on `vines.js` (breaks the cycle) |
 | `__birdSVG`, `__cloudSVG` | 954, 2288 | 3735, 3997/4002 | shared art module (`animals`, `weather`) |
 | `__guideBird` | 2470 | 3777, 3798, 3804 | `guide-bird.js` public API |
 | `__visitFlower` | 2828 | ecosystem.js 148 | `butterflies.js` public API |
 | `__eco` | ecosystem.js 154 | 3609 | `plants/seeds.js` public API |
-| `__rainbow`, `__spin`, `__story` | 4117, 4165, 3934 | 3112; 3194, 4023, 931, 939; 4052, 4064 | public API of text-effects / flowers / caterpillar |
+| `__rainbow` | **now set inside `effects.text-effects.rainbowLetters()`** (same moment as before) | `190-botanical.js` (stage) | declare `effects.text-effects` as a dependency of `botanical/stage.js`, then drop the global |
+| `__spin`, `__story` | 4165, 3934 | 3194, 4023, 931, 939; 4052, 4064 | public API of flowers / caterpillar |
 | `__deerSVG`, `__scatterPlace`, `__adoptFlowers` | 2025, 1561, 4359 | **no reader found** | verify, then drop |
 | `__garden`, `__world`, `__dand`, `__vineDebug` | debug-only (`?gardendebug`, `?worlddebug`, `?v11debug`) | tests | **keep** |
 
