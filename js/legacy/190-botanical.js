@@ -900,7 +900,7 @@
             if (busy) return; busy = true;
             const it = draw();
             packet.classList.add('opening'); say('Sprouting: ' + it.title, true);
-            const pour = window.__eco && window.__eco.pour ? window.__eco.pour(packet) : 0;
+            const pour = MB.use('plants.seeds').pour(packet);   /* plants/seeds.js (was window.__eco.pour) */
             setTimeout(() => {
                 packet.classList.remove('opening'); busy = false;
                 if (it.type === 'card') { gotoItem(it.cat + ':' + it.id); say('Planted: ' + it.title); }

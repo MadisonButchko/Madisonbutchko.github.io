@@ -49,7 +49,6 @@
     }
     /* (the dandelions themselves live in the v11 pass below: several of them, sharing one drift loop) */
     setTimeout(seeds.sprouts, 1500);
-    const beatFns = [];
 
     /* A small rain cloud, rarely (js/environment/weather.js) */
     const { rainCloud } = MB.use('environment.weather');
@@ -58,28 +57,21 @@
        One heartbeat for all of it. Small things are occasional; bigger
        ones wait for a quiet stretch, so the page keeps returning to calm.
        ------------------------------------------------------------------ */
-    let beats = 0;
-    setInterval(() => {
-        if (document.hidden) return;
-        beats++;
-        checkWaiting();
-        caterpillar.advance();
-        nest.render();
-        beatFns.forEach(fn => { try { fn(beats); } catch (e) { } });
-        if (beats > 6 && !seed.el && W.explored >= 2 && Math.random() < 0.06) seed.spawn();
-        if (!Life.calm(40000)) return;                  /* quiet stretch first */
-        const r = Math.random();
-        if (r < 0.03) rainCloud();
-        else if (r < 0.06) steal();
-        else if (r < 0.12) nest.visit();
-    }, 6000);
+    /* the heartbeat itself and the single weighted rare-event roll live in js/core/scheduler.js (Beat) */
+    const { Beat } = MB.use('core.scheduler');
+    Beat.rare('rain', 0.03, rainCloud);
+    Beat.rare('thief', 0.03, steal);
+    Beat.rare('nest-visit', 0.06, () => nest.visit());
+    Beat.start(6000,
+        () => { checkWaiting(); caterpillar.advance(); nest.render(); },
+        beats => { if (beats > 6 && !seed.el && W.explored >= 2 && Math.random() < 0.06) seed.spawn(); });
 
     window.World = {
         note(n) { W.explored += n || 1; save(); caterpillar.advance(); },
         /* shared with the v11 pass below, so it reuses these instead of making its own */
         sparkle, gather, placeIn, openSpot, clearAt, inView, whenUnseen, contentRects,
         seedAt: at => seed.spawn(at), hasSeed: () => !!seed.el, nestStage: () => W.nest,
-        plantSeed: seeds.plantSeed, onBeat: fn => beatFns.push(fn), calm: ms => Life.calm(ms)
+        plantSeed: seeds.plantSeed, onBeat: fn => Beat.onBeat(fn), calm: ms => Life.calm(ms)
     };
     /* test hook, only when the page is opened with ?worlddebug */
     if (/[?&]worlddebug\b/.test(location.search)) window.__world = { seed: () => seed.spawn(), steal, rain: rainCloud, nestVisit: () => nest.visit(), state: W, sprouts: seeds.sprouts };
