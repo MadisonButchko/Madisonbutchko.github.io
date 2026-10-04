@@ -3,7 +3,7 @@
 The permanent guide to how this site is organised. **Read this before changing anything.**
 Migration steps (temporary) live in [MIGRATION_PLAN.md](MIGRATION_PLAN.md).
 
-> **STATUS: migration in progress (Phase C).** Real `MB.define` modules: `js/core/` (namespace, utils, scheduler, state, particles), `js/gallery/` (artworks, gallery), `js/effects/` (petals, flower-fx, scroll-effects, text-effects, cursor), `js/navigation/` (navigation, scroll-sunflower) and `js/site/hero.js` (Steps 1-3, 6-8).
+> **STATUS: migration in progress (Phase C).** Real `MB.define` modules: `js/core/` (namespace, utils, scheduler, state, particles, safe-zones), `js/gallery/` (artworks, gallery), `js/effects/` (petals, flower-fx, scroll-effects, text-effects, cursor), `js/navigation/` (navigation, scroll-sunflower) and `js/site/hero.js` (Steps 1-3, 6-9).
 > The remaining features live in `js/legacy/` (19 files; many are already just calls into the modules), `ecosystem.js` (155) and `style.css` (2,769).
 > §1–§10 describe the **target**; §0 says where things live **right now**.
 > As each migration step lands, update §0 (rows disappear as code reaches its home) and the global-debt table (§4).
@@ -71,7 +71,7 @@ Approximate line numbers; valid only until the code is moved. Use them to read o
 | `170-photo-frames.js` | one call: `site.hero.photoFrames()` | removed with Phase D wiring |
 | `180-text-hover-color.js` | one call only: `text-effects.hoverColor()` | removed with Phase D wiring |
 | `190-botanical.js` | Experience garden, Skills herbarium, stage, bouquet, links, seed of curiosity | `botanical/*`, `easter-eggs/` |
-| `200-little-world.js` | world helpers, sunlight, bird + seed feeding, nest, caterpillar story, dandelions, rain cloud, heartbeat, `window.World` | `core/safe-zones.js`, `animals/*`, `plants/*`, `environment/*`, `core/scheduler.js` |
+| `200-little-world.js` | world helpers *(safe-zone helpers moved to `core/safe-zones.js` in Step 9; this file keeps one lookup line)*, sunlight, bird + seed feeding, nest, caterpillar story, dandelions, rain cloud, heartbeat, `window.World` | `animals/*`, `plants/*`, `environment/*`, `core/scheduler.js` |
 | `210-v11-polish.js` | `scroll-effects.offscreen()` and `text-effects.rainbowLetters()` calls (`window.__rainbow` is published by that module); `Spin`, touch responses, late-flower adoption, chrysalis, dandelions | `plants/*`, `animals/*` |
 
 Original `script.js` sections, for reference (original numbering):
@@ -289,8 +289,8 @@ One rAF-coalesced pointer tracker with position, velocity and `subscribe(fn)`. C
 dandelion brush), because they only matter while the pointer is over/dragging that element and centralising them adds cost, not clarity.
 Touch: pointer.js does not track touch position continuously (no hover on touch); drags remain local to their element.
 
-### safe-zones.js (extracted verbatim first; unified later)
-`clearAt`, `openSpot`, `contentRects`, `navBottom`, `inView`, `whenUnseen`. Today there are **five** divergent selector lists (`CONTENT` ×2, `BLOCK` ×2,
+### safe-zones.js (extracted verbatim in Step 9; unified in Phase D)
+`clearAt`, `openSpot`, `contentRects`, `navBottom`, `inView`, `whenUnseen`, `checkWaiting` (+ `offscreen`, and the `BLOCK` list); `whenUnseen`'s private waiting list lives in the module, and the world heartbeat still calls `checkWaiting`. Today there are **five** divergent selector lists (`CONTENT` ×2, `BLOCK` ×2,
 `BLOCKERS`). They are moved as-is, then unified in a dedicated step because their differences are observable (placement changes). Elements that
 belong to the world and may overlap carry `.w-ignore`.
 
