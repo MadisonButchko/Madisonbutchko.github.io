@@ -1,4 +1,6 @@
-# MIGRATION PLAN (temporary: delete when finished)
+# MIGRATION PLAN — COMPLETE (kept as history/reference only)
+
+> **Status: finished.** Steps 0–15, Phase D items 3 and 5, Phase E1 and Phase F are done; see [STATUS.md](STATUS.md). Phase D items 1, 2, 4 were deliberately not done (they change behavior/timing). Nothing below is pending work, and the per-step "Next step" notes are historical.
 
 Goal: reach the structure in [ARCHITECTURE.md](ARCHITECTURE.md) through small, individually revertible commits.
 Decisions fixed by the owner: **ordered classic `<script src defer>` files sharing one `window.MB` namespace (no ES modules; the site must work identically from `file://`, a local server and GitHub Pages)** · deer in `animals/deer.js` with a small garden-facing API · files split only for real independent logic
@@ -243,4 +245,4 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - **No automated tests exist.** T1/T2 are manual + the Step 0 console snippet; that is why every step is small.
 
 ## Next step to perform
-Steps 0-9 are complete. **Step 10** (the little world, one commit each) is next.
+None: migration complete (see the banner at the top and STATUS.md).
