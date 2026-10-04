@@ -1,7 +1,7 @@
 # STATUS (handoff)
 
 ## Status
-- **Migration Steps 0–15 complete and verified** (T1 per step, T2 after Steps 10, 12, 13, 14, final pass after 15; file://, local server and Pages-style export all match the `pre-modular` baseline). Remaining: Phase D (consolidation), E (CSS), F (dead code) — all optional/later, one change per commit.
+- **Migration Steps 0–15 and Phase D items 3 and 5 complete and verified** (uncommitted). Phase D items 1 (core/pointer), 2 (unify safe-zone lists) and 4 (merge timers) are deliberately NOT done: they change observable behavior/timing and need approval. Next optional phases: E (CSS), F (dead code).
 
 ## Important architecture
 - Classic `<script src defer>` files, **not ES modules** (modules break on `file://`).
@@ -28,8 +28,8 @@
 - Always verify `file://`, local server, and a Pages-style export (copy of tracked files, served).
 
 ## Leftovers for later phases
-- Thin legacy wiring files remain (`js/legacy/*`: mostly one-line `MB.use(...)` calls; real code left in `070` drifting butterfly, `200` World/placeIn/heartbeat registration, `210`, `140` vine wiring). Phase D moves modules to `init()` + `main.js`.
-- Window debt still read by legacy code: `World`, `Life`, `GardenLog`, `__fx`, `__spin`, `__adoptFlowers`, `__birdSVG`, `__cloudSVG`, `__deerSVG`, `__visitFlower`, `__rainbow`, `__scatterPlace`.
+- `js/legacy/` is gone; `js/main.js` is the single ordered init sequence (keep its order and `boundary()` calls; verified identical to the old load order: 890 / 653 ordered side effects normal / reduced motion). Gallery's first block still runs at definition (it owns private state `enhance()` reassigns).
+- Test env note: Google Chrome vanished from /Applications mid-session; tools/ hardcode its path. Phase D checks ran under Brave (new vs a served `git archive HEAD` export); re-run against `tools/baseline/` once Chrome is back.
 - Dead code (Phase F): `BF` constant and `addStems` in `plants/vines.js`; `shouldVisit` placeholder (returns false) in `animals/butterflies.js`; the `TODO(human)` note on `clickGrowthLimit` in `plants/vine-sprigs.js`; unused header destructure in `legacy/140`; the passive `.w-nest/.w-story/.w-jade` are CSS-hidden (`display:none !important`).
 - Five content-avoidance selector lists still differ (unify only in Phase D).
 
@@ -50,4 +50,4 @@
 - Reuse existing tests; no new test infrastructure unless necessary.
 - Keep commentary concise. Targeted tests first; broad baseline only where required.
 
-NEXT: Phase D (consolidation) — only when asked; Phase F dead-code list below
+NEXT: Phase E (CSS) — only when asked

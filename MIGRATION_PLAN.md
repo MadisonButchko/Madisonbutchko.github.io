@@ -220,11 +220,11 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - 2391–2520. `__guideBird` becomes the public API of `animals.guide-bird`, a declared dependency of `animals.birds`. **T1:** flutters in empty spaces, points to the garden, yields to purposeful creatures, phone behaviour unchanged.
 
 ## Phase D: consolidation (behaviour-adjacent; one change per commit)
-1. `core/pointer.js` + subscribe: migrate rainbow glow, butterfly cursor, vine breeze, sunlight, wind **one at a time**; then the three duplicated tap-for-hover handlers → `tapHover`. Risk medium–high: wind uses a 1300 px/s velocity threshold that depends on sampling; verify equivalence.
-2. Unify the five safe-zone selector lists (observable placement changes: review at 3 widths).
-3. Switch from run-at-definition to `init()` + registries (`animals.js`, `environment.js`, `easter-eggs.js`, `plants.js`); remove `window.World` and remaining `window.__*` (keep debug hooks); confirm `__deerSVG`, `__scatterPlace`, `__adoptFlowers` unread, then drop.
-4. Decide about merging the garden's own tick and the ecosystem rare-visitor timer into the scheduler (changes timing: only with explicit approval).
-5. Share creature/cloud art where two files use it (`animals/art.js`).
+1. **NOT DONE (changes sampling/timing; needs approval)** `core/pointer.js` + subscribe: migrate rainbow glow, butterfly cursor, vine breeze, sunlight, wind **one at a time**; then the three duplicated tap-for-hover handlers → `tapHover`. Risk medium–high: wind uses a 1300 px/s velocity threshold that depends on sampling; verify equivalence.
+2. **NOT DONE (observable placement changes; needs approval)** Unify the five safe-zone selector lists (observable placement changes: review at 3 widths).
+3. **DONE** (every module except gallery's first block now runs from `js/main.js`, which replays the old script order with a microtask `boundary()` at each former script end; `js/legacy/*` deleted; `window.World` → `core.world` registry; removed window globals `World, Life, GardenLog, __fx, __spin, __rainbow, __birdSVG, __cloudSVG, __deerSVG, __visitFlower, __adoptFlowers, __scatterPlace`; debug hooks kept; new `world/world.js`) Switch from run-at-definition to `init()` + registries (`animals.js`, `environment.js`, `easter-eggs.js`, `plants.js`); remove `window.World` and remaining `window.__*` (keep debug hooks); confirm `__deerSVG`, `__scatterPlace`, `__adoptFlowers` unread, then drop.
+4. **NOT DONE (timing; needs explicit approval)** Decide about merging the garden's own tick and the ecosystem rare-visitor timer into the scheduler (changes timing: only with explicit approval).
+5. **DONE** (`animals/art.js`: BIRD_SVG, CLOUD_SVG) Share creature/cloud art where two files use it (`animals/art.js`).
 - **T2 after each of 1–3.**
 
 ## Phase E: CSS (structural), separate from JS steps
