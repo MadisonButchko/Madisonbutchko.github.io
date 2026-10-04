@@ -1,6 +1,3 @@
-/* Every load starts fresh: the bouquet, the garden and the world's small memory are cleared before anything reads them. */
-try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* storage may be blocked: nothing to clear */ }
-
 /* =====================================================================
    Life: one director for every wandering creature. Only one moves at a
    time, so the page keeps returning to calm. A creature asks with
@@ -888,10 +885,6 @@ const WorldState = (() => {
         function navFlower(k){ const f = NAVFL[k % NAVFL.length]; const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'nav-fl'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false'); s.setAttribute('viewBox', '-50 -50 100 100'); s.style.color = f[1]; s.style.setProperty('--center', f[2]); s.innerHTML = '<use href="#' + f[0] + '" x="-50" y="-50" width="100" height="100"/>'; return s; }
         document.querySelectorAll('.nav a').forEach((a, idx) => {
             a.prepend(navFlower(idx));
-            // Match by section so mobile keeps the desktop flower and palette.
-            document.querySelectorAll('.m-menu a').forEach(link => {
-                if (link.getAttribute('href') === a.getAttribute('href')) link.prepend(navFlower(idx));
-            });
         });
         const nav = document.querySelector('.nav');
         if (nav){
@@ -1154,7 +1147,7 @@ const WorldState = (() => {
             buildSlots();
             const tip = document.createElement('div'); tip.className = 'vine-tip'; document.body.appendChild(tip);
             const TIP = (hoverable ? 'click' : 'tap') + ' the vine to grow it ' + FLI;
-            let tipHold = 0;
+            let tipHold = 0, tipTimer = 0;
             ['left', 'right'].forEach(side => {
                 const hit = document.createElement('div'); hit.className = 'vine-hit ' + side; hit.setAttribute('aria-hidden', 'true'); document.body.appendChild(hit);
                 hit.addEventListener('mousemove', e => {
@@ -1173,9 +1166,19 @@ const WorldState = (() => {
                     if (!quick && growVine(side, e.clientY)){ lastGrow = Date.now(); return; }
                     react(v, e.clientX, e.clientY);
                     if (quick) return;
-                    tip.innerHTML = 'this stretch is in full bloom ' + FLI; tipHold = Date.now() + 1600; tip.classList.add('show');
-                    tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
-                    setTimeout(() => { if (Date.now() >= tipHold) tip.classList.remove('show'); }, 1700);
+                    clearTimeout(tipTimer);   /* a new tap resets the one message instead of stacking */
+                    tip.innerHTML = 'this stretch is in full bloom ' + FLI;
+                    const life = hoverable ? 1600 : 1200;   /* phones: brief, so it never covers what is being read */
+                    tipHold = Date.now() + life; tip.classList.add('show');
+                    if (hoverable) tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
+                    else {
+                        /* compact and clamped inside the viewport, hovering just above the tap so the finger does not hide it */
+                        const w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
+                        const x = Math.min(innerWidth - w - m, Math.max(m, e.clientX - w / 2 + (side === 'left' ? w / 2 + 14 : -w / 2 - 14)));
+                        const y = Math.min(innerHeight - h - m, Math.max(m, e.clientY - h - 18));
+                        tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+                    }
+                    tipTimer = setTimeout(() => tip.classList.remove('show'), life);
                 });
             });
             if (window.__vineUpdate) window.__vineUpdate();   /* size the click strips to the drawn vine right away */
@@ -2935,31 +2938,43 @@ const WorldState = (() => {
                 const r = box(b.getBoundingClientRect()), pad = 6;
                 return { left: r.left - pad, right: r.right + pad, top: r.top - pad, bottom: r.bottom + pad };
             });
-            const placed = [], width = Math.min(140, Math.max(94, pr.width * 0.27));
-            const hits = (a, b) => a.left < b.right + 5 && a.right > b.left - 5 && a.top < b.bottom + 5 && a.bottom > b.top - 5;
+            const placed = [], width = Math.min(140, Math.max(84, pr.width * 0.27));
+            const hits = (a, b) => a.left < b.right + 4 && a.right > b.left - 4 && a.top < b.bottom + 4 && a.bottom > b.top - 4;
+            const hc = { x: HC.x / VW * pr.width, y: HC.y / VH * pr.height };
+            const gap = pr.width < 420 ? 4 : 8;
             let highest = 0;
-            buds.forEach(b => {
+            buds.forEach((b, i) => {
                 const label = $('.gs-lab', b), br = box(b.getBoundingClientRect());
                 label.style.setProperty('--label-width', 'max-content');
                 label.style.maxWidth = width + 'px';
-                const lr = label.getBoundingClientRect(), labelWidth = lr.width, height = lr.height;
-                const baseX = Math.max(4, Math.min(pr.width - labelWidth - 4, (br.left + br.right - labelWidth) / 2));
-                const baseY = br.top - height - 14;
-                let best = null;
-                for (let rise = 0; rise <= 400; rise += 8) {
-                    for (let dx = -64; dx <= 64; dx += 8) {
-                        const x = Math.max(4, Math.min(pr.width - labelWidth - 4, baseX + dx)), y = baseY - rise;
-                        const rect = { left: x, right: x + labelWidth, top: y, bottom: y + height };
-                        const score = (x - baseX) ** 2 + rise ** 2 * 2;
-                        if ((!best || score < best.score) && !obstacles.concat(placed).some(r => hits(rect, r))) best = { rect, score };
+                const lr = label.getBoundingClientRect(), lw = lr.width, lh = lr.height;
+                const cx = (br.left + br.right) / 2, cy = (br.top + br.bottom) / 2;
+                /* outward direction from the flower's heart decides which edge of the petal the label hugs */
+                const ox = cx - hc.x, oy = cy - hc.y, mostlySide = Math.abs(ox) > Math.abs(oy) * 1.6;
+                const clampX = x => Math.max(2, Math.min(pr.width - lw - 2, x));
+                const spotsAt = e => {
+                    const above = { left: clampX(cx - lw / 2), top: br.top - lh - gap - e };
+                    const outer = { left: clampX(ox >= 0 ? br.right + gap + e : br.left - gap - e - lw), top: cy - lh / 2 };
+                    const diag = { left: clampX(ox >= 0 ? cx - 4 : cx + 4 - lw), top: br.top - lh - gap - e };
+                    const below = { left: clampX(cx - lw / 2), top: br.bottom + gap + e };
+                    return mostlySide ? [outer, above, diag, below] : [above, diag, outer, below];
+                };
+                /* only spots touching the petal's own edge (a few px of slack at most), never a free search;
+                   if every one collides, take the one that overlaps least */
+                const area = (r, o) => Math.max(0, Math.min(r.right, o.right) - Math.max(r.left, o.left)) * Math.max(0, Math.min(r.bottom, o.bottom) - Math.max(r.top, o.top));
+                let pick = null, bestOverlap = Infinity;
+                search: for (const e of [0, 8, 18]) {
+                    for (const sp of spotsAt(e)) {
+                        const rect = { left: sp.left, right: sp.left + lw, top: sp.top, bottom: sp.top + lh };
+                        const others = obstacles.filter((_, k) => k !== i).concat(placed).map(r => ({ left: r.left - 4, right: r.right + 4, top: r.top - 4, bottom: r.bottom + 4 }));
+                        const overlap = others.concat([obstacles[i]]).reduce((t, r) => t + area(rect, r), 0);
+                        if (overlap < bestOverlap) { bestOverlap = overlap; pick = rect; }
+                        if (!overlap) break search;
                     }
-                    if (best && rise ** 2 * 2 > best.score) break;
                 }
-                const candidate = best ? best.rect : { left: baseX, right: baseX + labelWidth, top: baseY - 440, bottom: baseY - 440 + height };
-                const x = candidate.left, y = candidate.top;
-                label.style.setProperty('--label-x', (x - br.left) + 'px');
-                label.style.setProperty('--label-y', (y - br.top) + 'px');
-                placed.push(candidate); highest = Math.min(highest, y);
+                label.style.setProperty('--label-x', (pick.left - br.left) + 'px');
+                label.style.setProperty('--label-y', (pick.top - br.top) + 'px');
+                placed.push(pick); highest = Math.min(highest, pick.top);
             });
             plant.style.setProperty('--label-headroom', Math.max(60, (innerWidth <= 700 ? 56 : 28) - highest) + 'px');
             piecesEl.classList.remove('gs-measure');
@@ -4345,23 +4360,20 @@ const WorldState = (() => {
         const layoutObserver = new ResizeObserver(validateSoon);
         $$('main > section').forEach(sec => layoutObserver.observe(sec));
         new MutationObserver(validateSoon).observe(document.querySelector('main'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded'] });
+        /* The wish can be offered again after a short quiet spell: one text at a time, then WISH_COOLDOWN before the next. */
+        const WISH_COOLDOWN = 4000;
+        let wishReadyAt = 0;
+        const endWish = () => { clearTimeout(wishTimer); wish?.remove(); wish = null; wishReadyAt = performance.now() + WISH_COOLDOWN; };
         function makeWish(d) {
-            // Each dandelion offers its wish once per visit; further taps dismiss it.
-            if (d.wished) {
-                if (wish?.dataset.sec === d.sec) {
-                    wish.classList.add('dismissed'); clearTimeout(wishTimer);
-                    wishTimer = setTimeout(() => { wish?.remove(); wish = null; }, 350);
-                }
-                return;
-            }
-            d.wished = true;
-            if (wish) wish.remove(); clearTimeout(wishTimer);
+            // While the words are showing, taps leave them be so they can be read in full.
+            if (wish) return;
+            if (performance.now() < wishReadyAt) return;
             const r = d.el.getBoundingClientRect();
             wish = document.createElement('span'); wish.className = 'dandelion-wish'; wish.setAttribute('role', 'status'); wish.dataset.sec = d.sec; wish.innerHTML = '<span class="wish-words">make a wish</span>';
             wish.style.left = Math.max(8, Math.min(innerWidth - 156, r.left + r.width / 2 - 74)) + 'px';
             wish.style.top = Math.max(72, r.top - 34) + 'px';
             document.body.appendChild(wish);
-            wishTimer = setTimeout(() => { wish?.remove(); wish = null; }, 2800);
+            wishTimer = setTimeout(endWish, 4800);
         }
         function regrow(d) {
             if (d.regrowTimer) return;
@@ -4548,15 +4560,3 @@ const WorldState = (() => {
     }, { passive: true });
 })();
 
-
-/* mobile header: name + hamburger, menu toggles, closes on link / outside tap / Escape / widening */
-(() => {
-    const hd = document.getElementById('mHeader'); if (!hd) return;
-    const btn = hd.querySelector('.m-toggle'), menu = hd.querySelector('.m-menu');
-    const set = open => { hd.classList.toggle('open', open); btn.setAttribute('aria-expanded', open); btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); };
-    btn.addEventListener('click', () => set(!hd.classList.contains('open')));
-    menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
-    document.addEventListener('click', e => { if (hd.classList.contains('open') && !hd.contains(e.target)) set(false); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && hd.classList.contains('open')) { set(false); btn.focus(); } });
-    matchMedia('(min-width: 769px)').addEventListener('change', e => { if (e.matches) set(false); });
-})();
