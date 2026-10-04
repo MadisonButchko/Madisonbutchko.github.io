@@ -3,8 +3,8 @@
 The permanent guide to how this site is organised. **Read this before changing anything.**
 Migration steps (temporary) live in [MIGRATION_PLAN.md](MIGRATION_PLAN.md).
 
-> **STATUS: migration in progress (Phase C).** `js/core/` (namespace, utils, scheduler, state, particles), `js/gallery/` (artworks, gallery) and `js/effects/` (petals, flower-fx, scroll-effects, text-effects) are real `MB.define` modules (Steps 1-3, 6).
-> The remaining features live in `js/legacy/` (19 files, the old `script.js`), `ecosystem.js` (155) and `style.css` (2,769).
+> **STATUS: migration in progress (Phase C).** Real `MB.define` modules: `js/core/` (namespace, utils, scheduler, state, particles), `js/gallery/` (artworks, gallery), `js/effects/` (petals, flower-fx, scroll-effects, text-effects, cursor), `js/navigation/` (navigation, scroll-sunflower) and `js/site/hero.js` (Steps 1-3, 6-8).
+> The remaining features live in `js/legacy/` (19 files; many are already just calls into the modules), `ecosystem.js` (155) and `style.css` (2,769).
 > §1–§10 describe the **target**; §0 says where things live **right now**.
 > As each migration step lands, update §0 (rows disappear as code reaches its home) and the global-debt table (§4).
 
@@ -53,22 +53,22 @@ Approximate line numbers; valid only until the code is moved. Use them to read o
 | Legacy file | Contains | Target home |
 |---|---|---|
 | `010-legacy-lookups.js` | one-line lookups of `Life`, `WorldState`, `artworks`, `openArtwork`, `buildCollage` (+ their `window.Life` alias) | deleted as their last readers move |
-| `020-reveal-scroll-spy.js` | scroll-spy (the `.reveal` observer line is now `effects.scroll-effects.reveal()`) | `navigation/` |
+| `020-reveal-scroll-spy.js` | two calls: `scroll-effects.reveal()` and `navigation.scrollSpy()` | removed with Phase D wiring |
 | ~~`030-petals.js`~~ | **moved in Step 6** → `js/effects/petals.js` (same tag position) | done |
-| `040-hero-letters.js` | hero name letters wave (Flower FX a) | `site/hero.js` |
+| `040-hero-letters.js` | one call: `site.hero.letters()` | removed with Phase D wiring |
 | `050-vine-growth.js` | scroll progress + growing vines (Flower FX b) | `plants/vines.js` |
 | ~~`060-click-blooms-photo-pops.js`~~ | **moved in Step 6** → `js/effects/flower-fx.js` (same tag position) | done |
 | `070-drifting-butterfly.js` | the drifting butterfly (Flower FX d) | `animals/butterflies.js` |
-| `080-about-hero.js` | About word-by-word text; hero role rotator, fan shuffle, glow | `site/hero.js` |
-| `090-fx-v2-titles-gallery-fan.js` | `text-effects.titles()` call; the gallery `enhance()` call; hero fan rotation | `site/hero.js` (fan) |
-| `100-fx-v3-cursor.js` | `text-effects.hoverSettle()` call; rainbow glow; butterfly cursor; the gallery `frame()` call | `effects/cursor.js` |
-| `110-v4-background-nav-sunflower.js` | `scroll-effects.pageBg()` call; nav pill; corner sunflower + back-to-top | `navigation/` |
-| `120-flower-nav.js` | flower nav (a flower per link, butterfly to your section) | `navigation/` |
+| `080-about-hero.js` | two calls: `site.hero.aboutWords()` and `.heroV3()` (role rotator, photo fan shuffle) | removed with Phase D wiring |
+| `090-fx-v2-titles-gallery-fan.js` | three calls: `text-effects.titles()`, `gallery.enhance()`, `site.hero.fanRotation()` | removed with Phase D wiring |
+| `100-fx-v3-cursor.js` | four calls: `text-effects.hoverSettle()`, `effects.cursor.glow()`, `.butterfly()`, `gallery.frame()` | removed with Phase D wiring |
+| `110-v4-background-nav-sunflower.js` | two calls: `scroll-effects.pageBg()`, `navigation.pill()` (the sunflower block is `navigation/scroll-sunflower.js`, loaded right after this file) | removed with Phase D wiring |
+| `120-flower-nav.js` | one call: `navigation.flowerNav()` | removed with Phase D wiring |
 | `130-vine-stems-butterflies.js` | vine stems + vine butterflies | `plants/vines.js`, `animals/butterflies.js` |
 | `140-side-vines-and-garden.js` | **1,432 lines**: side vines (click sprigs, vine caterpillar, vine/flyby birds), flower patches, scattered blooms, the footer garden game incl. deer and weather | `plants/*`, `animals/*`, `garden/*`, `environment/weather.js` |
 | `150-info-popins-bg-shift.js` | two calls only: `scroll-effects.popins()` and `.bgShift()` | removed with Phase D wiring |
 | `160-guide-bird.js` | red guide bird | `animals/guide-bird.js` |
-| `170-photo-frames.js` | photo floral frames | `site/hero.js` |
+| `170-photo-frames.js` | one call: `site.hero.photoFrames()` | removed with Phase D wiring |
 | `180-text-hover-color.js` | one call only: `text-effects.hoverColor()` | removed with Phase D wiring |
 | `190-botanical.js` | Experience garden, Skills herbarium, stage, bouquet, links, seed of curiosity | `botanical/*`, `easter-eggs/` |
 | `200-little-world.js` | world helpers, sunlight, bird + seed feeding, nest, caterpillar story, dandelions, rain cloud, heartbeat, `window.World` | `core/safe-zones.js`, `animals/*`, `plants/*`, `environment/*`, `core/scheduler.js` |

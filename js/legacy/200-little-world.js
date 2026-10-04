@@ -19,37 +19,8 @@
     const W = WorldState.get();
     const save = () => WorldState.save();
     const NS = 'http://www.w3.org/2000/svg';
-    /* is anything the visitor reads or clicks at (x, y)? decorations and the world's own pieces don't count */
-    const BLOCK = 'p,h1,h2,h3,h4,li,a,button,img,input,label,.nav,.hero-text,.collage,.about-body,.about-photo-wrap,.section-head,.section-hint,.xp-head,.garden,.herbarium,.mb-bouquet,.seed-wrap,.gallery-frame,.gallery-deviant,.contact-inner,.garden-bed,.garden-tip,.to-top,.guide-bird,.page-posy,.w-piece,footer';
-    function clearAt(x, y, r) {
-        if (x - r < 8 || x + r > innerWidth - 8 || y - r < navBottom() + 6 || y + r > innerHeight - 8) return false;
-        for (const dx of [-r, 0, r]) for (const dy of [-r, 0, r]) {
-            const top = document.elementsFromPoint(x + dx, y + dy).find(e => !e.closest('.w-ignore'));
-            if (top && top.closest(BLOCK)) return false;
-        }
-        return true;
-    }
-    const navBottom = () => { const n = [$('.m-header'), $('.nav')].find(x => x && x.getClientRects().length); return n ? n.getBoundingClientRect().bottom : 0; };
-    function openSpot(r, tries) {
-        for (let k = 0; k < (tries || 40); k++) {
-            const x = rand(20, innerWidth - 20), y = rand(navBottom() + 40, innerHeight - 60);
-            if (clearAt(x, y, r)) return { x, y };
-        }
-        return null;
-    }
-    /* runs fn once the element is out of view (so changes happen while nobody is looking) */
-    const offscreen = el => { const r = el.getBoundingClientRect(); return r.bottom < 0 || r.top > innerHeight || !r.width; };
-    const waiting = [];
-    function whenUnseen(el, fn) {
-        if (offscreen(el)) { fn(); return; }
-        let done = false;
-        const once = () => { if (done) return; done = true; io.disconnect(); fn(); };
-        const io = new IntersectionObserver(es => { if (!es[0].isIntersecting) once(); });
-        io.observe(el);
-        waiting.push({ el, once, done: () => done });   /* the heartbeat double-checks, in case the observer is throttled */
-    }
-    function checkWaiting() { for (let i = waiting.length - 1; i >= 0; i--) { const w = waiting[i]; if (w.done()) waiting.splice(i, 1); else if (offscreen(w.el)) { w.once(); waiting.splice(i, 1); } } }
-    const inView = el => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width && r.bottom > 60 && r.top < innerHeight - 40; };
+    /* safe-zone helpers (js/core/safe-zones.js): is anything the visitor reads or clicks at (x, y)? */
+    const { clearAt, navBottom, openSpot, whenUnseen, checkWaiting, inView, contentRects } = MB.use('core.safe-zones');
 
     /* ------------------------------------------------------------------
        Sunlight: flowers near the cursor lean toward it by a few degrees;
@@ -295,14 +266,6 @@
        the breeze. A few may take root further down the page, later.
        ------------------------------------------------------------------ */
     const SECTIONS = ['home', 'about', 'experience', 'skills', 'gallery', 'contact'];
-    /* what a reader actually sees in a section: text lines, images and controls (not the empty width of their boxes) */
-    function contentRects(sec) {
-        const rects = $$('img, button, a, input, svg.g-art, svg.h-art, .collage, .gallery-frame, .contact-photo, .about-photo, .seed-art, .page-posy, .scatter, .w-sprout, .gs-inner, .title-bloom, .w-dandelion:not([hidden]), .v11-bud', sec).map(e => e.getBoundingClientRect());
-        const tw = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, { acceptNode: n => n.textContent.trim() && !n.parentElement.closest('template, .vh') ? 1 : 2 });
-        const range = document.createRange();
-        for (let n = tw.nextNode(); n; n = tw.nextNode()) { range.selectNodeContents(n); rects.push(...range.getClientRects()); }
-        return rects.filter(r => r.width && r.height);
-    }
     function placeIn(sec, w, h, extra = []) {
         const sr = sec.getBoundingClientRect(), blocks = contentRects(sec).concat(extra), W2 = document.documentElement.clientWidth, m = 12;
         for (const fy of [0.995, 0.97, 0.9, 0.8, 0.68, 0.55, 0.4]) for (const fx of [0.025, 0.975, 0.06, 0.94, 0.12, 0.88, 0.2, 0.8]) {

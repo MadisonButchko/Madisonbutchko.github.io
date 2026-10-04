@@ -148,14 +148,27 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
   - **Baseline (single pass):** `check_site.py paths` PASS (74 references + 54 artwork files) and `globals` PASS (only `MB` new); `file://` all 5 profiles, local server (desktop, reduced motion, phone), Pages-style export (desktop, phone): 0 console entries, 0 style differences, smoke identical (storage keys, globals list, debug hooks, gallery) apart from random counts; screenshots within noise (tablet `home` 7.6 % is the auto-shuffling photo fan and the guide bird's bubble: layout identical).
   - **Regressions:** none.
 
-### Step 7: navigation + hero · low–medium
+### Step 7: navigation + hero · low–medium · **DONE**
 - Nav pill, mobile menu, scroll-spy, flower nav (with its butterfly), in-page links → `navigation/navigation.js`; sunflower scroll indicator/back-to-top → `navigation/scroll-sunflower.js`; hero letters wave, role rotator, photo fan (+ rotation), glow, About word reveal, photo floral frames → `site/hero.js`.
 - **Watch:** MutationObserver on `.nav` class changes; scroll+resize handlers; fan interval pause-on-hover/hold logic.
 - **T1:** every nav state desktop/phone, quick scroll spy, back-to-top morph, fan click/hover/dots, frames tucked on phones, RM.
 
-### Step 8: cursor effects → `effects/cursor.js` · medium
+### Step 8: cursor effects → `effects/cursor.js` · medium · **DONE**
 - Cursor ring, rainbow glow, butterfly cursor + trail, magnetic hovers. Listeners stay exactly as they are (centralising is Phase D).
 - **T1:** desktop (fine pointer) only; absent on touch; ring grows over links; glow follows; RM state.
+
+- **Step 7 result (verified):**
+  - **Created:** `js/navigation/navigation.js` (`scrollSpy()`, `pill()`, `flowerNav()`), `js/navigation/scroll-sunflower.js` (the corner sunflower + back-to-top; its block was the last statement of legacy `110`, so the module's tag sits right after that file and runs at definition time), `js/site/hero.js` (`letters()`, `aboutWords()`, `heroV3()` = role rotator + photo fan shuffle + glow, `fanRotation()`, `photoFrames()`). Entry-point modules load before the legacy files; each original spot is now one call (`MB.use('site.hero').letters();`), so execution order is unchanged.
+  - **Legacy files reduced to calls:** `020` (+scroll-spy), `040`, `080`, `090`, `110`, `120`, `170`.
+  - **Not in the code (plan text was stale):** there is **no mobile menu / hamburger** (the pill nav is used at every width) and the "in-page links / ways in" belong to the botanical block (Step 13), so neither moved.
+  - **Static proof:** line accounting shows only 8 IIFE wrappers and 6 banner comments disappeared; the three modules use only `MB`; strict-mode audit clean (0 undeclared assignments, 0 top-level `this`, 0 block functions).
+  - **Targeted tests (file://, differential vs the pristine baseline, 25 trace sections each on desktop / touch phone / reduced motion), all identical:** fan auto-rotation at 9.5 s / 13.6 s and role rotator; hero letters; About words DOM; fan card/dot/front clicks; nav init (links, flowers, bug, pill); active link + pill geometry + nav shrink + bug state at 11 scroll positions; click on a nav link (scroll target, active); sunflower state at 3 positions + back-to-top; photo floral frames over 8 clicks (seeded) on the contact photo and one fan card.
+- **Step 8 result (verified):**
+  - **Created:** `js/effects/cursor.js` (`glow()`, `butterfly()`); legacy `100` now only calls modules (`hoverSettle`, `glow`, `butterfly`, gallery `frame`). Window-level pointer/mouse listeners are exactly as before (centralising stays Phase D). **The "cursor ring" and "magnetic hovers" named in the plan do not exist in the JavaScript** (stale comments only), so nothing else moved.
+  - **Static proof:** only 2 wrappers and 2 banners removed; module uses only `MB`; strict-mode audit clean.
+  - **Targeted tests (8 sections desktop, 5 phone, 5 reduced motion; identical):** DOM of glow/butterfly/trail canvas (size, classes, `bf-cursor`), a 24-event pointer path (glow on and moving, butterfly on and positioned, trail drawn), `big` over a link and a photo but not the body, removal on `mouseleave`, return on re-entry; phone and reduced motion: neither effect exists in either version.
+- **Batch baseline (single pass, both steps):** `check_site.py paths` PASS (78 references, 54 artwork files), `globals` PASS (only `MB` new); the Step 4 differential suite (21 / 19 / 19 sections) identical; `file://` all 5 profiles, local server (desktop, reduced motion, phone), Pages-style export (desktop, phone): 0 console entries, 0 style differences, smoke identical (storage keys, globals, hooks, gallery) apart from random counts (reduced-motion DOM-node total +2.7 %, the same noise seen at Step 2); screenshots within noise (phone/laptop `home` ≈ 11-12 % = photo fan and butterflies in different moments).
+- **Regressions (Steps 7 and 8):** none.
 
 ### Step 9: safe-zone helpers → `core/safe-zones.js` · medium
 - Move verbatim `clearAt`, `openSpot`, `offscreen`, `whenUnseen`, `checkWaiting`, `inView`, `navBottom`, `BLOCK`, `contentRects` (3665–3697). The other four selector lists stay put. `checkWaiting` is still called by the world heartbeat.
@@ -222,4 +235,4 @@ Re-wrap only; code stays in `script.js`, in the same order, so nothing can reord
 - **No automated tests exist.** T1/T2 are manual + the Step 0 console snippet; that is why every step is small.
 
 ## Next step to perform
-Steps 0-6 are complete. **Step 7** (navigation + hero) is next.
+Steps 0-8 are complete. **Step 9** (safe-zone helpers → `core/safe-zones.js`) is next.
