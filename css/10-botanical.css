@@ -78,17 +78,34 @@ main > section, footer { overflow: visible; }
 .nav.small { top: calc(0.55rem + var(--safe-t)); }
 .nav a { white-space: nowrap; min-height: 38px; padding: 0.5rem clamp(0.6rem, 1.1vw, 0.95rem) 0.5rem clamp(0.5rem, 0.8vw, 0.7rem) !important; font-size: clamp(0.76rem, 0.72rem + 0.12vw, 0.82rem) !important; }
 @media (max-width: 640px) {
-    :root { --nav-h: calc(62px + var(--safe-t)); }
-    .nav { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); transform: none; max-width: none; justify-content: space-between; gap: 0 !important; padding: 0.28rem !important; }
-    .nav a { flex: 1 1 auto; justify-content: center; gap: 0.2rem !important; min-height: 40px; padding: 0.35rem 0.3rem !important; font-size: 0.8rem !important; }
-    .nav a .nav-fl { display: none; }
-    .nav a.active .nav-fl { display: block; width: 11px; height: 11px; }
-    .nav-bug { display: none; }
+    :root { --nav-h: calc(52px + var(--safe-t)); --mobile-menu-rainbow: linear-gradient(90deg, #c45178 0%, #b77924 25%, #488363 50%, #527cba 75%, #9256b4 100%); }
+    .nav { display: none !important; }
     .hero { padding-top: calc(var(--nav-h) + 1.4rem) !important; }
 }
-@media (max-width: 400px) {
-    .nav a { font-size: 0.75rem !important; padding: 0.35rem 0.2rem !important; }
-    .nav a.active .nav-fl { display: none; }
+
+/* Mobile header + dropdown (<=640px): replaces the pill nav; links are built from .nav by navigation.js */
+.m-header, .m-menu { display: none; }
+@media (max-width: 640px) {
+    .m-header { display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 140; box-sizing: border-box; height: var(--nav-h); padding: var(--safe-t) calc(14px + var(--safe-r)) 0 calc(16px + var(--safe-l)); background: linear-gradient(90deg, rgba(251, 231, 161, 0.92), rgba(253, 225, 234, 0.92) 35%, rgba(236, 228, 248, 0.92) 68%, rgba(223, 236, 210, 0.92)); border-bottom: 1px solid rgba(194, 69, 126, 0.14); box-shadow: 0 4px 14px rgba(120, 72, 96, 0.08); }
+    .m-brand { font-family: var(--font-display); font-size: 1.15rem; font-weight: 500; color: var(--white); text-decoration: none; }
+    .m-burger { position: relative; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .m-burger span { position: absolute; left: 11px; width: 22px; height: 2px; border-radius: 2px; background: var(--mobile-menu-rainbow); transition: transform 0.22s ease, opacity 0.15s ease; }
+    .m-burger span:nth-child(1) { top: 15px; }
+    .m-burger span:nth-child(2) { top: 21px; }
+    .m-burger span:nth-child(3) { top: 27px; }
+    .m-burger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .m-burger.open span:nth-child(2) { opacity: 0; }
+    .m-burger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+    .m-menu { display: flex; flex-direction: column; position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 139; box-sizing: border-box; max-height: calc(100dvh - var(--nav-h)); overflow-y: auto; padding: 0.4rem calc(1rem + var(--safe-r)) calc(0.8rem + env(safe-area-inset-bottom, 0px)) calc(1rem + var(--safe-l)); background: rgba(255, 250, 242, 0.97); border-bottom: 1px solid rgba(194, 69, 126, 0.14); box-shadow: 0 12px 24px rgba(120, 72, 96, 0.14); opacity: 0; visibility: hidden; pointer-events: none; translate: 0 -8px; transition: opacity 0.2s ease, translate 0.2s ease, visibility 0s 0.2s; }
+    .m-menu.open { opacity: 1; visibility: visible; pointer-events: auto; translate: 0 0; transition: opacity 0.2s ease, translate 0.2s ease; }
+    .m-menu a { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 0.5rem; font-size: 1rem; color: var(--text-mid); text-decoration: none; border-bottom: 1px solid var(--border); }
+    .m-menu a:last-child { border-bottom: 0; }
+    .m-menu a.active { color: var(--cyan); font-weight: 500; }
+    .m-menu .nav-fl { width: 22px; height: 22px; scale: 1; rotate: 0deg; opacity: 1; }
+    .m-burger:focus-visible, .m-brand:focus-visible, .m-menu a:focus-visible { outline: 2px solid #7441b3; outline-offset: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .m-burger span, .m-menu, .m-menu.open { transition: none; }
 }
 
 /* ---------------------------------------------------------------------

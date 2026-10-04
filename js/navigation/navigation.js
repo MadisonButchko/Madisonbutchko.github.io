@@ -1,11 +1,42 @@
 /* js/navigation/navigation.js
    Purpose : the top navigation: scroll-spy (which link is active), the sliding nav pill, and the flower nav (a flower per link and a butterfly that flies to your section).
-   Owns    : scrollSpy(), pill(), flowerNav(). Each is called by a legacy file at the spot its code used to run (scroll-spy first, then the pill, then the flower nav: the flower nav and pill both watch the .nav classes that scroll-spy sets).
+   Owns    : mobileMenu(), scrollSpy(), pill(), flowerNav(). Each is called by a legacy file at the spot its code used to run (scroll-spy first, then the pill, then the flower nav: the flower nav and pill both watch the .nav classes that scroll-spy sets).
    Uses    : nothing.   Used by: js/legacy/020, 110, 120 (until Phase D wiring).
-   Mobile / reduced motion: there is no hamburger menu (the pill nav is used at every width); the nav shrinks after 80px of scroll; the flower nav butterfly is part of the page decoration and respects the existing CSS reduced-motion rules.
+   Mobile / reduced motion: at <=640px the pill nav is hidden and the .m-header + .m-menu dropdown (hamburger) show instead; mobileMenu() builds its links from the .nav links so labels, order and hrefs have one source; the nav shrinks after 80px of scroll; the flower nav butterfly is part of the page decoration and respects the existing CSS reduced-motion rules.
    Moved verbatim from the legacy files (Migration Step 7); behaviour, order and timing unchanged. */
 MB.define('navigation.navigation', [], function () {
     'use strict';
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const NAVFL = [['fl-bloom','#f4a7bf','#f2c230'],['fl-daisy','#b9a2de','#fbe7a1'],['fl-forsythia','#f2c230','#d99a12'],['fl-bloom','#8db36a','#fff1cc'],['fl-daisy','#e9789f','#f2c230']];
+    function navFlower(k){ const f = NAVFL[k % NAVFL.length]; const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'nav-fl'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false'); s.setAttribute('viewBox', '-50 -50 100 100'); s.style.color = f[1]; s.style.setProperty('--center', f[2]); s.innerHTML = '<use href="#' + f[0] + '" x="-50" y="-50" width="100" height="100"/>'; return s; }
+
+    /* Mobile header + dropdown. Links are copied from the desktop .nav so both menus share one label/href/order source;
+       the single open/closed state drives the menu class, burger class, aria-label, aria-expanded and `inert` (closed links leave the tab order at once). */
+    function mobileMenu() {
+        const burger = document.querySelector('.m-burger'), menu = document.getElementById('mMenu'), nav = document.querySelector('.nav');
+        if (!burger || !menu || !nav) return;
+        nav.querySelectorAll('a').forEach((src, idx) => {
+            const a = document.createElement('a'); a.href = src.getAttribute('href'); a.textContent = src.textContent.trim();
+            if (src.classList.contains('active')) a.className = 'active';
+            a.prepend(navFlower(idx)); menu.appendChild(a);
+        });
+        const mq = matchMedia('(max-width: 640px)');
+        let open = false;
+        /* outside-click and Escape listeners exist only while the menu is open */
+        const onOutside = e => { if (!menu.contains(e.target) && !burger.contains(e.target)) set(false); };
+        const onKey = e => { if (e.key === 'Escape') set(false, true); };
+        const set = (on, refocus) => {
+            if (on === open) return; open = on;
+            menu.classList.toggle('open', on); burger.classList.toggle('open', on); menu.inert = !on;
+            burger.setAttribute('aria-expanded', String(on)); burger.setAttribute('aria-label', on ? 'Close navigation menu' : 'Open navigation menu');
+            if (on) { document.addEventListener('pointerdown', onOutside); addEventListener('keydown', onKey); }
+            else { document.removeEventListener('pointerdown', onOutside); removeEventListener('keydown', onKey); if (refocus) burger.focus(); }
+        };
+        burger.addEventListener('click', () => set(!open));
+        menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
+        mq.addEventListener('change', e => { if (!e.matches) set(false); });
+    }
 
     function scrollSpy() {
         (()=>{const secs=[...document.querySelectorAll('section[id]')],links=[...document.querySelectorAll('.nav a, .m-menu a')];let tk=false,cur='';addEventListener('scroll',()=>{if(tk)return;tk=true;requestAnimationFrame(()=>{tk=false;let c='about';for(const s of secs){if(s.id!=='home'&&scrollY>=s.offsetTop-200)c=s.id;}if(c===cur)return;cur=c;links.forEach(l=>{const on=l.getAttribute('href')==='#'+c;if(l.classList.contains('active')!==on)l.classList.toggle('active',on);});});},{passive:true});})();
@@ -22,11 +53,9 @@ MB.define('navigation.navigation', [], function () {
     }
 
     function flowerNav() {
-        const NS = 'http://www.w3.org/2000/svg', reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         /* ---------- flower nav ---------- */
-        const NAVFL = [['fl-bloom','#f4a7bf','#f2c230'],['fl-daisy','#b9a2de','#fbe7a1'],['fl-forsythia','#f2c230','#d99a12'],['fl-bloom','#8db36a','#fff1cc'],['fl-daisy','#e9789f','#f2c230']];
-        function navFlower(k){ const f = NAVFL[k % NAVFL.length]; const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'nav-fl'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false'); s.setAttribute('viewBox', '-50 -50 100 100'); s.style.color = f[1]; s.style.setProperty('--center', f[2]); s.innerHTML = '<use href="#' + f[0] + '" x="-50" y="-50" width="100" height="100"/>'; return s; }
         document.querySelectorAll('.nav a').forEach((a, idx) => {
             a.prepend(navFlower(idx));
         });
@@ -51,5 +80,5 @@ MB.define('navigation.navigation', [], function () {
         }
     }
 
-    return { scrollSpy, pill, flowerNav };
+    return { mobileMenu, scrollSpy, pill, flowerNav };
 });

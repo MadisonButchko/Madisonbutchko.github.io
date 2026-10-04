@@ -5,6 +5,7 @@
    Uses    : core.utils (rand, reduce), core.state (GardenLog), plants.vines, plants.plants (NS, hoverable, FLI, BLOOMS).
    Used by : legacy/140 calls start() (only when motion is allowed) at the spot the block ran; animals/birds.js and animals/vine-caterpillar.js use VINE, vineShown, fadeSprout.
    Mobile / reduced motion: unchanged: taps grow the vine on phones (slimmer vine, 14 blooms, brief hint once), nothing at all under reduced motion.
+   Messages: createVineMessages() is the single tooltip controller (hover hints x3 then 90 s apart, none after 3 clicks, 15 s full-bloom cooldown, hides on scroll/leave/click).
    Moved verbatim from legacy/140 (Migration Step 12d); only the hook plumbing changed. */
 MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'plants.plants'], function (utils, state, vines, plants) {
     'use strict';
@@ -171,23 +172,61 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
             return true;
         }
 
+        /* The one vine tooltip controller: one message at a time, hint/feedback cooldowns, positioning clamped inside the viewport (and below the mobile header).
+           The icon is existing SVG markup (FLI), so messages are set as HTML from these fixed strings only. */
+        function createVineMessages({ tip, hoverable, getVineClicks, flowerHTML, getHeaderBottom }){
+            const settings = { onboardingHints: 3, laterHintGapMs: 90000, feedbackGapMs: 15000, lifeMs: hoverable ? 1500 : 1000 };
+            let hintsShown = 0, lastHint = -Infinity, lastFeedback = -Infinity, timer, followingSide = null;
+            const hintText = (hoverable ? 'click' : 'tap') + ' the vine to grow it ' + flowerHTML;
+            const clamp = (value, min, max) => Math.min(Math.max(min, max), Math.max(min, value));
+            function hide(){ clearTimeout(timer); timer = undefined; followingSide = null; tip.classList.remove('show'); }
+            function place(x, y, side){
+                const margin = 8, width = tip.offsetWidth, height = tip.offsetHeight;
+                const desiredX = hoverable ? (side === 'left' ? x + 20 : x - width - 20) : (side === 'left' ? x + 14 : x - width - 14);
+                const desiredY = hoverable ? y - 14 : y - height - 18;
+                const minimumY = Math.max(margin, getHeaderBottom() + margin);
+                const left = clamp(desiredX, margin, innerWidth - width - margin), top = clamp(desiredY, minimumY, innerHeight - height - margin);
+                tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+            }
+            function show(html, x, y, side, life = settings.lifeMs){
+                hide(); tip.innerHTML = html; tip.classList.add('show'); place(x, y, side); timer = setTimeout(hide, life);
+            }
+            function hintDue(){
+                if (getVineClicks() > 3) return false;
+                return hintsShown < settings.onboardingHints || performance.now() - lastHint >= settings.laterHintGapMs;
+            }
+            function showHint(x, y, side, life = settings.lifeMs){
+                if (!hintDue() || tip.classList.contains('show')) return false;
+                hintsShown += 1; lastHint = performance.now(); show(hintText, x, y, side, life); return true;
+            }
+            const onEnter = (e, side) => { if (hoverable && showHint(e.clientX, e.clientY, side)) followingSide = side; };
+            const onMove = (e, side) => { if (followingSide === side && tip.classList.contains('show')) place(e.clientX, e.clientY, side); };
+            function showFullBloom(x, y, side){
+                hide(); const now = performance.now();
+                if (now - lastFeedback < settings.feedbackGapMs) return;
+                lastFeedback = now; show('this stretch is in full bloom ' + flowerHTML, x, y, side);
+            }
+            const showPhoneFirstVisitHint = () => { if (!hoverable) showHint(24, innerHeight - 70, 'left', 2800); };
+            addEventListener('scroll', hide, { passive: true }); addEventListener('resize', hide);
+            return { hide, onEnter, onMove, showFullBloom, showPhoneFirstVisitHint, destroy(){ hide(); removeEventListener('scroll', hide); removeEventListener('resize', hide); } };
+        }
+
+
         function start(){
             vines.onRender(sprigsRender); vines.onLayout(buildSlots);   /* hooks into the vine growth system (were window.__vineSprigs / __onVineLayout) */
             buildSlots();
             const tip = document.createElement('div'); tip.className = 'vine-tip'; document.body.appendChild(tip);
-            const TIP = (hoverable ? 'click' : 'tap') + ' the vine to grow it ' + FLI;
-            let tipHold = 0, tipTimer = 0;
+            const headerBottom = () => { const h = document.querySelector('.m-header'); return h && h.getClientRects().length ? h.getBoundingClientRect().bottom : 0; };
+            const messages = createVineMessages({ tip, hoverable, getVineClicks: () => vineClicks, flowerHTML: FLI, getHeaderBottom: headerBottom });
+            let hintTimer = 0;
             ['left', 'right'].forEach(side => {
                 const hit = document.createElement('div'); hit.className = 'vine-hit ' + side; hit.setAttribute('aria-hidden', 'true'); document.body.appendChild(hit);
-                hit.addEventListener('mousemove', e => {
-                    if (vineClicks > 3 && Date.now() > tipHold) { tip.classList.remove('show'); return; }
-                    if (Date.now() > tipHold && tip.innerHTML !== TIP) tip.innerHTML = TIP;
-                    tip.classList.add('show');
-                    tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
-                });
-                hit.addEventListener('mouseleave', () => tip.classList.remove('show'));
+                hit.addEventListener('mouseenter', e => messages.onEnter(e, side));
+                hit.addEventListener('mousemove', e => messages.onMove(e, side));
+                hit.addEventListener('mouseleave', () => messages.hide());
                 let lastGrow = 0;
                 hit.addEventListener('click', e => {
+                    messages.hide();
                     const v = VINE[side]; if (!v) return;
                     /* blooms already on the vine near the click give a happy bounce */
                     v.svg.querySelectorAll('.vine-item.on, .vine-sprout .sprout').forEach(it => { const b = it.getBoundingClientRect(); if (Math.abs(b.top + b.height / 2 - e.clientY) < 90){ it.classList.add('grow'); setTimeout(() => it.classList.remove('grow'), 650); } });
@@ -195,31 +234,19 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
                     if (!quick && growVine(side, e.clientY)){ lastGrow = Date.now(); return; }
                     react(v, e.clientX, e.clientY);
                     if (quick) return;
-                    clearTimeout(tipTimer);   /* a new tap resets the one message instead of stacking */
-                    tip.innerHTML = 'this stretch is in full bloom ' + FLI;
-                    const life = hoverable ? 1600 : 1200;   /* phones: brief, so it never covers what is being read */
-                    tipHold = Date.now() + life; tip.classList.add('show');
-                    if (hoverable) tip.style.transform = `translate(${side === 'left' ? e.clientX + 20 : e.clientX - tip.offsetWidth - 20}px, ${e.clientY - 14}px)`;
-                    else {
-                        /* compact and clamped inside the viewport, hovering just above the tap so the finger does not hide it */
-                        const w = tip.offsetWidth, h = tip.offsetHeight, m = 8;
-                        const x = Math.min(innerWidth - w - m, Math.max(m, e.clientX - w / 2 + (side === 'left' ? w / 2 + 14 : -w / 2 - 14)));
-                        const y = Math.min(innerHeight - h - m, Math.max(m, e.clientY - h - 18));
-                        tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-                    }
-                    tipTimer = setTimeout(() => tip.classList.remove('show'), life);
+                    messages.showFullBloom(e.clientX, e.clientY, side);   /* its 15 s cooldown only mutes the message */
                 });
             });
             vines.update();   /* size the click strips to the drawn vine right away */
             /* phones have no hover, so show the hint once, next to the vine, a few seconds in */
             /* (the vine stays hidden until the visitor scrolls past the hero, so wait until there is a vine to tap) */
-            if (!hoverable) (function hint(tries){ setTimeout(() => {
+            if (!hoverable) (function hint(tries){ hintTimer = setTimeout(() => {
                 if (vineClicks || !VINE.left) return;
                 const hit = document.querySelector('.vine-hit.left');
                 if (!hit || hit.style.display === 'none' || (hit._h || 0) < innerHeight * 0.5){ if (tries < 12) hint(tries + 1); return; }
-                tip.innerHTML = TIP; tip.style.transform = `translate(24px, ${Math.round(innerHeight - 70)}px)`; tip.classList.add('show');
-                setTimeout(() => tip.classList.remove('show'), 3800);
+                messages.showPhoneFirstVisitHint();
             }, 6000); })(0);
+            return () => { clearTimeout(hintTimer); messages.destroy(); };   /* optional teardown: cancels the scheduled hint, message timer and controller listeners */
         }
 
         return { VINE, GROWN, vineShown, fadeSprout, start };

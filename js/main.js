@@ -15,6 +15,7 @@
     const nav = use('navigation.navigation'), hero = use('site.hero'), vines = use('plants.vines'), flowers = use('plants.flowers');
     const birds = use('animals.birds'), bouquet = use('botanical.bouquet');
 
+    nav.mobileMenu();                                                  /* mobile header + dropdown (links cloned from .nav, before scroll-spy collects them) */
     scroll.reveal(); nav.scrollSpy();                                  /* reveal-on-scroll, scroll-spy */
     await boundary();
     use('effects.petals').init();                                      /* drifting petals + click bursts */

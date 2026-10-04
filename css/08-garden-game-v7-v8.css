@@ -13,7 +13,7 @@
 .vine-hit { position: fixed; top: 0; width: 84px; height: 100vh; z-index: 4; display: block; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .vine-hit.left { left: 8px; } .vine-hit.right { right: 8px; }
 @media (max-width: 1239px) { .vine-hit { width: 20px; } .vine-hit.left { left: 0; } .vine-hit.right { right: 0; } }
-.vine-tip { position: fixed; left: 0; top: 0; z-index: 130; pointer-events: none; font-family: var(--font-hand); font-size: 1.1rem; color: var(--green); background: rgba(255, 255, 255, 0.9); padding: 0.1rem 0.75rem 0.2rem; border-radius: 20px; box-shadow: 0 4px 14px rgba(120, 72, 96, 0.12); opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
+.vine-tip { position: fixed; left: 0; top: 0; z-index: 130; box-sizing: border-box; max-width: calc(100vw - 16px); overflow-wrap: anywhere; pointer-events: none; font-family: var(--font-hand); font-size: 1.1rem; color: var(--green); background: rgba(255, 255, 255, 0.9); padding: 0.1rem 0.75rem 0.2rem; border-radius: 20px; box-shadow: 0 4px 14px rgba(120, 72, 96, 0.12); opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
 .vine-tip.show { opacity: 1; }
 .vine-sprout { transition: opacity 1.4s ease; }
 .vine-sprout .sprout { animation: sproutIn 0.85s cubic-bezier(0.34, 1.6, 0.64, 1) 0.3s both; }
