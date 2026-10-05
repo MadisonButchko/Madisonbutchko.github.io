@@ -90,4 +90,5 @@
     use('animals.snails').start();                                     /* a few snails resting in the margins: tap, peek, crawl */
     use('animals.insects').start();                                    /* tap a decorative leaf: a ladybug, beetle or caterpillar comes out */
     use('animals.nest').start();                                       /* the bird family beside the DeviantArt button */
+    use('environment.pinwheels').start();                              /* three small pinwheels in open space: hover, tap, build momentum */
 })();

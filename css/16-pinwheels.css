@@ -1,0 +1,23 @@
+/* css/16-pinwheels.css: the three decorative pinwheels (js/environment/pinwheels.js). Decorative: only the pinwheel itself takes clicks. */
+.pinwheel { position: absolute; z-index: 3; width: 54px; height: 98px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+.pinwheel[hidden] { display: none; }
+.pinwheel::after { content: ''; position: absolute; inset: -8px; }   /* a forgiving tap area */
+.pinwheel:focus-visible { outline: 2.5px solid var(--focus); outline-offset: 4px; border-radius: 10px; }
+.pw-head { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 1; z-index: 2; overflow: visible; filter: drop-shadow(0 2px 2px rgba(110, 80, 50, .22)); transform-origin: 50% 50%; }
+.pw-stick { position: absolute; left: 50%; top: 50%; bottom: 0; width: 3px; margin-left: -1.5px; z-index: 1; border-radius: 2px; background: linear-gradient(90deg, #d9c3a3, #b99a74); }
+.pw-halo { position: absolute; left: -22%; top: -22%; width: 144%; aspect-ratio: 1; z-index: 0; border-radius: 50%; opacity: 0; pointer-events: none; background: conic-gradient(from 0deg, #ffd9e6, #fff1b8, #d6f2e4, #d4ecfa, #e6dcff, #ffd9e6); filter: blur(7px); }
+.pinwheel.is-shimmer .pw-halo { animation: pwHalo 1.9s ease-in-out; }
+@keyframes pwHalo { 0% { opacity: 0; transform: scale(.6) rotate(0deg); } 30% { opacity: .75; } 100% { opacity: 0; transform: scale(1.15) rotate(120deg); } }
+.pw-bit { position: absolute; left: 50%; top: calc(27px - 5px); z-index: 4; width: 10px; height: 10px; margin-left: -5px; pointer-events: none; opacity: 0; }
+.pw-spark { background: var(--bc, #fff6c8); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 2px rgba(255, 255, 255, .9)); }
+.pw-petal { width: 9px; height: 12px; margin-left: -4.5px; background: var(--bc, #f9c6d6); border-radius: 60% 60% 50% 50% / 70% 70% 30% 30%; }
+.pw-say { position: absolute; top: 2px; z-index: 5; width: max-content; pointer-events: none; font-family: var(--font-hand); font-weight: 600; font-size: 1.2rem; line-height: 1.1; white-space: nowrap; text-shadow: 0 0 6px rgba(255, 255, 255, .95), 0 0 2px rgba(255, 255, 255, .9); animation: pwSay 2.6s ease-in-out forwards; }
+.pw-say.is-r { left: calc(100% + 6px); }
+.pw-say.is-l { right: calc(100% + 6px); }
+@keyframes pwSay { 0% { opacity: 0; translate: 0 4px; } 15%, 75% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 -3px; } }
+@media (max-width: 699px) {
+    .pinwheel { width: 40px; height: 74px; }
+    .pw-bit { top: calc(20px - 5px); }
+    .pw-say { font-size: 1.05rem; }
+}
+@media (prefers-reduced-motion: reduce) { .pw-halo, .pw-bit { display: none; } }

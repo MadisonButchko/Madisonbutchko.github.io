@@ -7,5 +7,5 @@
 .intro { position: fixed; inset: 0; z-index: 99999; overflow: hidden; pointer-events: none; background: none; }
 .intro .in-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 /* soft translucent gradient overlay on top of the site (max opacity set in intro.js); opacity is driven from intro.js (fades in, then out to reveal the site) */
-.intro .in-bg { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+.intro .in-bg { position: absolute; inset: 0; opacity: .5; pointer-events: none;
     background: radial-gradient(circle at 50% 45%, #ffe8a0 0%, #ffc2dd 30%, #c9b0ff 62%, #9cc8ff 100%); }
