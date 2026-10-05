@@ -134,6 +134,7 @@
 .env-hearts { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .env-heart { position: absolute; left: 26px; top: 12px; width: 12px; height: 11px; opacity: 0; pointer-events: none; }
 .env-heart svg { display: block; width: 100%; height: 100%; }
+.env-spark { width: 10px; height: 10px; left: 27px; top: 13px; }
 
 /* the letter box clips only what would hang below the envelope; everything above and beside it is free */
 .env-letter-box { position: absolute; inset: 0; z-index: 3; pointer-events: none; clip-path: inset(-600px -240px 4px -240px); }
@@ -150,6 +151,8 @@
 .env-panel { position: absolute; top: 0; width: 50%; height: 100%; box-sizing: border-box; background-color: #fff0f5;
     background-image: linear-gradient(rgba(236, 160, 196, 0.26) 1px, transparent 1px), linear-gradient(90deg, rgba(180, 160, 226, 0.28) 1px, transparent 1px); background-size: 19px 19px;
     border: 1px solid rgba(214, 170, 196, 0.5); }
+/* no border along the inner (fold) edges: they would draw heavy cross lines over the open letter */
+.env-panel.tl, .env-panel.bl { border-right: 0; } .env-panel.tr, .env-panel.br { border-left: 0; } .env-panel.tl, .env-panel.tr { border-bottom: 0; } .env-panel.bl, .env-panel.br { border-top: 0; }
 .env-panel.tr, .env-panel.br { left: 50%; }
 .env-panel.tl, .env-panel.bl { left: 0; transform-origin: 100% 50%; }
 .env-panel.tl { border-radius: 8px 0 0 0; } .env-panel.tr { border-radius: 0 9px 0 0; } .env-panel.bl { border-radius: 0 0 0 9px; } .env-panel.br { border-radius: 0 0 8px 0; }

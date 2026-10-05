@@ -1,13 +1,13 @@
 /* js/easter-eggs/envelope.js
-   Purpose : the secret envelope: after a few taps on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
-   Owns    : the tap counter, the delivery (spot choice, bird, drift), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: it is delivered again on every page load.
+   Purpose : the secret envelope: after three taps within two seconds on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
+   Owns    : the tap counter, the delivery (spot choice, bird, drift), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
    Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (BLOCK, clearAt, navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
    Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); the letter has a close button and Escape closes it (focus returns to the envelope). Reduced motion: no bird, drift, folding, hearts or animated repositioning; the letter just fades in/out.
-   Cleanup : the tap listener is removed once the envelope is placed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; hearts are finished (and their FX slots returned) when interrupted; the one resize listener lives with the envelope. */
+   Cleanup : the one tap listener is added once; the envelope stays after the note is closed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; hearts are finished (and their FX slots returned) when interrupted; the one resize listener lives with the envelope. */
 MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zones', 'core.particles', 'animals.birds'], function (utils, scheduler, zones, particles, birds) {
     'use strict';
     const { rand, reduce } = utils, { Life } = scheduler, { BLOCK, clearAt, navBottom } = zones, { FX } = particles;
-    const TAPS = 3;
+    const TAPS = 3, WINDOW = 2000;      /* three quiet taps within two seconds */
     /* taps on text, photos, links, buttons, cards, navigation or dialogs never count */
     const IGNORE = BLOCK + ',button,[role="button"],[tabindex],summary,select,textarea,#galleryModal,#lightbox,.w-envelope';
 
@@ -19,6 +19,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     const FLAP_OPEN = '<path d="M3 9 L31.5 -11 Q32 -11.5 32.5 -11 L61 9 Z" fill="#f8c9d8" ' + S + '/>';
     const SEAL = '<path d="M32 38.2 C25.5 33 24.4 27.6 28.2 26.2 C30.4 25.4 31.8 27 32 28 C32.2 27 33.6 25.4 35.8 26.2 C39.6 27.6 38.5 33 32 38.2Z" fill="#e9789f" stroke="#c2457e" stroke-width="1.2" stroke-linejoin="round"/><path d="M29.2 28.4 Q30 27.6 30.9 28.3" stroke="#fff" opacity=".7" stroke-width="1" fill="none" stroke-linecap="round"/>';
     const HEART = '<svg viewBox="0 0 12 11" aria-hidden="true"><path d="M6 10.4 C1.2 7 .6 3.6 2.6 2.2 C4 1.3 5.4 2 6 3.2 C6.6 2 8 1.3 9.4 2.2 C11.4 3.6 10.8 7 6 10.4Z" fill="#f8bdd3" stroke="#e58cb0" stroke-width=".7"/></svg>';
+    const SPARK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8 Q6.5 5.5 11.2 6 Q6.5 6.5 6 11.2 Q5.5 6.5 .8 6 Q5.5 5.5 6 .8Z" fill="FILL" stroke="STROKE" stroke-width=".6" stroke-linejoin="round"/></svg>';
+    const SPARKS = [['#fbe3a0', '#d9aa4a'], ['#d9ccf3', '#9a84cf'], ['#fbe3a0', '#d9aa4a']];
     const svg = (cls, inner, vb) => '<svg class="' + cls + '" viewBox="' + (vb || '0 -14 64 60') + '" aria-hidden="true">' + inner + '</svg>';
     const COPY = '<span class="env-hello">hello, curious soul &nbsp;♡</span><span>the garden has secrets.</span><span>look closely, explore, and see what comes to life.</span>';
     const LABEL = 'A tiny envelope with a heart seal. Press to open it; arrow keys move it';
@@ -144,18 +146,22 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             return Math.max(0, Math.min(44, navBottom() + 8 - (r.top + 24 - 152)));
         }
 
-        /* a few small hearts rise from the pocket, drift apart and fade; they live behind the letter and never take input */
+        /* three small hearts and three faint sparkles rise from the pocket, drift apart and fade; they live behind the letter and never take input.
+           They draw on the shared FX budget: with room for fewer than 3 nothing is released, with less than 6 the sparkles are the ones dropped */
         function hearten() {
             if (reduce || el.getBoundingClientRect().top < navBottom() + 110) return;
-            const n = FX.room(3 + Math.floor(Math.random() * 3)); if (n < 3) return;
-            for (let k = 0; k < n; k++) {
-                const h = document.createElement('span'); h.className = 'env-heart'; h.innerHTML = HEART; heartBox.appendChild(h);
-                const dx = (k - (n - 1) / 2) * rand(15, 24) + rand(-5, 5), rise = rand(46, 78);
+            const n = FX.room(6); if (n < 3) return;
+            const hearts3 = 3, total = Math.min(6, n);
+            for (let k = 0; k < total; k++) {
+                const spark = k >= hearts3, i = spark ? k - hearts3 : k, h = document.createElement('span');
+                h.className = spark ? 'env-heart env-spark' : 'env-heart';
+                h.innerHTML = spark ? SPARK.replace('FILL', SPARKS[i][0]).replace('STROKE', SPARKS[i][1]) : HEART; heartBox.appendChild(h);
+                const dx = (i - 1) * rand(15, 24) * (spark ? 1.25 : 1) + rand(-5, 5), rise = rand(46, 78) * (spark ? 0.9 : 1);
                 const a = h.animate([
                     { transform: 'translate(0, 6px) scale(0.4)', opacity: 0 },
-                    { transform: 'translate(' + (dx * 0.5).toFixed(1) + 'px, ' + (-rise * 0.5).toFixed(1) + 'px) scale(1)', opacity: 0.95, offset: 0.3 },
+                    { transform: 'translate(' + (dx * 0.5).toFixed(1) + 'px, ' + (-rise * 0.5).toFixed(1) + 'px) scale(1)', opacity: spark ? 0.85 : 0.95, offset: 0.3 },
                     { transform: 'translate(' + dx.toFixed(1) + 'px, ' + (-rise).toFixed(1) + 'px) scale(0.85)', opacity: 0 }
-                ], { duration: rand(900, 1050), delay: 300 + k * 70, easing: 'ease-out', fill: 'backwards' });
+                ], { duration: rand(1000, 1400), delay: 250 + i * 70 + (spark ? 40 : 0), easing: 'ease-out', fill: 'backwards' });
                 FX.track(h, a, 2200); hearts.push(a);
             }
         }
@@ -180,14 +186,16 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         /* a press on the closed envelope is either a tap (opens it) or a drag (moves it): 8 px tells them apart */
         hit.addEventListener('pointerdown', e => {
             if (st !== 'closed' || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
-            const c = center(); drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, cx: c.x, cy: c.y, moved: false };
+            const c = center(); drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, cx: c.x, cy: c.y, l: parseFloat(el.style.left), t: parseFloat(el.style.top), moved: false };
             try { hit.setPointerCapture(e.pointerId); } catch (_) { }
         });
         hit.addEventListener('pointermove', e => {
             if (!drag || e.pointerId !== drag.id) return;
             const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
             if (!drag.moved) { if (Math.hypot(dx, dy) <= 8) return; drag.moved = true; el.classList.remove('settling'); el.classList.add('is-dragging'); }
-            moveTo(drag.cx + dx, drag.cy + dy);
+            /* straight from the press point: clamp to the screen, write left/top, no layout reads while moving */
+            const m = 30, x = Math.max(m, Math.min(innerWidth - m, drag.cx + dx)), y = Math.max(navBottom() + m, Math.min(innerHeight - m, drag.cy + dy));
+            el.style.left = (drag.l + x - drag.cx).toFixed(1) + 'px'; el.style.top = (drag.t + y - drag.cy).toFixed(1) + 'px';
         });
         function endPress(e, cancelled) {
             if (!drag || (e && e.pointerId !== drag.id)) return;
@@ -222,13 +230,14 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             const n = nearest(c.x, c.y);
             if (n) { moveTo(n.x, n.y); note(); } else if (home) moveTo(home.x - scrollX, home.y - scrollY);
         }
-        addEventListener('resize', () => { if (innerWidth === lastW) return; lastW = innerWidth; clearTimeout(rzT); rzT = setTimeout(recheck, 300); });
+        function onResize() { if (innerWidth === lastW) return; lastW = innerWidth; clearTimeout(rzT); rzT = setTimeout(recheck, 300); }
+        addEventListener('resize', onResize);
 
         paint(); note();
     }
 
     /* ---- delivery ---- */
-    let taps = 0, busy = false, placed = false;
+    let taps = 0, firstAt = 0, busy = false, placed = false, started = false;
 
     /* somewhere quiet: room for the opened letter above the envelope (strict), and a clear path for it to drift down.
        Phones are too full for that much room, so there only the envelope itself needs a clear spot (and its fall may cross a little text) */
@@ -254,18 +263,18 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             const t = setTimeout(landed, 3800); el.addEventListener('animationend', landed);
         } else el.classList.add('fade-in');
         document.body.appendChild(el);
+        placed = true;
         envelope(el);
-        placed = true; document.removeEventListener('click', onTap, true);
     }
 
     function deliver() {
-        if (placed || busy || document.hidden || !Life.claim('envelope', 14000)) return;
-        const spot = pickAny(); if (!spot) { Life.release('envelope'); return; }
+        if (placed || busy || document.hidden || !Life.claim('envelope', 14000)) return false;
+        const spot = pickAny(); if (!spot) { Life.release('envelope'); return false; }
         busy = true;
         /* the flight is the only thing that can hang (rAF stalls in a hidden tab): never leave the feature stuck "busy" */
         const guard = setTimeout(() => finish(), 15000);
         const finish = () => { clearTimeout(guard); busy = false; Life.release('envelope'); };
-        if (reduce) { place(spot, null); finish(); return; }
+        if (reduce) { place(spot, null); finish(); return true; }
         const drop = { x: spot.x, y: spot.top };
         const carry = document.createElement('span'); carry.className = 'env-carry'; carry.innerHTML = svg('', BODY + PANELS + FLAP, '0 6 64 42');
         const bird = birds.visitingBird(() => drop, {
@@ -281,14 +290,20 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             done: finish
         });
         bird.querySelector('.c-body').appendChild(carry);
+        return true;
     }
 
     function onTap(e) {
+        if (placed || busy) { taps = 0; return; }                     /* already here (or on its way): never a duplicate */
         if (e.target.closest && e.target.closest(IGNORE)) return;
-        if (++taps >= TAPS) deliver();      /* if the stage is busy or there is no quiet spot yet, it tries again on the next quiet tap */
+        const now = performance.now();
+        if (!taps || now - firstAt > WINDOW) { taps = 0; firstAt = now; }
+        if (++taps < TAPS) return;
+        if (deliver()) taps = 0;            /* if the stage is busy or there is no quiet spot, the gesture stays armed: the next quiet tap tries again */
+        else firstAt = now;
     }
 
-    function start() { document.addEventListener('click', onTap, true); }
+    function start() { if (started) return; started = true; document.addEventListener('click', onTap, true); }
 
     return { start };
 });
