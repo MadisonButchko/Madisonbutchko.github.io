@@ -1,15 +1,33 @@
 /* js/easter-eggs/envelope.js
    Purpose : the secret envelope: after three taps within two seconds on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
    Owns    : the tap counter, the delivery (spot choice, bird, drift, one bounded retry timer when the stage is busy), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
-   Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (BLOCK, clearAt, navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
-   Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); the letter has a close button and Escape closes it (focus returns to the envelope). Reduced motion: no bird, drift, folding, hearts or animated repositioning; the letter just fades in/out.
-   Cleanup : the one tap listener is added once; the envelope stays after the note is closed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; hearts are finished (and their FX slots returned) when interrupted; the one resize listener lives with the envelope. */
+   Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
+   Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); the letter has a close button and Escape closes it (focus returns to the envelope). Reduced motion: no bird, drift, folding, particles, rays or animated repositioning; the letter fades in with a brief static glow.
+   Cleanup : the one tap listener is added once; the envelope stays after the note is closed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; decorative effects are removed immediately (and particle slots returned) when interrupted; the one resize listener lives with the envelope. */
 MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zones', 'core.particles', 'animals.birds'], function (utils, scheduler, zones, particles, birds) {
     'use strict';
-    const { rand, reduce } = utils, { Life } = scheduler, { BLOCK, clearAt, navBottom } = zones, { FX } = particles;
+    const { rand, reduce } = utils, { Life } = scheduler, { navBottom } = zones, { FX } = particles;
     const TAPS = 3, WINDOW = 2000;      /* three quiet taps within two seconds */
-    /* taps on text, photos, links, buttons, cards, navigation or dialogs never count */
-    const IGNORE = BLOCK + ',button,[role="button"],[tabindex],summary,select,textarea,#galleryModal,#lightbox,.w-envelope';
+    /* Protect controls and photos as whole boxes, but only the actual lines of text.
+       Container boxes such as .hero-text include empty background on narrow screens. */
+    const SOLID = 'a,button,[role="button"],[tabindex]:not([tabindex="-1"]),summary,input,label,select,textarea,img,.collage,.nav,.m-header,.m-menu,.garden,.herbarium,.mb-bouquet,.seed-wrap,.gallery-frame,.guide-bird,.page-posy,.w-piece,#galleryModal,#lightbox';
+    const IGNORE = SOLID + ',.w-envelope';
+    function spaceCheck() {
+        const visible = el => !el.closest('.w-ignore,.w-envelope,script,style,template,.vh,[hidden]') && getComputedStyle(el).visibility !== 'hidden';
+        const rects = Array.from(document.querySelectorAll(SOLID)).filter(visible).map(el => el.getBoundingClientRect());
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: n => n.textContent.trim() && visible(n.parentElement) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+        });
+        const range = document.createRange();
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            range.selectNodeContents(n); rects.push(...range.getClientRects());
+        }
+        const blocks = rects.filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight);
+        const top = navBottom();
+        return (x, y, r) => x - r >= 8 && x + r <= innerWidth - 8 && y - r >= top + 6 && y + r <= innerHeight - 8 &&
+            !blocks.some(b => x + r > b.left && x - r < b.right && y + r > b.top && y - r < b.bottom);
+    }
+    const clearAt = (x, y, r) => spaceCheck()(x, y, r);
 
     /* ---- art (viewBox "0 -14 64 60": one unit = one pixel of the 64 x 60 envelope) ---- */
     const S = 'stroke="#b9708a" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"';
@@ -18,9 +36,20 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     const FLAP = '<path d="M2.4 9 Q32 8.6 61.6 9 L32 32.5 Z" fill="#f9d6e1" ' + S + '/>';
     const FLAP_OPEN = '<path d="M3 9 L31.5 -11 Q32 -11.5 32.5 -11 L61 9 Z" fill="#f8c9d8" ' + S + '/>';
     const SEAL = '<path d="M32 38.2 C25.5 33 24.4 27.6 28.2 26.2 C30.4 25.4 31.8 27 32 28 C32.2 27 33.6 25.4 35.8 26.2 C39.6 27.6 38.5 33 32 38.2Z" fill="#e9789f" stroke="#c2457e" stroke-width="1.2" stroke-linejoin="round"/><path d="M29.2 28.4 Q30 27.6 30.9 28.3" stroke="#fff" opacity=".7" stroke-width="1" fill="none" stroke-linecap="round"/>';
-    const HEART = '<svg viewBox="0 0 12 11" aria-hidden="true"><path d="M6 10.4 C1.2 7 .6 3.6 2.6 2.2 C4 1.3 5.4 2 6 3.2 C6.6 2 8 1.3 9.4 2.2 C11.4 3.6 10.8 7 6 10.4Z" fill="#f8bdd3" stroke="#e58cb0" stroke-width=".7"/></svg>';
-    const SPARK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .8 Q6.5 5.5 11.2 6 Q6.5 6.5 6 11.2 Q5.5 6.5 .8 6 Q5.5 5.5 6 .8Z" fill="FILL" stroke="STROKE" stroke-width=".6" stroke-linejoin="round"/></svg>';
-    const SPARKS = [['#fbe3a0', '#d9aa4a'], ['#d9ccf3', '#9a84cf'], ['#fbe3a0', '#d9aa4a']];
+    const HEART = '<svg viewBox="0 0 16 15" aria-hidden="true"><path d="M8 14 C2.1 10.2 .8 5.7 3.1 3.5 C4.8 1.9 7 2.8 8 4.5 C9.1 2.7 11.5 1.9 13 3.7 C15.2 6.2 13.6 10.4 8 14Z" fill="FILL" stroke="STROKE" stroke-width=".8" stroke-linejoin="round"/></svg>';
+    const HEARTS = [
+        ['#f7a9c4', '#d9789f'], ['#ffc5aa', '#e59a82'], ['#f9e6a4', '#d7b95e'], ['#bfe7cf', '#7fbd9b'],
+        ['#bdddf5', '#7fb1d5'], ['#d7c6f2', '#a18acb'], ['#efb2be', '#ce7f91']
+    ];
+    const SPARKS = [
+        ['star', '#f9dfa0', '#d6ab4f'], ['glint', '#d8c9f1', '#9d85c9'], ['dot', '#c9e4f6', '#82b5d5'],
+        ['star', '#f7bfd4', '#d985aa'], ['glint', '#f9dfa0', '#d6ab4f']
+    ];
+    const spark = (kind, fill, stroke) => kind === 'dot'
+        ? '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.2" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".7"/></svg>'
+        : kind === 'glint'
+            ? '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .7 L6.7 5.3 L11.3 6 L6.7 6.7 L6 11.3 L5.3 6.7 L.7 6 L5.3 5.3Z" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".55"/></svg>'
+            : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .9 L7.5 4.5 L11.1 6 L7.5 7.5 L6 11.1 L4.5 7.5 L.9 6 L4.5 4.5Z" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".55" stroke-linejoin="round"/></svg>';
     const svg = (cls, inner, vb) => '<svg class="' + cls + '" viewBox="' + (vb || '0 -14 64 60') + '" aria-hidden="true">' + inner + '</svg>';
     const COPY = '<span class="env-hello">hello, curious soul &nbsp;♡</span><span>the garden has secrets.</span><span>look closely, explore, and see what comes to life.</span>';
     const LABEL = 'A tiny envelope with a heart seal. Press to open it; arrow keys move it';
@@ -31,6 +60,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     const MARKUP =
         svg('env-back', BODY) +
         '<svg class="env-flap-open" viewBox="0 -12 64 21" aria-hidden="true">' + FLAP_OPEN + '</svg>' +
+        '<div class="env-magic" aria-hidden="true"><span class="env-glow"></span><span class="env-ray r1"></span><span class="env-ray r2"></span><span class="env-ray r3"></span><span class="env-ray r4"></span></div>' +
         '<div class="env-hearts" aria-hidden="true"></div>' +
         '<div class="env-letter-box"><div class="env-letter" role="region" aria-label="A handwritten note" aria-hidden="true">' + SHEET +
             '<div class="env-text"><div class="env-copy">' + COPY + '</div></div>' +
@@ -87,8 +117,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     /* ---- the envelope's own controller: states closed | opening | open | closing ---- */
     function envelope(el) {
         const q = s => el.querySelector(s);
-        const letter = q('.env-letter'), hit = q('.env-hit'), close = q('.env-close'), heartBox = q('.env-hearts');
-        let st = 'closed', anims = [], hearts = [], token = 0, timer = 0, settleT = 0, rzT = 0;
+        const letter = q('.env-letter'), hit = q('.env-hit'), close = q('.env-close'), magic = q('.env-magic'), heartBox = q('.env-hearts');
+        let st = 'closed', anims = [], hearts = new Set(), token = 0, timer = 0, settleT = 0, rzT = 0;
         let drag = null, handledAt = 0, lastW = innerWidth, home = null;     /* home = last valid position, in document coordinates (memory only) */
 
         /* geometry: the envelope's centre in viewport coordinates, moving it there, and "is that spot free?" */
@@ -100,11 +130,12 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             const c = center();
             el.style.left = (parseFloat(el.style.left) + x - c.x).toFixed(1) + 'px'; el.style.top = (parseFloat(el.style.top) + y - c.y).toFixed(1) + 'px';
         }
-        function safe(x, y) { el.classList.add('w-ignore'); const ok = clearAt(x, y, 34); el.classList.remove('w-ignore'); return ok; }
+        const safe = (x, y) => clearAt(x, y, 34);
         function nearest(x, y) {
+            const clear = spaceCheck();
             for (let r = 18; r <= 162; r += 18) for (let k = 0; k < 12; k++) {
                 const a = k * Math.PI / 6, cx = x + Math.cos(a) * r, cy = y + Math.sin(a) * r;
-                if (safe(cx, cy)) return { x: cx, y: cy };
+                if (clear(cx, cy, 34)) return { x: cx, y: cy };
             }
             return null;
         }
@@ -148,32 +179,85 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             return Math.max(0, Math.min(MAX_PUSH, navBottom() + 8 - (r.top + 24 - LETTER_UP)));
         }
 
-        /* three small hearts and three faint sparkles rise from the pocket, drift apart and fade; they live behind the letter and never take input.
-           They draw on the shared FX budget: with room for fewer than 3 nothing is released, with less than 6 the sparkles are the ones dropped */
+        function illuminate() {
+            magic.hidden = false;
+            if (reduce) {
+                magic.classList.add('is-still');
+                let t = 0;
+                const clean = () => { clearTimeout(t); magic.hidden = true; magic.classList.remove('is-still'); hearts.delete(clean); };
+                t = setTimeout(clean, 1300); hearts.add(clean);
+                return;
+            }
+            const glow = q('.env-glow'), rays = Array.from(magic.querySelectorAll('.env-ray'));
+            const animations = [glow.animate([
+                { opacity: 0, transform: 'translate(-50%, 10px) scale(.58)' },
+                { opacity: .72, transform: 'translate(-50%, 0) scale(1)', offset: .32 },
+                { opacity: .42, transform: 'translate(-50%, -7px) scale(1.14)', offset: .68 },
+                { opacity: 0, transform: 'translate(-50%, -12px) scale(1.22)' }
+            ], { duration: 1450, delay: 90, easing: 'ease-out', fill: 'both' })];
+            rays.forEach((ray, i) => animations.push(ray.animate([
+                { opacity: 0, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(.3)' },
+                { opacity: .34, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(1)', offset: .38 },
+                { opacity: 0, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(1.18)' }
+            ], { duration: 1250 + i * 55, delay: 210 + i * 35, easing: 'ease-out', fill: 'both' })));
+            let left = animations.length;
+            const clean = () => { if (!hearts.has(clean)) return; animations.forEach(a => a.cancel()); magic.hidden = true; hearts.delete(clean); };
+            hearts.add(clean);
+            animations.forEach(a => a.addEventListener('finish', () => { if (!--left) clean(); }, { once: true }));
+        }
+
+        /* One bounded burst per closed → opening cycle; reversing a partial close
+           continues that cycle without spawning a second burst. Paths use the same
+           protected-content checks as placement, with room for the whole particle. */
         function hearten() {
-            if (reduce || el.getBoundingClientRect().top < navBottom() + 110) return;
-            const n = FX.room(6); if (n < 3) return;
-            const hearts3 = 3, total = Math.min(6, n);
-            for (let k = 0; k < total; k++) {
-                const spark = k >= hearts3, i = spark ? k - hearts3 : k, h = document.createElement('span');
-                h.className = spark ? 'env-heart env-spark' : 'env-heart';
-                h.innerHTML = spark ? SPARK.replace('FILL', SPARKS[i][0]).replace('STROKE', SPARKS[i][1]) : HEART; heartBox.appendChild(h);
-                const dx = (i - 1) * rand(15, 24) * (spark ? 1.25 : 1) + rand(-5, 5), rise = rand(46, 78) * (spark ? 0.9 : 1);
+            if (reduce || !FX.room(1)) return;
+            const clear = spaceCheck(), style = getComputedStyle(el);
+            const matrix = new DOMMatrix(style.transform === 'none' ? undefined : style.transform);
+            const scale = parseFloat(style.scale) || 1;
+            const pieces = HEARTS.map((colors, i) => ({ heart: true, i, colors })).concat(SPARKS.map((spec, i) => ({ heart: false, i, spec })));
+            for (let k = 0; k < pieces.length && FX.room(1); k++) {
+                const piece = pieces[k], h = document.createElement('span'), size = piece.heart ? rand(17, 23) : rand(7, 12);
+                h.className = piece.heart ? 'env-heart' : 'env-heart env-spark env-' + piece.spec[0];
+                h.style.width = size.toFixed(1) + 'px'; h.style.height = (size * (piece.heart ? .94 : 1)).toFixed(1) + 'px';
+                h.style.left = (32 - size / 2 + rand(-7, 7)).toFixed(1) + 'px'; h.style.top = (12 + rand(-3, 5)).toFixed(1) + 'px';
+                h.innerHTML = piece.heart
+                    ? HEART.replace('FILL', piece.colors[0]).replace('STROKE', piece.colors[1])
+                    : spark(piece.spec[0], piece.spec[1], piece.spec[2]);
+                heartBox.appendChild(h);
+                const box = h.getBoundingClientRect(), cx = box.left + box.width / 2, cy = box.top + box.height / 2;
+                const side = piece.i % 2 ? 1 : -1, lane = piece.heart ? Math.floor(piece.i / 2) : piece.i % 3;
+                const dx = side * rand(104 + lane * 8, 122 + lane * 10), rise = rand(piece.heart ? 72 : 54, piece.heart ? 118 : 96);
+                const turn = rand(-24, 24), startTurn = rand(-18, 18);
+                /* Sample the entire rise with overlapping padded footprints, including
+                   the envelope's tilt/hover scale. Try a shorter path in tight spaces. */
+                const pathClear = factor => {
+                    for (let j = 0; j <= 24; j++) {
+                        const t = j / 24, x = dx * factor * t, y = 6 - (rise * factor + 6) * t;
+                        if (!clear(cx + scale * (matrix.a * x + matrix.c * y), cy + scale * (matrix.b * x + matrix.d * y), size / 2 + 4)) return false;
+                    }
+                    return true;
+                };
+                const factor = [1, 0.7, 0.45].find(pathClear);
+                if (!factor) { h.remove(); continue; }
                 const a = h.animate([
-                    { transform: 'translate(0, 6px) scale(0.4)', opacity: 0 },
-                    { transform: 'translate(' + (dx * 0.5).toFixed(1) + 'px, ' + (-rise * 0.5).toFixed(1) + 'px) scale(1)', opacity: spark ? 0.85 : 0.95, offset: 0.3 },
-                    { transform: 'translate(' + dx.toFixed(1) + 'px, ' + (-rise).toFixed(1) + 'px) scale(0.85)', opacity: 0 }
-                ], { duration: rand(1000, 1400), delay: 250 + i * 70 + (spark ? 40 : 0), easing: 'ease-out', fill: 'backwards' });
-                FX.track(h, a, 2200); hearts.push(a);
+                    { transform: 'translate(0, 7px) rotate(' + startTurn.toFixed(1) + 'deg) scale(.3)', opacity: 0 },
+                    { transform: 'translate(' + (dx * factor * .58).toFixed(1) + 'px, ' + (3 - rise * factor * .58).toFixed(1) + 'px) rotate(' + (startTurn + turn * .55).toFixed(1) + 'deg) scale(1.06)', opacity: piece.heart ? .92 : .84, offset: .4 },
+                    { transform: 'translate(' + (dx * factor).toFixed(1) + 'px, ' + (-rise * factor).toFixed(1) + 'px) rotate(' + (startTurn + turn).toFixed(1) + 'deg) scale(.82)', opacity: 0 }
+                ], { duration: rand(1300, 1550), delay: 300 + k * 18, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'both' });
+                const release = FX.track(h, a, 2150);
+                const clean = () => { release(); hearts.delete(clean); a.cancel(); };
+                hearts.add(clean);
+                a.addEventListener('finish', clean, { once: true });
             }
         }
-        const clearHearts = () => { hearts.forEach(a => { try { a.finish(); } catch (_) { } }); hearts = []; };
+        const clearHearts = () => { hearts.forEach(clean => clean()); hearts.clear(); };
 
         function unfold() {
             if (st === 'opening' || st === 'open') return;
             if (st === 'closing') { st = 'opening'; paint(); run(1); return; }       /* turn the closing around from where it is */
             clearHearts();
             const extra = fit(); st = 'opening'; paint();
+            illuminate();
             if (reduce) { st = 'open'; paint(); return; }
             anims.forEach(a => a.cancel()); anims = timeline(el, extra);             /* fresh timeline: every deliberate opening replays from the start */
             run(1); hearten();
@@ -241,7 +325,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     /* ---- delivery ---- */
     let taps = 0, firstAt = 0, busy = false, placed = false, started = false;
     /* a gesture that could not be served at once (another creature has the stage, or no quiet spot this second) is retried for a short while, from one timer */
-    const RETRY_MS = 2000, RETRY_SPAN = 24000;
+    const RETRY_MS = 1000, RETRY_SPAN = 60000;
     let retryT = 0, retryUntil = 0;
     const cancelRetry = () => { clearTimeout(retryT); retryT = 0; };
     function retry() {
@@ -255,18 +339,18 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
        The closed envelope needs a clear spot of its own (hard rule: never over text or controls) and must sit low enough for the opened letter to stay on screen (hard rule: fit() can only push it so far).
        Clear space for the letter and for the fall is only a preference, so a crowded page still gets an envelope: the best-ranked spot wins (3 = both clear, 2 = fall clear, 1 = envelope clear only) */
     const letterMinY = () => navBottom() + LETTER_UP - 24 + 8 - MAX_PUSH + 30;
-    function rankSpot(x, y, top, fit) {
+    function rankSpot(x, y, top, fit, clearAt) {
         if (!clearAt(x, y, fit)) return 0;
         return 1 + (innerWidth < 700 || clearAt(x, (top + y) / 2, 20) ? 1 : 0) + (clearAt(x, y - 80, 110) ? 1 : 0);
     }
-    /* phones are packed edge to edge: if no spot has the envelope's full footprint clear, accept one a few pixels tighter (never over a text line's own box) */
-    const pickSpot = () => search(34) || (innerWidth < 700 ? search(28) : null);
+    const pickSpot = () => search(34);
     function search(fit) {
         const m = innerWidth < 700 ? 44 : 60, minY = letterMinY(), maxY = innerHeight - 60, up = innerWidth < 700 ? 100 : 190;
         if (maxY <= minY) return null;
+        const clear = spaceCheck();
         let best = null, bestRank = 0;
         const consider = (x, y) => {
-            const top = Math.max(navBottom() + 30, y - up), r = y - top < 80 ? 0 : rankSpot(x, y, top, fit);
+            const top = Math.max(navBottom() + 30, y - up), r = y - top < 80 ? 0 : rankSpot(x, y, top, fit, clear);
             if (r > bestRank) { bestRank = r; best = { x, y, top, docY: y + scrollY }; }
             return r === 3;
         };
@@ -297,7 +381,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     }
 
     function deliver() {
-        if (placed || busy || document.hidden || !Life.claim('envelope', 14000)) return false;
+        if (placed || busy || document.hidden || !Life.claim('envelope', 14000, 'preempt')) return false;
         const spot = pickSpot(); if (!spot) { Life.release('envelope'); return false; }
         busy = true; cancelRetry();
         /* the flight is the only thing that can hang (rAF stalls in a hidden tab): never leave the feature stuck "busy" */
@@ -325,6 +409,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     function onTap(e) {
         if (placed || busy) { taps = 0; cancelRetry(); return; }                     /* already here (or on its way): never a duplicate */
         if (e.target.closest && e.target.closest(IGNORE)) return;
+        if (!clearAt(e.clientX, e.clientY, 0)) return;
         const now = performance.now();
         if (!taps || now - firstAt > WINDOW) { taps = 0; firstAt = now; }
         if (++taps < TAPS) return;

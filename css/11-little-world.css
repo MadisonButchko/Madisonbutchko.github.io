@@ -130,11 +130,20 @@
 }
 @keyframes envRise { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
 
-/* hearts: behind the letter, above the pocket; the timeline in JS moves and fades them */
+/* temporary opening light and particles: all sit behind the readable letter */
+.env-magic { position: absolute; inset: 0; z-index: 1; overflow: visible; pointer-events: none; }
+.env-magic[hidden] { display: none; }
+.env-glow { position: absolute; left: 50%; top: -74px; width: 260px; height: 190px; border-radius: 50%; opacity: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 66%, rgba(255, 250, 207, .98) 0%, rgba(255, 220, 151, .62) 28%, rgba(247, 194, 224, .25) 54%, rgba(205, 188, 241, 0) 78%);
+    filter: blur(10px); transform: translateX(-50%); }
+.env-ray { --ray-angle: 0deg; position: absolute; left: 50%; top: -130px; width: 20px; height: 155px; opacity: 0; pointer-events: none; transform-origin: 50% 100%;
+    background: linear-gradient(to top, rgba(255, 248, 208, .58), rgba(255, 226, 174, .2) 58%, transparent); filter: blur(5px); border-radius: 50% 50% 20% 20%; }
+.env-ray.r1 { --ray-angle: -48deg; } .env-ray.r2 { --ray-angle: -24deg; height: 170px; top: -145px; }
+.env-ray.r3 { --ray-angle: 25deg; height: 164px; top: -139px; } .env-ray.r4 { --ray-angle: 49deg; }
 .env-hearts { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.env-heart { position: absolute; left: 26px; top: 12px; width: 12px; height: 11px; opacity: 0; pointer-events: none; }
+.env-heart { position: absolute; left: 24px; top: 11px; width: 18px; height: 17px; opacity: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(163, 104, 137, .18)); }
 .env-heart svg { display: block; width: 100%; height: 100%; }
-.env-spark { width: 10px; height: 10px; left: 27px; top: 13px; }
+.env-spark { width: 10px; height: 10px; left: 27px; top: 13px; filter: drop-shadow(0 0 3px rgba(255, 226, 151, .45)); }
 
 /* the letter box clips only what would hang below the envelope; everything above and beside it is free */
 .env-letter-box { position: absolute; inset: 0; z-index: 3; pointer-events: none; clip-path: inset(-600px -240px 4px -240px); }
@@ -177,5 +186,7 @@
     .w-envelope, .w-envelope.settling, .env-back { transition: none; }
     .env-letter { transition: opacity 0.3s ease; }
     .env-hearts { display: none; }
+    .env-magic .env-ray { display: none; }
+    .env-magic.is-still .env-glow { opacity: .24; transform: translate(-50%, -2px) scale(.95); }
 }
 @keyframes envFade { from { opacity: 0; } to { opacity: 1; } }

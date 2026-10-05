@@ -222,9 +222,9 @@ MB.define('garden.garden', ['core.utils', 'plants.plants', 'garden.species', 'ga
             P.forEach(p => { p.state = 'gone'; p.el.remove(); }); P.length = 0;
             ga.S = freshStats(); ga.badges = new Set(); ga.fullReached = false; ga.regrowing = false;
             C.slice().forEach(ga.dropCritter); ga.deer = null; bed.classList.remove('deer-alert');
-            if (ga.cloud){ if (ga.cloud.tok) ga.cloud.tok.stop = true; ga.cloud.el.remove(); ga.cloud = null; }
+            if (ga.cloud){ if (ga.cloud.tok) ga.cloud.tok.stop = true; if (ga.cloud.shTok) ga.cloud.shTok.stop = true; ga.cloud.el.remove(); ga.cloud = null; }
             ga.setSunny(false);
-            bed.querySelectorAll('.g-fx, .g-sparkle, .shoo-pop').forEach(el => el.remove());
+            bed.querySelectorAll('.g-fx, .g-sparkle, .g-rainbow, .shoo-pop').forEach(el => el.remove());
             ga.toastQ.length = 0; clearTimeout(ga.toastT); ga.toasting = false; toast.classList.remove('show');
             clearTimeout(ga.flashT); ga.flashMsg = '';
             ga.tick = 0; nextPest = 9; nextFriend = 7; ga.nextCloud = 25; ga.nextSun = 6; ga.sunUntil = 0; ga.play = 0; lastTouch = 0; ga.deerAt = Math.round(rand(20, 30));

@@ -11,11 +11,13 @@ MB.define('core.particles', [], function () {
         let live = 0; const MAX = innerWidth < 700 ? 28 : 48;
         return {
             room: n => Math.max(0, Math.min(n, MAX - live)),
-            /* el is removed (and its slot returned) when its animation ends, or after ms at the latest */
+            /* Removes el and returns its slot on finish/timeout; the returned function also cleans up immediately. */
             track(el, anim, ms) {
                 live++; let done = false;
-                const end = () => { if (done) return; done = true; live--; el.remove(); };
-                if (anim) anim.onfinish = end; setTimeout(end, ms || 4000);
+                const end = () => { if (done) return; done = true; clearTimeout(timer); live--; el.remove(); };
+                const timer = setTimeout(end, ms || 4000);
+                if (anim) anim.onfinish = end;
+                return end;
             },
             /* for particles moved by a script loop instead of an animation */
             claim: n => { const k = Math.max(0, Math.min(n, MAX - live)); live += k; return k; },

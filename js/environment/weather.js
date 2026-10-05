@@ -84,34 +84,80 @@ MB.define('environment.weather', ['core.utils', 'core.scheduler', 'core.safe-zon
             const cw = el.offsetWidth || 110, ch = el.offsetHeight || 62;
             /* the cloud's whole path is inside the bed, so it is never cut off; it fades in and out at the ends */
             const ltr = Math.random() < 0.5, x0 = ltr ? 6 : W - cw - 6, x1 = ltr ? W - cw - 6 : 6;
-            const c = { el, x: x0, raining: Math.random() < 0.3, revived: 0, tok: null };
+            const c = { el, x: x0, y: 9, raining: Math.random() < 0.3, shower: false, busy: false, shown: false, revived: 0, tok: null, shTok: null };
             ga.cloud = c; if (c.raining) el.classList.add('raining');
+            const W2 = W, ground = ga.bed.clientHeight - 12, bob = () => Math.asin(clamp((c.y - 9) / 3, -1, 1));
+            let lastDrop = 0, gap = 60, lastWater = 0, ph = 0;
+            /* one frame of the cloud's life: position, fade, drizzle, and (while raining) watering the plants underneath */
+            const frame = (x, y, op, now, edge) => {
+                c.x = x; c.y = y;
+                el.style.transform = `translate(${f1(x)}px, ${f1(y)}px)`; el.style.opacity = op.toFixed(3);
+                if (edge || (c.busy && !c.shower)) return;   /* no drizzle while a click cycle is flashing, drifting off or showing the rainbow */
+                /* always a gentle drizzle under the cloud; while it is raining it becomes a proper shower that waters plants */
+                if (now - lastDrop > gap){ lastDrop = now; gap = c.shower ? rand(45, 90) : c.raining ? rand(30, 70) : rand(60, 115); rainDrop(x + rand(cw * 0.2, cw * 0.8), y + ch * 0.84, ground, W2); }
+                if (c.raining && now - lastWater > 400){
+                    lastWater = now; const lo = x / W2 * 100, hi = (x + cw) / W2 * 100;
+                    ga.P.forEach(p => { if (p.state === 'gone' || p.x < lo || p.x > hi) return; if (p.state === 'thirsty'){ ga.refresh(p); c.revived++; } else if (p.state === 'bloom') p.age = 0; });
+                }
+            };
+            /* the drift across the bed; resumed after every shower from wherever the cloud stopped */
+            const drift = (xa, dur, fadeIn) => {
+                c.tok = tween(dur, t => {
+                    const edge = fadeIn ? (t < 0.04 || t > 0.96) : t > 0.96;
+                    frame(xa + (x1 - xa) * t, 9 + Math.sin(t * 14 + ph) * 3, Math.min(fadeIn ? t / 0.07 : 1, (1 - t) / 0.07), performance.now(), edge);
+                }, () => {
+                    el.remove(); if (ga.cloud === c) ga.cloud = null; ga.nextCloud = ga.tick + Math.round(rand(35, 60));
+                    if (c.revived) ga.flash(`the rain perked up ${c.revived} thirsty plant${c.revived > 1 ? 's' : ''} ${FLI}`, 2600);
+                    ga.updateHud(); ga.save();
+                });
+            };
+            /* plants under the cloud lift and open a little; some leaves and petals sparkle, and a few keep a droplet for a while */
+            const refreshArea = () => {
+                const lo = (c.x - cw * 0.5) / W * 100, hi = (c.x + cw * 1.5) / W * 100;
+                ga.P.forEach(p => {
+                    if (p.state === 'gone' || p.x < lo || p.x > hi || !p.el.isConnected) return;
+                    const hd = ga.headOf(p);
+                    if (p.flower && p.state !== 'grow' && !p.el.classList.contains('g-perk')){ p.el.classList.add('g-perk'); setTimeout(() => p.el.classList.remove('g-perk'), 2800); }
+                    if (Math.random() < 0.55) ga.sparkles(hd.x, hd.y + rand(2, Math.max(8, p.H * 0.55)), 1 + (Math.random() < 0.4 ? 1 : 0));
+                    if (Math.random() < 0.4){ const d = ga.fxEl('g-dew', hd.x + rand(-9, 9), hd.y + rand(4, Math.max(10, p.H * 0.5))); setTimeout(() => d.remove(), 6300); }
+                });
+            };
+            /* a soft, pale arch behind the plants that fades in and out (see .g-rainbow) */
+            const rainbow = done => {
+                const w = Math.min(W * 0.8, 520), bow = document.createElement('div');
+                bow.className = 'g-rainbow'; bow.setAttribute('aria-hidden', 'true');
+                bow.style.width = f1(w) + 'px'; bow.style.height = f1(w / 2) + 'px'; bow.style.left = f1(clamp(c.x + cw / 2 - w / 2, 0, W - w)) + 'px';
+                ga.bed.insertBefore(bow, ga.bed.firstChild);
+                setTimeout(() => { bow.remove(); done(); }, 7600);
+            };
+            /* click -> soft flash -> gentle rain -> plants perk up -> rain stops -> rainbow -> everything fades. c.busy keeps cycles from overlapping. */
             const makeRain = e => {
                 if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
                 e.stopPropagation(); e.preventDefault();
-                if (!c.raining){ c.raining = true; el.classList.add('raining'); ga.award('rain'); ga.flash('you made it rain ' + FLI, 2200); }
+                if (c.busy) return; c.busy = true;
+                const first = !c.shown; c.shown = true;
+                if (c.tok) c.tok.stop = true;
+                ph = bob();
+                el.classList.remove('g-flash'); void el.offsetWidth; el.classList.add('g-flash');
+                ga.award('rain'); if (first) ga.flash('you made it rain ' + FLI, 2200);
+                const x0s = c.x, y0 = c.y, DUR = 5800; let perked = 0, started = false;
+                const shower = tween(DUR, t => {
+                    const now = performance.now();
+                    if (!started && t > 0.1){ started = true; c.shower = true; c.raining = true; el.classList.add('raining'); }
+                    if (perked === 0 && t > 0.3){ perked = 1; refreshArea(); }
+                    if (perked === 1 && t > 0.6){ perked = 2; refreshArea(); }
+                    if (t >= 0.9 && c.raining){ c.raining = false; c.shower = false; el.classList.remove('raining'); }
+                    frame(x0s, y0 + Math.sin(t * 6) * 1.5, 1, now, t >= 0.9);
+                }, () => {
+                    c.raining = false; c.shower = false; el.classList.remove('raining');
+                    rainbow(() => { c.busy = false; });
+                    const left = Math.abs(x1 - c.x), full = Math.abs(x1 - x0) || 1;
+                    drift(c.x, Math.max(4000, Math.max(13000, W * 15) * left / full), false);
+                });
+                c.shTok = shower;
             };
             el.addEventListener('click', makeRain); el.addEventListener('keydown', makeRain);
-            let lastDrop = 0, gap = 60, lastWater = 0;
-            const ground = ga.bed.clientHeight - 12;
-            c.tok = tween(Math.max(13000, W * 15), t => {
-                c.x = x0 + (x1 - x0) * t;
-                const y = 9 + Math.sin(t * 14) * 3;
-                el.style.transform = `translate(${f1(c.x)}px, ${f1(y)}px)`;
-                el.style.opacity = Math.min(1, t / 0.07, (1 - t) / 0.07).toFixed(3);
-                if (t < 0.04 || t > 0.96) return;
-                const now = performance.now();
-                /* always a gentle drizzle under the cloud; a click turns it into a proper shower that waters plants */
-                if (now - lastDrop > gap){ lastDrop = now; gap = c.raining ? rand(30, 70) : rand(60, 115); rainDrop(c.x + rand(cw * 0.2, cw * 0.8), y + ch * 0.84, ground, W); }
-                if (c.raining && now - lastWater > 400){
-                    lastWater = now; const lo = c.x / W * 100, hi = (c.x + cw) / W * 100;
-                    ga.P.forEach(p => { if (p.state === 'gone' || p.x < lo || p.x > hi) return; if (p.state === 'thirsty'){ ga.refresh(p); c.revived++; } else if (p.state === 'bloom') p.age = 0; });
-                }
-            }, () => {
-                el.remove(); if (ga.cloud === c) ga.cloud = null; ga.nextCloud = ga.tick + Math.round(rand(35, 60));
-                if (c.revived) ga.flash(`the rain perked up ${c.revived} thirsty plant${c.revived > 1 ? 's' : ''} ${FLI}`, 2600);
-                ga.updateHud(); ga.save();
-            });
+            drift(x0, Math.max(13000, W * 15), true);
             ga.updateHud();
         }
         function weatherTick(n){
