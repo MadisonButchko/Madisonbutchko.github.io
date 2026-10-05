@@ -1,5 +1,5 @@
 /* js/animals/nest.js
-   Purpose : a small bird nest of overlapping twigs beside the DeviantArt button in Let's Connect, advanced by plain clicks (one discrete state each, nothing timed or random): 0 two adult birds sit on it · 1 they flutter and fly away, revealing three eggs · 2-7 each egg cracks, then hatches, one at a time · then every click brings a parent with a worm for the chicks (always, one at a time); after 6 feedings the chicks grow a little and fly off, the empty nest stays, the next click brings the adults back with new eggs and the cycle restarts. No text, counters or buttons.
+   Purpose : a small bird nest of overlapping twigs beside the DeviantArt button in Let's Connect, advanced by plain clicks (one discrete state each, nothing timed or random): 0 two adult birds sit on it · 1 they flutter and fly away, revealing three eggs · 2-7 each egg cracks, then hatches, one at a time · then every click brings a parent with a worm who feeds chick 1, 2 and 3 in turn (always, one at a time); after 3 feedings (the chicks grow bigger after each, and the second parent joins the 2nd) the chicks fly off one after another, the empty nest stays, the next click brings the adults back with new eggs and the cycle restarts. No text, counters or buttons.
    Owns    : the .bn element (SVG art, placement beside the DeviantArt link and re-placement on resize/load), the click state `n` (0..9) and feed count, in memory only: every page load starts again at 0, the click/keyboard handler, the ?nestdebug hook.
    Uses    : core.utils, core.scheduler (Life: parent visits take the stage by force), animals.animals (registry), animals.art (BIRD_SVG), animals.birds (seed.onDrop for the seed hook, sparkle).
    Used by : js/main.js (start(), last in the order). The older, CSS-hidden `.w-nest` at the contact photo (animals/birds.js) is untouched.
@@ -10,8 +10,8 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     const { $, f1, reduce } = utils, { Life } = scheduler;
 
     /* n: 0 adults on the nest · 1 eggs · 2/3 egg 1 cracks/hatches · 4/5 egg 2 · 6/7 egg 3 · 7 = chicks: each click feeds (FEEDS of them) ·
-       8 chicks grow and fly off · 9 empty nest; the next click brings the adults back with new eggs (n 0 -> 1, the same sequence again) */
-    const LAST = 7, FEEDS = 6, GONE = 9;
+       8 the grown chicks fly off one by one · 9 empty nest; the next click brings the adults back with new eggs (n 0 -> 1, the same sequence again) */
+    const LAST = 7, FEEDS = 3, GONE = 9, FX = [0.275, 0.5, 0.725];   /* FX: each chick's x across the nest (SLOT_X / 80) */
     const EGG_TINT = ['#e6f1f8', '#f7e9ee', '#e8f3e6'], BABY_TINT = [['#f8e6b8', '#e8cf8f'], ['#f9d6df', '#eab4c4'], ['#d3e7f3', '#b2d0e4']];
 
     /* one nest per call: the state below is per instance (the contact nest and the about nest are independent) */
@@ -24,8 +24,8 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     /* ---- art ------------------------------------------------------------ */
     const SLOT_X = [22, 40, 58];
     function slotSVG(i) {
-        const bt = BABY_TINT[i];
-        return '<g class="bn-slot" data-st="" transform="translate(' + SLOT_X[i] + ' 0)" style="--ec:' + EGG_TINT[i] + ';--bc:' + bt[0] + ';--bc2:' + bt[1] + ';--d:' + (-i * 0.9) + 's">'
+        const bt = (cfg.babies || BABY_TINT)[i];
+        return '<g class="bn-slot bn-c' + i + '" data-st="" transform="translate(' + SLOT_X[i] + ' 0)" style="--ec:' + EGG_TINT[i] + ';--bc:' + bt[0] + ';--bc2:' + bt[1] + ';--d:' + (-i * 0.9) + 's">'
             + '<g class="bn-shell" transform="translate(0 40) scale(1.5) translate(0 -40)"><path d="M-5 36.6 Q-4.6 41.4 0 41.4 Q4.6 41.4 5 36.6 L3.2 38 L1.6 36 L0 38 L-1.6 36 L-3.2 38Z" style="fill:var(--ec)" stroke="#9ab8cc" stroke-width=".7" stroke-linejoin="round"/></g>'
             + '<g class="bn-baby"><g transform="translate(0 41) scale(1.5) translate(0 -41)"><ellipse cx="0" cy="37" rx="6" ry="5.2" style="fill:var(--bc)"/>'
             + '<g class="bn-head"><circle cx="0" cy="30.2" r="4.8" style="fill:var(--bc)"/><path d="M-1.6 25.8 Q0 23.6 1.7 25.7" fill="none" stroke-width="1.1" stroke-linecap="round" style="stroke:var(--bc2)"/>'
@@ -72,13 +72,15 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     })();
     const BOWL = 'M9 36 Q10 55 40 58 Q70 55 71 36 Q40 46.5 9 36Z';
     const BIRD = cfg.tint ? art.BIRD_SVG.replace(/#a9d8ea/g, cfg.tint[0]).replace(/#8fc3dc/g, cfg.tint[1]).replace(/#7fb3cc/g, cfg.tint[2]) : art.BIRD_SVG;
+    /* a chick leaving the nest is drawn in its own colour (same three body colours as the adults' tint) */
+    const chickBird = i => { const bt = (cfg.babies || BABY_TINT)[i]; return art.BIRD_SVG.replace(/#a9d8ea/g, bt[0]).replace(/#8fc3dc/g, bt[1]).replace(/#7fb3cc/g, bt[1]); };
     /* two adult birds sitting in the nest (BIRD_SVG, drawn as nested svgs so the front twigs overlap their lower bodies) */
-    const SEAT = (bx, flip) => '<g class="bn-adult" transform="' + (flip ? 'translate(' + (bx + 28) + ' 0) scale(-1 1)' : 'translate(' + bx + ' 0)') + '">' + BIRD.replace('<svg viewBox="0 0 40 32">', '<svg x="0" y="14" width="29" height="23" viewBox="0 0 40 32" overflow="visible">') + '</g>';
+    const SEAT = (bx, flip) => '<g class="bn-adult" transform="' + (flip ? 'translate(' + (bx + 36) + ' 0) scale(-1 1)' : 'translate(' + bx + ' 0)') + '">' + BIRD.replace('<svg viewBox="0 0 40 32">', '<svg x="0" y="9.5" width="36" height="28.5" viewBox="0 0 40 32" overflow="visible">') + '</g>';
     const ART = '<svg viewBox="0 0 80 60" focusable="false" aria-hidden="true">'
         + '<g class="bn-p"><ellipse cx="40" cy="37" rx="29.5" ry="7.5" fill="#5e3f22"/><ellipse cx="40" cy="37.8" rx="26" ry="5.6" fill="#e6d29c"/><path d="M17 39 Q27 35 36 38.6 M44 37.8 Q54 34 63 38.6 M26 36.6 Q40 33.6 54 36.6" fill="none" stroke="#c9b27a" stroke-width=".9" stroke-linecap="round"/>'
         + '<g fill="none" stroke-linecap="round">' + '<path d="M11 34 Q40 27 69 34" stroke="#8a5a2a" stroke-width="2"/><path d="M13 35.6 Q40 29.4 67 35.6" stroke="#b07f4a" stroke-width="1.4"/></g></g>'
         + slotSVG(0) + slotSVG(1) + slotSVG(2)
-        + '<g class="bn-adults">' + SEAT(8, false) + SEAT(43, true) + '</g>'
+        + '<g class="bn-adults">' + SEAT(4, false) + SEAT(40, true) + '</g>'
         + '<g class="bn-p"><clipPath id="bnBowl' + cfg.id + '"><path d="' + BOWL + '"/></clipPath><path d="' + BOWL + '" fill="#6f4a2a"/>'
         + '<g clip-path="url(#bnBowl' + cfg.id + ')" fill="none" stroke-linecap="round">' + TWIGS.body + '</g>'
         + '<g fill="none" stroke-linecap="round">' + TWIGS.rimFront + TWIGS.pokes + '</g></g>'
@@ -107,62 +109,88 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
 
     /* ---- chicks ------------------------------------------------------------ */
     const gapeAll = on => slots.forEach(g => { const b = $('.bn-baby', g); b.classList.toggle('gape', on); });
-    const hopAll = () => slots.forEach((g, i) => { const b = $('.bn-baby', g); later(() => { b.classList.add('hop'); later(() => b.classList.remove('hop'), 950); }, i * 120); });
     const nestPt = (fx, fy) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height * fy }; };
     const fly = (b, frames, ms, easing, done) => { const a = b.animate(frames, { duration: ms, easing, fill: 'forwards' }); a.onfinish = done; return a; };
     const at = (p, dx, dy) => 'translate(' + f1(p.x - 18 + (dx || 0)) + 'px,' + f1(p.y - 26 + (dy || 0)) + 'px)';
     const newBird = (fromLeft) => {
-        const b = document.createElement('div'); b.className = 'vine-bird flying w-bird' + (fromLeft ? '' : ' left-facing'); b.setAttribute('aria-hidden', 'true');
+        const b = document.createElement('div'); b.className = 'vine-bird flying w-bird bn-parent' + (fromLeft ? '' : ' left-facing'); b.setAttribute('aria-hidden', 'true');
         b.innerHTML = '<div class="c-flip"><div class="c-body">' + BIRD + '</div></div>'; document.body.appendChild(b); return b;
     };
 
-    /* one feeding = the parent arrives with a worm, hands it to the chicks, leaves; only then can the next click start another (locked). Always happens: it takes the stage by force. */
+    /* one feeding = the parent arrives with a worm, feeds chick 1, then 2, then 3, and leaves; only then can the next click start another (locked). Always happens: it takes the stage by force.
+       The 2nd feeding brings the second parent too. After each feeding the chicks grow (data-grow 1..3, see the CSS --g). */
     function feed() {
         locked = true;
         let counted = false;   /* the safety timer and the animation end can both report; a feeding counts once */
-        const done = () => { if (counted) return; counted = true; feeds++; locked = false; if (feeds >= FEEDS) growUp(); };
+        const pair = feeds === 1;
+        let mate = null;
+        const done = () => { if (counted) return; counted = true; if (mate) mate.remove(); feeds++; el.dataset.grow = feeds; locked = false; if (feeds >= FEEDS) growUp(); };
         if (reduce) { gapeAll(true); later(() => { gapeAll(false); done(); }, 500); return; }
-        Life.claim('nest-bird', 6000, true);
-        const tgt = nestPt(0.5, -0.05), fromLeft = tgt.x < innerWidth / 2 ? true : false;
+        Life.claim('nest-bird', 9000, true);
+        const hover = i => nestPt(FX[i], -0.02), tgt = hover(0), fromLeft = tgt.x < innerWidth / 2 ? true : false;
         const bird = newBird(fromLeft), sx = fromLeft ? -60 : innerWidth + 60, sy = Math.max(-20, tgt.y - 160);
         const worm = document.createElement('i'); worm.className = 'bn-worm'; $('.c-body', bird).appendChild(worm);
-        const guard = later(() => { bird.remove(); Life.release('nest-bird'); gapeAll(false); done(); }, 7000);   /* safety: a click can never stay blocked */
+        if (pair) mate = newBird(fromLeft);
+        let pos = tgt;   /* where the feeding parent hovers now */
+        const guard = later(() => { bird.remove(); Life.release('nest-bird'); gapeAll(false); done(); }, 9000);   /* safety: a click can never stay blocked */
+        const exit = { x: fromLeft ? innerWidth + 60 : -60, y: sy };
         const leave = () => {
             bird.classList.remove('eating'); bird.classList.add('flying'); bird.classList.toggle('left-facing', fromLeft);
-            fly(bird, [{ transform: at(tgt) }, { transform: at({ x: fromLeft ? innerWidth + 60 : -60, y: sy }) }], 1000, 'ease-in', () => { bird.remove(); clearTimeout(guard); Life.release('nest-bird'); done(); });
+            if (mate) { mate.classList.remove('nflap'); mate.classList.add('flying'); mate.classList.toggle('left-facing', fromLeft); fly(mate, [{ transform: at(mateAt) }, { transform: at({ x: exit.x, y: sy - 30 }) }], 1000, 'ease-in', () => { mate.remove(); mate = null; }); }
+            fly(bird, [{ transform: at(pos) }, { transform: at(exit) }], 1000, 'ease-in', () => { bird.remove(); clearTimeout(guard); Life.release('nest-bird'); done(); });
         };
-        fly(bird, [{ transform: at({ x: sx, y: sy }) }, { transform: at(tgt) }], 1100, 'ease-out', () => {
-            bird.classList.remove('flying'); bird.classList.add('eating'); gapeAll(true);
-            later(() => {   /* hand over the worm */
-                worm.remove(); const w = document.createElement('i'); w.className = 'bn-worm fly'; document.body.appendChild(w);
-                const p0 = { x: tgt.x + (fromLeft ? 8 : -8), y: tgt.y + 4 }, p1 = nestPt(0.5, 0.55);
+        const mateAt = nestPt(fromLeft ? 1 : 0, 0.05);   /* the near edge of the nest, on the side opposite the arrival */
+        if (mate) {   /* lands beside the nest, then the same few movements every time: head tilt, wing flutter, tiny hop */
+            const body = $('.c-body', mate), nudge = (kf, ms) => body.animate(kf, { duration: ms, easing: 'ease-in-out' });
+            fly(mate, [{ transform: at({ x: sx, y: sy - 30 }) }, { transform: at(mateAt) }], 1200, 'ease-out', () => {
+                mate.classList.remove('flying');
+                later(() => nudge([{ rotate: '0deg' }, { rotate: (fromLeft ? -9 : 9) + 'deg' }, { rotate: '0deg' }], 600), 150);
+                later(() => { mate.classList.add('nflap'); later(() => mate.classList.remove('nflap'), 450); }, 800);
+                later(() => nudge([{ translate: '0 0' }, { translate: '0 -4px' }, { translate: '0 0' }], 400), 1500);
+            });
+        }
+        /* hover over chick i, open its beak, hand the worm over, then go on to the next chick (or leave after the last) */
+        const feedChick = i => {
+            const hp = hover(i), b = $('.bn-baby', slots[i]);
+            bird.classList.remove('flying'); bird.classList.add('eating'); b.classList.add('gape');
+            later(() => {
+                const w = document.createElement('i'); w.className = 'bn-worm fly'; document.body.appendChild(w);
+                const p0 = { x: hp.x + (fromLeft ? 8 : -8), y: hp.y + 4 }, p1 = nestPt(FX[i], 0.42);
                 fly(w, [{ transform: 'translate(' + f1(p0.x) + 'px,' + f1(p0.y) + 'px)', opacity: 1 }, { transform: 'translate(' + f1(p1.x) + 'px,' + f1(p1.y) + 'px) scale(.4)', opacity: 0 }], 450, 'ease-in', () => w.remove());
-                later(() => { gapeAll(false); hopAll(); }, 450);
-            }, 500);
-            later(leave, 1300);
-        });
+                later(() => { b.classList.remove('gape'); b.classList.add('hop'); later(() => b.classList.remove('hop'), 950); }, 450);
+            }, 300);
+            later(() => {
+                if (i === 2) { worm.remove(); leave(); return; }
+                const nx = hover(i + 1); bird.classList.remove('eating'); bird.classList.add('flying');
+                fly(bird, [{ transform: at(pos) }, { transform: at(nx) }], 450, 'ease-in-out', () => { pos = nx; feedChick(i + 1); });
+            }, 1000);
+        };
+        fly(bird, [{ transform: at({ x: sx, y: sy }) }, { transform: at(tgt) }], 1100, 'ease-out', () => feedChick(0));
     }
 
-    /* the sixth feeding is done: the chicks grow a little, then fly off; the nest stays, empty */
+    /* the third feeding is done: after a short pause the grown chicks fly off one after another; the nest stays, empty */
     function growUp() {
         locked = true; n = 8;
-        if (reduce) { el.classList.add('grown'); later(() => leaveNest(), 400); return; }
-        el.classList.add('grown');
+        if (reduce) { later(() => leaveNest(), 400); return; }
         later(leaveNest, 1500);
     }
     function leaveNest() {
         const rects = slots.map(g => $('.bn-baby', g).getBoundingClientRect());
-        n = GONE; el.classList.remove('grown'); render();
-        Life.claim('nest-bird', 3000, true);
-        if (reduce) { Life.release('nest-bird'); locked = false; return; }
-        rects.forEach((r, i) => flyAway(r, i - 1, i === 2 ? () => { Life.release('nest-bird'); locked = false; } : null, 0.62));
-        later(() => { if (n === GONE && !returning) locked = false; }, 4000);   /* safety */
+        n = GONE;
+        Life.claim('nest-bird', 5000, true);
+        if (reduce) { render(); Life.release('nest-bird'); locked = false; return; }
+        rects.forEach((r, i) => later(() => {
+            slots[i].dataset.st = '';
+            flyAway(r, i - 1, i === 2 ? () => { Life.release('nest-bird'); locked = false; } : null, chickBird(i));
+            if (i === 2) render();
+        }, i * 550));
+        later(() => { if (n === GONE && !returning) locked = false; }, 5500);   /* safety */
     }
 
     /* the adults come back: they land on the nest, then flutter off and leave a new clutch (the same step as the very first click) */
     function adultsReturn() {
         locked = true; returning = true;
-        const finish = () => { if (!returning) return; returning = false; n = 1; feeds = 0; el.classList.add('has-adults'); birdsLeave(); };
+        const finish = () => { if (!returning) return; returning = false; n = 1; feeds = 0; el.dataset.grow = 0; el.classList.add('has-adults'); birdsLeave(); };
         if (reduce) { finish(); return; }
         el.classList.add('has-adults');
         const rects = [...el.querySelectorAll('.bn-adult')].map(a => a.getBoundingClientRect());
@@ -190,9 +218,9 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
             rects.forEach((r, i) => flyAway(r, i, i === 1 ? () => Life.release('nest-bird') : null));
         }, 900);
     }
-    function flyAway(r, i, done, sc) {
-        const b = document.createElement('div'); b.className = 'vine-bird flying w-bird' + (i <= 0 ? ' left-facing' : ''); b.setAttribute('aria-hidden', 'true');
-        b.innerHTML = '<div class="c-flip"><div class="c-body">' + BIRD + '</div></div>'; document.body.appendChild(b);
+    function flyAway(r, i, done, svg) {
+        const b = document.createElement('div'); b.className = 'vine-bird flying w-bird bn-parent' + (i <= 0 ? ' left-facing' : ''); b.setAttribute('aria-hidden', 'true');
+        b.innerHTML = '<div class="c-flip"><div class="c-body">' + (svg || BIRD) + '</div></div>'; document.body.appendChild(b);
         const x = r.left - 3, y = r.top - 2, dir = i <= 0 ? -1 : 1;
         const t = (dx, dy) => 'translate(' + f1(x + dx) + 'px,' + f1(y + dy) + 'px)';
         b.animate([{ transform: t(0, 0), opacity: 1 }, { transform: t(dir * 70, -70), opacity: 1, offset: 0.35 }, { transform: t(dir * 420, -240), opacity: 0 }], { duration: 1700 + Math.abs(i) * 200, easing: 'ease-in' }).onfinish = () => { b.remove(); done && done(); };
@@ -237,7 +265,7 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     function start() {
         links = cfg.host();
         if (!links || !cfg.geom || el) return;
-        el = document.createElement('div'); el.className = 'bn w-piece' + (cfg.cls ? ' ' + cfg.cls : ''); el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
+        el = document.createElement('div'); el.className = 'bn w-piece' + (cfg.cls ? ' ' + cfg.cls : ''); el.dataset.grow = 0; el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
         el.innerHTML = ART; links.appendChild(el);
         slots = [...el.querySelectorAll('.bn-slot')];
         el.addEventListener('click', advance);
@@ -253,7 +281,7 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
         debug: {
             state: () => ({ n, locked, feeds }),
             click: () => advance(),
-            reset: () => { n = 0; feeds = 0; locked = false; el.classList.remove('grown'); render(); }
+            reset: () => { n = 0; feeds = 0; locked = false; el.dataset.grow = 0; render(); }
         }
     };
     }
@@ -265,7 +293,7 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
             geom: () => { const l = $('.social-links a[href*="deviantart"]'); return l ? { left: l.offsetLeft, top: l.offsetTop, width: l.offsetWidth, height: l.offsetHeight } : { width: 0 }; }
         });
         const about = create({
-            id: 'About', gap: 24, above: true, cls: 'bn-about', tint: ['#d9c3f0', '#bfa3e3', '#ad8fd6'],
+            id: 'About', gap: 24, above: true, cls: 'bn-about', babies: [['#f3877e', '#d8605a'], ['#f8df7e', '#e6c557'], ['#c8a6ea', '#a883d3']], tint: ['#d9c3f0', '#bfa3e3', '#ad8fd6'],
             host: () => $('.about-hello'),
             geom: h => { const p = $('.about-hello'); return p ? { left: 0, top: 0, width: p.offsetWidth, height: p.offsetHeight } : { width: 0 }; }
         });

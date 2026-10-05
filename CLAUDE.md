@@ -24,6 +24,16 @@ Reuse existing modules and shared services. These rules do not authorize unrelat
 - Don't touch the files in `tools/` or `tools/baseline/` as part of site work; they are verification aids.
 - Commit or push only when asked.
 
+## Responsive / Mobile Requirements
+Mobile compatibility is a default requirement for every visual, interactive, animation or layout change, even when the prompt doesn't mention mobile.
+- Treat desktop and phone as separate layouts when needed; don't just shrink the desktop version. Account for both for every new feature.
+- Adapt size, position, spacing, animation bounds and layout to the available screen. Respect existing mobile-specific positioning and breakpoints.
+- Use targeted media queries when desktop and mobile need different placement or sizing. Don't alter unrelated desktop or mobile layout to fit a new feature.
+- New elements must never unintentionally cover or obstruct text, photos, buttons, navigation, game elements or other interactive/decorative features. Check `z-index`/stacking so everything layers as intended.
+- Prevent clipping, off-screen elements, unintended overlap and horizontal scrolling.
+- Interactions must work with touch as well as mouse/keyboard where applicable.
+- **Required verification:** before calling any visual or interactive change complete, check it at desktop and phone-sized viewports and confirm: (1) correct placement and scale; (2) no unintended overlap or obstruction; (3) no horizontal overflow; (4) correct stacking/`z-index`; (5) touch interactions work; (6) animations stay within their intended area.
+
 ## Feature workflow
 Follow this automatically for every new feature, modification or bug fix.
 
