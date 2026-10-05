@@ -237,3 +237,54 @@
 @keyframes snSpark { 0% { opacity: 0; scale: .2; } 20% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .4; rotate: 50deg; } }
 @keyframes snFlour { 0% { opacity: 0; scale: .3; } 15% { opacity: .9; scale: 1; } 70% { opacity: .8; } 100% { opacity: 0; scale: 1.1; } }
 @media (max-width: 699px) { .snail { width: 28px; height: 21px; } }
+
+/* ---------------------------------------------------------------------
+   The bird nest beside the DeviantArt button (js/animals/nest.js).
+   Placed by script; each click advances it: eggs appear, crack, hatch; chicks bob, blink,
+   peep and open their beaks when fed. Transforms and opacity only.
+   --------------------------------------------------------------------- */
+.social-links { position: relative; }
+.about-hello { position: relative; }
+.bn { position: absolute; z-index: 3; width: 130px; height: 98px; cursor: pointer; border-radius: 12px; outline: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.bn:focus-visible { outline: 3px solid var(--focus, #c2457e); outline-offset: 3px; }
+.bn svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(110, 80, 50, 0.2)); }
+.bn-adults { display: none; }
+.bn.has-adults .bn-adults { display: inline; }
+.bn.flutter .c-wing { animation: wingFlap 0.13s ease-in-out infinite alternate; }
+.bn-slot .bn-shell, .bn-slot .bn-baby, .bn-slot .bn-egg, .bn-slot .bn-crack { display: none; }
+.bn-slot[data-st="0"] .bn-egg, .bn-slot[data-st="1"] .bn-egg, .bn-slot[data-st="1"] .bn-crack { display: inline; }
+.bn-slot[data-st="2"] .bn-shell, .bn-slot[data-st="2"] .bn-baby { display: inline; }
+.bn-eggbody, .bn-baby, .bn-head, .bn-mouth, .bn-eye { transform-box: fill-box; }
+.bn-eggbody { transform-origin: 50% 100%; }
+.bn-baby { transform-origin: 50% 100%; animation: bnBob 3.4s ease-in-out var(--d, 0s) infinite alternate; }
+.bn-eye { transform-origin: 50% 50%; animation: bnBlink 5.5s ease-in-out var(--d, 0s) infinite; }
+.bn-head { transform-origin: 50% 90%; transition: rotate 0.25s ease, translate 0.25s ease; }
+.bn-mouth { opacity: 0; scale: 0.4; transform-origin: 50% 0; transition: opacity 0.2s ease, scale 0.25s ease; animation: bnPeep 9s ease-in-out calc(var(--d, 0s) - 3s) infinite; }
+.bn-beak { transition: opacity 0.2s ease; }
+.bn.near .bn-baby, .bn-baby.gape { animation: bnBob 0.55s ease-in-out infinite alternate; }
+.bn.near .bn-mouth, .bn-baby.gape .bn-mouth { opacity: 1; scale: 1; animation: none; }
+.bn.near .bn-beak, .bn-baby.gape .bn-beak { opacity: 0; }
+.bn.near .bn-head, .bn-baby.gape .bn-head { rotate: -5deg; translate: 0 -0.8px; }
+.bn-baby.hop { animation: bnHop 0.45s ease 2; }
+.bn-slot.wig .bn-eggbody { animation: bnWig 0.75s ease-in-out; }
+.bn-slot.shake .bn-eggbody { animation: bnShake 0.65s ease-in-out forwards; }
+.bn-slot.fresh .bn-eggbody { animation: bnLay 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.bn-slot[data-st="1"] .bn-eggbody { animation: bnTremble 6s ease-in-out var(--d, 0s) infinite; }
+.bn-slot[data-st="1"].shake .bn-eggbody { animation: bnShake 0.65s ease-in-out forwards; }
+.bn-slot.born .bn-baby { animation: bnPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), bnBob 3.4s ease-in-out var(--d, 0s) infinite alternate; }
+.bn.grown .bn-baby { scale: 1.18; }
+.bn-baby { transition: scale 1.2s ease; }
+.bn-worm { position: absolute; left: 32px; top: 11px; width: 17px; height: 7px; border-radius: 3px; background: #e0868f; box-shadow: inset 0 -1px 0 rgba(150, 70, 90, 0.35); pointer-events: none; animation: bnWorm 0.5s ease-in-out infinite alternate; }
+.bn-worm.fly { position: fixed; left: 0; top: 0; z-index: 7; width: 20px; height: 8px; }
+@keyframes bnWorm { to { rotate: 22deg; scale: 1.1 0.8; } }
+@keyframes bnBob { to { translate: 0 -1.2px; } }
+@keyframes bnBlink { 0%, 93%, 100% { scale: 1; } 96% { scale: 1 0.1; } }
+@keyframes bnPeep { 0%, 90%, 100% { opacity: 0; scale: 0.4; } 93%, 97% { opacity: 1; scale: 0.9; } }
+@keyframes bnHop { 50% { translate: 0 -2.4px; } }
+@keyframes bnPop { from { scale: 0.2; opacity: 0; } 60% { scale: 1.15; opacity: 1; } to { scale: 1; } }
+@keyframes bnWig { 15% { rotate: -13deg; } 35% { rotate: 12deg; } 55% { rotate: -9deg; } 75% { rotate: 7deg; } 100% { rotate: 0deg; } }
+@keyframes bnShake { 10% { rotate: -14deg; } 25% { rotate: 14deg; } 40% { rotate: -12deg; } 55% { rotate: 12deg; } 70% { rotate: -8deg; scale: 1.08; } 100% { rotate: 0deg; scale: 1.12; opacity: 0; } }
+@keyframes bnLay { from { scale: 0; translate: 0 -8px; } to { scale: 1; translate: 0 0; } }
+@keyframes bnTremble { 0%, 88%, 100% { rotate: 0deg; } 90% { rotate: -3deg; } 94% { rotate: 3deg; } 97% { rotate: -2deg; } }
+@media (max-width: 700px) { .bn { width: 150px; height: 113px; } }
+@media (prefers-reduced-motion: reduce) { .bn, .bn * { animation: none !important; transition: none !important; } }

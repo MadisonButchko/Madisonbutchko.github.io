@@ -87,4 +87,5 @@
 
     flowers.startAmbient();                                            /* breathing, pollen, click delay, wind, rare visitor (was ecosystem.js) */
     use('animals.snails').start();                                     /* a few snails resting in the margins: tap, peek, crawl */
+    use('animals.nest').start();                                       /* the bird family beside the DeviantArt button */
 })();

@@ -33,11 +33,7 @@ MB.define('plants.vines', [], function () {
             vines.forEach((v, vi) => {
                 /* the svg is 90 units wide; on phones it is drawn narrower, so scale the viewBox height to keep it uniform */
                 const svg = v.svg; svg.innerHTML = '';
-                /* phones: 100vh is not always the visible height. If the element is shorter than the screen, the viewBox (built for the screen)
-                   no longer matches it, the svg letterboxes, and everything drawn (and every caterpillar/hit-test using k) drifts off the vine.
-                   So make the element at least screen-tall first, then derive the viewBox from its real size. */
-                svg.style.height = ''; if (svg.clientHeight < innerHeight) svg.style.height = innerHeight + 'px';
-                const k = (svg.clientWidth || 90) / 90, H = (svg.clientHeight || innerHeight) / k;
+                const k = (svg.clientWidth || 90) / 90, H = Math.max(innerHeight, svg.clientHeight || 0) / k;
                 svg.setAttribute('viewBox', '0 0 90 ' + H.toFixed(1));
                 const phase = vi ? Math.PI : 0, pts = [];
                 /* the path hugs the inner side of the screen, far enough in that a flower grown to 1.9x on hover still clears the edge */

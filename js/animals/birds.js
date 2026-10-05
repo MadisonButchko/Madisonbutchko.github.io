@@ -1,8 +1,8 @@
 /* js/animals/birds.js
    Purpose : the world's birds: a visiting bird (for seeds and petals), the seed you can feed a bird, petal/seed theft, material gathering and the nest at the contact photo.
-   Owns    : the vine bird and the page flybys (vineBird(), flyby(): each starts its own timer and returns the function, for ?v11debug), visitingBird, gather, the seed (spawn/drag/feed/take), sparkle, steal, the nest (render/visit; stays inside this file), WorldState.nest/nestShown/nestBits updates.
+   Owns    : the vine bird and the page flybys (vineBird(), flyby(): each starts its own timer and returns the function, for ?v11debug), visitingBird, gather, the seed (spawn/drag/feed/take, onDrop hook for the nest), sparkle, steal, the nest (render/visit; stays inside this file), WorldState.nest/nestShown/nestBits updates.
    Uses    : plants.plants (tween, ease, BIRD_SVG), plants.vine-sprigs (VINE, fadeSprout), core.utils (rand, f1, $, reduce), core.state (WorldState), core.scheduler (Life), core.safe-zones (clearAt, navBottom, openSpot, whenUnseen, inView), animals.animals; reads the guide bird (animals.guide-bird get()) at call time.
-   Used by : legacy/200-little-world.js (heartbeat: seed spawn, steal, nest render/visit; core.world helpers; ?worlddebug hook) and main.js (init() creates the nest where the old definition-time code ran).
+   Used by : animals/nest.js (visitingBird, seed.onDrop, sparkle), legacy/200-little-world.js (heartbeat: seed spawn, steal, nest render/visit; core.world helpers; ?worlddebug hook) and main.js (init() creates the nest where the old definition-time code ran).
    Mobile / reduced motion: unchanged: the seed is a pointer-drag (touch works) or Enter/Space; no visiting birds, theft or nest visits under prefers-reduced-motion (a fed seed is simply eaten).
    Moved verbatim from legacy/200 (Migration Step 10d) and legacy/140 (vine bird + flyby, Step 12e); behaviour, order and timing unchanged. */
 MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.safe-zones', 'animals.animals', 'plants.plants', 'plants.vine-sprigs', 'animals.guide-bird', 'core.world'], function (utils, state, scheduler, zones, animals, plants, sprigs, guide, World) {
@@ -58,6 +58,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
        ------------------------------------------------------------------ */
     const seed = (function () {
         let el = null, timer = 0, shownThisVisit = 0;
+        const dropHooks = [];   /* animals.nest registers one: a seed tapped, or dropped on the nest, once chicks have hatched, is used to feed them */
         const SVG = '<svg viewBox="-8 -11 16 22" aria-hidden="true"><path d="M0 -10 C6 -6 6 6 0 10 C-6 6 -6 -6 0 -10Z" fill="#c9a06a" stroke="#8a5a2a" stroke-width="1"/><path d="M0 -8 C3 -4 3 4 0 8" stroke="#f3dcbd" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>';
         function remove(fade) { if (!el) return; const e = el; el = null; clearTimeout(timer); if (fade) { e.classList.add('gone'); setTimeout(() => e.remove(), 900); } else e.remove(); }
         function docPos() { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
@@ -91,8 +92,10 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
                 if (!drag || e.pointerId !== drag.id) return;
                 const moved = drag.moved; drag = null; el.classList.remove('held');
                 const gb = guide.get(); if (gb) gb.el.classList.remove('curious');
-                if (moved < 24) { el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle'); return; }
-                const p = docPos(), near = gb && gb.visible() && Math.hypot(gb.at().x - p.x, gb.at().y - p.y) < 220;
+                const p = docPos(), tap = moved < 24;
+                if (dropHooks.some(h => h(p, tap))) { el.classList.add('taken', 'eaten'); el.setAttribute('aria-disabled', 'true'); sparkle(p.x + scrollX, p.y + scrollY); setTimeout(() => remove(false), 500); return; }
+                if (tap) { el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle'); return; }
+                const near = gb && gb.visible() && Math.hypot(gb.at().x - p.x, gb.at().y - p.y) < 220;
                 feed(near || !(gb && gb.visible()));
             };
             el.addEventListener('pointerup', drop); el.addEventListener('pointercancel', drop);
@@ -101,7 +104,7 @@ MB.define('animals.birds', ['core.utils', 'core.state', 'core.scheduler', 'core.
             timer = setTimeout(() => remove(true), 75000);
             return true;
         }
-        return { spawn, get el() { return el; }, take: () => { const e = el; el = null; clearTimeout(timer); return e; } };
+        return { spawn, onDrop: fn => dropHooks.push(fn), get el() { return el; }, take: () => { const e = el; el = null; clearTimeout(timer); return e; } };
     })();
     function sparkle(x, y) {
         if (reduce) return;

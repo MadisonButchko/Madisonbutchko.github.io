@@ -25,15 +25,6 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
         const GROWN = { left: new Map(), right: new Map() }; /* slot index -> { level, seed, leafy } (survives re-layout) */
         const rng = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
         const vf = v => (+v).toFixed(1);
-        function remapGrown(side, from, to){
-            const next = new Map();
-            Array.from(GROWN[side]).sort((a, b) => a[0] - b[0]).forEach(([i, spec]) => {
-                let j = Math.min(to - 1, Math.round(i * (to - 1) / Math.max(1, from - 1)));
-                while (next.has(j) && j > 0) j--;
-                if (!next.has(j)) next.set(j, spec);
-            });
-            GROWN[side].clear(); next.forEach((spec, j) => GROWN[side].set(j, spec));
-        }
         function buildSlots(){
             ['left', 'right'].forEach(side => {
                 const svg = document.querySelector('.vine-' + side), path = svg && svg.querySelector('.vine-path');
@@ -49,10 +40,7 @@ MB.define('plants.vine-sprigs', ['core.utils', 'core.state', 'plants.vines', 'pl
                     slots.push({ i: j, d, x: p.x, y: p.y, nx: nx / nm, ny: ny / nm, sp: null, pending: false });
                 }
                 const layer = document.createElementNS(NS, 'g'); layer.setAttribute('class', 'vine-sprigs'); svg.appendChild(layer);
-                const prevCount = VINE[side] ? VINE[side].slots.length : 0;
                 const v = VINE[side] = { svg, path, len, slots, layer, k, narrow, side };
-                /* slots are spaced along the path, so a new screen shape (rotation, resize) gives a different count: keep each grown sprig at the same relative spot */
-                if (prevCount && prevCount !== slots.length) remapGrown(side, prevCount, slots.length);
                 GROWN[side].forEach((spec, i) => { if (slots[i]) renderSprig(v, slots[i], spec, 99); else GROWN[side].delete(i); });
             });
         }

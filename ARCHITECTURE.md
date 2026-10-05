@@ -27,6 +27,7 @@ separate, later phase (never mixed into structural moves).
 | deer | `animals/deer.js` + garden host API in `garden/garden.js` |
 | page snails (tap, peek, crawl, trail) | `animals/snails.js` (+ `weather.onRain` hook) |
 | birds / nest / seed feeding | `animals/birds.js` (guide bird: `animals/guide-bird.js`) |
+| the bird family by the DeviantArt button (eggs, chicks) | `animals/nest.js` (uses `birds.visitingBird`, `birds.seed.onDrop`) |
 | weather, rain, sun, wind | `environment/weather.js` or `breeze.js` + `css/environment.css` |
 | flowers on the page (turning, touch, pollen) | `plants/flowers.js` |
 | side vines | `plants/vines.js` (growth) and `plants/vine-sprigs.js` (click-grown) |

@@ -81,7 +81,16 @@ MB.define('animals.vine-caterpillar', ['core.utils', 'core.state', 'plants.plant
             function stepCat(c, now, dt){
                 let v = VINE[c.side];
                 if (!v || !v.path.isConnected) return catLeave(c);
-                if (v.path !== c.v.path){ c.d *= v.len / c.v.len; catRelease(c); c.v = v; c.sc = c.el.offsetWidth / 34; c.span = null; }   /* the layout changed: stay at the same spot along the vine */
+                if (v.path !== c.v.path){
+                    c.d *= v.len / c.v.len;
+                    /* A phone viewport change rebuilds the SVG path and every sprig. If this caterpillar
+                       was eating, its target belonged to the discarded SVG. Release it and leave the
+                       eating state together so the next frame never follows stale flower geometry. */
+                    const wasEating = c.state === 'eat';
+                    catRelease(c);
+                    if (wasEating){ c.state = 'unlean'; c.leanTo = 0; c.el.classList.remove('eating'); }
+                    c.v = v; c.sc = c.el.offsetWidth / 34; c.span = null;
+                }   /* the layout changed: stay at the same relative spot along the vine */
                 if (!c.span || now - c.spanAt > 250){ c.span = catSpan(v); c.spanAt = now; }
                 const span = c.span;
                 if (c.state === 'eat'){
