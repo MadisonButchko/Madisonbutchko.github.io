@@ -154,6 +154,8 @@
     font-family: var(--font-hand); font-size: 1.1rem; line-height: 1.22; color: #5a4366; text-align: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .w-envelope[data-state="closed"] .env-letter { visibility: hidden; }
 .w-envelope[data-state="open"] .env-letter { opacity: 1; pointer-events: auto; }
+/* once open, nothing clips the sheet: near the top of the page it is pushed down past the pocket, and the box's bottom clip would cut it off */
+.w-envelope[data-state="open"] .env-letter-box { clip-path: none; }
 .env-sheet { position: absolute; inset: 0; transform-origin: 50% 100%; filter: drop-shadow(0 6px 8px rgba(90, 67, 102, 0.17)) drop-shadow(0 1px 1.5px rgba(90, 67, 102, 0.14)); }
 .env-row { position: absolute; left: 0; width: 100%; height: 50%; }
 .env-row.t { top: 0; transform-origin: 50% 100%; }
@@ -240,6 +242,26 @@
 @keyframes snSay { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 699px) { .sn-say { font-size: 11px; padding: 3px 8px; max-width: min(130px, 44vw); } }
 @media (prefers-reduced-motion: reduce) { .sn-say { animation: none; } }
+
+/* ---- insects that come out from under a tapped decorative leaf (js/animals/insects.js) ---- */
+.insect { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .35s ease; will-change: transform; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.insect.is-in { opacity: 1; }
+.insect.is-out { opacity: 0; transition-duration: .5s; }
+.insect.is-under { z-index: 0; }   /* beneath the leaf (z-index 1) while it slips out */
+.insect.is-landed { pointer-events: auto; cursor: pointer; }
+.insect.is-landed::after { content: ''; position: absolute; inset: -8px; }   /* a forgiving tap area */
+.insect .in-flip, .insect .in-body { display: block; width: 100%; height: 100%; }
+.insect.is-left .in-flip { transform: scaleX(-1); }
+.insect svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1px rgba(110, 80, 50, .28)); }
+.insect.is-fly svg { filter: drop-shadow(0 4px 3px rgba(90, 67, 102, .2)); }
+.insect.is-fly .in-body { animation: inFly .22s ease-in-out infinite alternate; }
+.insect.is-crawl .in-body { animation: inCrawl .3s ease-in-out infinite alternate; }
+.insect.in-caterpillar.is-crawl .in-body { transform-origin: 50% 100%; animation: inInch .9s ease-in-out infinite; }
+.insect.is-wiggle .in-body { animation: inWiggle .5s ease; }
+@keyframes inFly { from { transform: translateY(-1px) scale(1.06, .94); } to { transform: translateY(1px) scale(.94, 1.06); } }
+@keyframes inCrawl { from { transform: translateY(0); } to { transform: translateY(-.6px) scale(1.04, .98); } }
+@keyframes inInch { 0%, 100% { transform: scaleX(1); } 50% { transform: scale(.82, 1.14); } }
+@keyframes inWiggle { 20% { transform: rotate(-14deg); } 50% { transform: rotate(12deg); } 80% { transform: rotate(-6deg); } }
 
 /* ---------------------------------------------------------------------
    The bird nest beside the DeviantArt button (js/animals/nest.js).

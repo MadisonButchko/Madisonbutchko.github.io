@@ -104,5 +104,5 @@ MB.define('animals.butterflies', ['core.utils', 'core.scheduler'], function (uti
         setTimeout(fly, 9000);
     }
 
-    return { visitFlower, shouldVisit, ladybugOn, LADYBUG, drift };
+    return { visitFlower, shouldVisit, ladybugOn, LADYBUG, BEE, drift };
 });

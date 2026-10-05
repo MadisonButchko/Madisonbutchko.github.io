@@ -1,5 +1,5 @@
 /* js/easter-eggs/envelope.js
-   Purpose : the secret envelope: after three taps within two seconds on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
+   Purpose : the secret envelope: after three taps within ten seconds on quiet background (the first two leave a faint sparkle as a hint) a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Before it opens, the envelope glides to the nearest spot with clear room for the whole letter (clear of text, controls, creatures and the vine strips, fully on screen). Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
    Owns    : the tap counter, the delivery (spot choice, bird, drift, one bounded retry timer when the stage is busy), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
    Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
    Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); tapping the open letter or envelope closes it, and Escape does too. Reduced motion: no bird, drift, folding, particles, rays or animated repositioning; the letter fades in with a brief static glow.
@@ -7,14 +7,18 @@
 MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zones', 'core.particles', 'animals.birds'], function (utils, scheduler, zones, particles, birds) {
     'use strict';
     const { rand, reduce } = utils, { Life } = scheduler, { navBottom } = zones, { FX } = particles;
-    const TAPS = 3, WINDOW = 2000;      /* three quiet taps within two seconds */
+    const TAPS = 3, WINDOW = 10000;     /* three quiet taps within ten seconds, anywhere, at any pace */
     /* Protect controls and photos as whole boxes, but only the actual lines of text.
        Container boxes such as .hero-text include empty background on narrow screens. */
     const SOLID = 'a,button,[role="button"],[tabindex]:not([tabindex="-1"]),summary,input,label,select,textarea,img,.collage,.nav,.m-header,.m-menu,.garden,.herbarium,.mb-bouquet,.seed-wrap,.gallery-frame,.guide-bird,.page-posy,.w-piece,#galleryModal,#lightbox';
     const IGNORE = SOLID + ',.w-envelope';
-    function spaceCheck() {
+    /* what the opened letter must also keep clear of: creatures, nests, the garden game and anything growing on the vines */
+    const ALIVE = '.w-nest,.w-story,.w-jade,.w-twig,.bn,.bn-worm,.snail,.ladybug,.insect,.critter,.visitor,.butterfly,.vine-bird,.vine-cat,.vine-sprout,.flyby-bird,.garden-bed,.garden-tip,.g-plant,.vine-tip';
+    const LANE_PAD = 24, EDGE = 12, FOOT = 10;
+    /* the on-screen boxes of everything matching `solid` plus every visible line of text */
+    function blockRects(solid) {
         const visible = el => !el.closest('.w-ignore,.w-envelope,script,style,template,.vh,[hidden]') && getComputedStyle(el).visibility !== 'hidden';
-        const rects = Array.from(document.querySelectorAll(SOLID)).filter(visible).map(el => el.getBoundingClientRect());
+        const rects = Array.from(document.querySelectorAll(solid)).filter(visible).map(el => el.getBoundingClientRect());
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
             acceptNode: n => n.textContent.trim() && visible(n.parentElement) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
         });
@@ -22,12 +26,39 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         for (let n = walker.nextNode(); n; n = walker.nextNode()) {
             range.selectNodeContents(n); rects.push(...range.getClientRects());
         }
-        const blocks = rects.filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight);
+        return rects.filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight);
+    }
+    function spaceCheck() {
+        const blocks = blockRects(SOLID);
         const top = navBottom();
         return (x, y, r) => x - r >= 8 && x + r <= innerWidth - 8 && y - r >= top + 6 && y + r <= innerHeight - 8 &&
             !blocks.some(b => x + r > b.left && x - r < b.right && y + r > b.top && y - r < b.bottom);
     }
     const clearAt = (x, y, r) => spaceCheck()(x, y, r);
+
+    /* ---- where the opened letter may stand ----
+       The footprint is the letter at rest plus its peak while rising (LETTER_UP + 30 above the envelope's centre), the closed envelope below, and a little padding.
+       The vines' fixed side strips (and their padding) are always off limits, since a vine can grow anywhere along them. */
+    const letterRoom = () => {
+        const blocks = blockRects(SOLID + ',' + ALIVE), top = navBottom();
+        document.querySelectorAll('.vine,.vine-hit').forEach(v => {
+            const r = v.getBoundingClientRect();
+            if (r.width && r.height) blocks.push({ left: r.left - LANE_PAD, right: r.right + LANE_PAD, top: -1e5, bottom: 1e5 });
+        });
+        const half = Math.min(190, innerWidth - 16) / 2 + FOOT, up = LETTER_UP + 30 + FOOT, down = 32 + FOOT;
+        return (x, y) => x - half >= EDGE && x + half <= innerWidth - EDGE && y - up >= top + EDGE && y + down <= innerHeight - EDGE &&
+            !blocks.some(b => x + half > b.left && x - half < b.right && y + down > b.top && y - up < b.bottom);
+    };
+    /* the free spot for the whole letter nearest to (x, y), or null */
+    function letterSpot(x, y) {
+        const room = letterRoom(), clear = spaceCheck();
+        let best = null, bestD = Infinity;
+        for (let cy = navBottom() + 30; cy <= innerHeight - 30; cy += 16) for (let cx = 30; cx <= innerWidth - 30; cx += 16) {
+            const d = Math.hypot(cx - x, cy - y);
+            if (d < bestD && room(cx, cy) && clear(cx, cy, 34)) { bestD = d; best = { x: cx, y: cy }; }
+        }
+        return best;
+    }
 
     /* ---- art (viewBox "0 -14 64 60": one unit = one pixel of the 64 x 60 envelope) ---- */
     const S = 'stroke="#b9708a" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"';
@@ -75,6 +106,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     /* how far the opened sheet reaches above the envelope's pocket, and how far fit() may push it down; delivery uses the same numbers to keep the note on screen */
     const LETTER_UP = 152, MAX_PUSH = 44;
     const D = 1300, CLOSE_RATE = 1.8, P = 'perspective(700px) ', PF = 'perspective(260px) ';
+    const CLIP = 'inset(-600px -240px 4px -240px)', FREE = 'inset(-600px -240px -600px -240px)';   /* the box's own clip (see css), then the same with the bottom released */
     const OUT = 'cubic-bezier(0.25, 0.8, 0.3, 1)', IO = 'cubic-bezier(0.4, 0, 0.2, 1)';
     const K = (ms, props, easing) => Object.assign({ offset: ms / D }, props, easing ? { easing } : {});
     /* `extra` pushes the final letter down when the envelope sits too near the top of the screen for the sheet to fit above it */
@@ -91,6 +123,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                 K(1130, { opacity: 1, translate: '0 ' + rest + 'px', rotate: '0deg' }, IO), K(1210, { opacity: 1, translate: '0 ' + rest + 'px', rotate: '-1.1deg' }, IO),
                 K(D, { opacity: 1, translate: '0 ' + rest + 'px', rotate: '-0.6deg' })
             ], 0, D),
+            /* the clip only hides the sheet while it is still inside the pocket; once it has risen clear, the bottom opens so a sheet pushed down near the page top is not cut off */
+            A(q('.env-letter-box'), [K(0, { clipPath: CLIP }), K(400, { clipPath: CLIP }), K(500, { clipPath: FREE }), K(D, { clipPath: FREE })], 0, D),
             /* the folded stack is small and sits right of centre; it grows to full size and slides to centre as the left panels open */
             A(q('.env-sheet'), [K(0, { translate: '-34px 0' }), K(760, { translate: '-34px 0' }, IO), K(1130, { translate: '0 0' }), K(D, { translate: '0 0' })], 0, D),
             A(q('.env-sheet'), [K(0, { scale: '0.72' }), K(420, { scale: '0.72' }, IO), K(1130, { scale: '1' }), K(D, { scale: '1' })], 0, D),
@@ -118,7 +152,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     function envelope(el) {
         const q = s => el.querySelector(s);
         const letter = q('.env-letter'), hit = q('.env-hit'), magic = q('.env-magic'), heartBox = q('.env-hearts');
-        let st = 'closed', anims = [], hearts = new Set(), token = 0, timer = 0, settleT = 0, rzT = 0;
+        let st = 'closed', anims = [], hearts = new Set(), token = 0, timer = 0, settleT = 0, rzT = 0, glideT = 0;
         let drag = null, handledAt = 0, lastW = innerWidth, home = null;     /* home = last valid position, in document coordinates (memory only) */
 
         /* geometry: the envelope's centre in viewport coordinates, moving it there, and "is that spot free?" */
@@ -267,9 +301,23 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         }
         const clearHearts = () => { hearts.forEach(clean => clean()); hearts.clear(); };
 
+        /* before a fresh opening, make sure the whole letter has clear room on screen: if not, glide the envelope to the nearest spot that has */
+        function relocate() {
+            const c = center();
+            if (letterRoom()(c.x, c.y)) return false;
+            const n = letterSpot(c.x, c.y);
+            if (!n) return false;                                   /* nowhere is better: open here, fit() still keeps it on screen */
+            if (!reduce) { el.classList.add('settling'); clearTimeout(settleT); settleT = setTimeout(() => el.classList.remove('settling'), 360); }
+            moveTo(n.x, n.y); note();
+            return true;
+        }
         function unfold() {
-            if (st === 'opening' || st === 'open') return;
+            if (st === 'opening' || st === 'open' || glideT) return;
             if (st === 'closing') { st = 'opening'; paint(); run(1); return; }       /* turn the closing around from where it is */
+            if (relocate() && !reduce) { glideT = setTimeout(() => { glideT = 0; begin(); }, 340); return; }
+            begin();
+        }
+        function begin() {
             clearHearts();
             const extra = fit(); st = 'opening'; paint();
             illuminate();
@@ -286,7 +334,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
 
         /* a press on the closed envelope is either a tap (opens it) or a drag (moves it): 8 px tells them apart */
         hit.addEventListener('pointerdown', e => {
-            if (st !== 'closed' || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            if (st !== 'closed' || drag || glideT || (e.pointerType === 'mouse' && e.button !== 0)) return;
             const c = center(); drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, cx: c.x, cy: c.y, l: parseFloat(el.style.left), t: parseFloat(el.style.top), moved: false };
             try { hit.setPointerCapture(e.pointerId); } catch (_) { }
         });
@@ -313,7 +361,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         hit.addEventListener('click', () => { if (performance.now() - handledAt < 700) return; if (st === 'open' || st === 'opening') shut(false); else unfold(); });
         hit.addEventListener('keydown', e => {
             const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-            if (!dir || st !== 'closed') return;
+            if (!dir || st !== 'closed' || glideT) return;
             e.preventDefault();
             const c = center(), step = e.shiftKey ? 60 : 24;
             for (let m = 1; m <= 6; m++) {                          /* hop over anything in the way */
@@ -421,13 +469,28 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         return true;
     }
 
+    /* a faint, brief sparkle where a counted tap landed: it uses a particle slot, ignores the pointer, and removes itself */
+    function hint(x, y) {
+        if (!FX.room(1)) return;
+        const h = document.createElement('span'), size = 14;
+        h.setAttribute('aria-hidden', 'true');
+        h.style.cssText = 'position:fixed;z-index:60;pointer-events:none;opacity:0;width:' + size + 'px;height:' + size + 'px;left:' + (x - size / 2).toFixed(1) + 'px;top:' + (y - size / 2).toFixed(1) + 'px;filter:drop-shadow(0 0 3px rgba(255,226,151,.5))';
+        h.innerHTML = spark('glint', '#f9dfa0', '#d6ab4f');
+        document.body.appendChild(h);
+        const a = h.animate(reduce
+            ? [{ opacity: 0 }, { opacity: .5, offset: .3 }, { opacity: 0 }]
+            : [{ opacity: 0, transform: 'scale(.4) rotate(0deg)' }, { opacity: .6, transform: 'scale(1) rotate(35deg)', offset: .35 }, { opacity: 0, transform: 'scale(.7) rotate(70deg)' }],
+            { duration: 750, easing: 'ease-out', fill: 'both' });
+        FX.track(h, a, 1200);
+    }
+
     function onTap(e) {
         if (placed || busy) { taps = 0; cancelRetry(); return; }                     /* already here (or on its way): never a duplicate */
         if (e.target.closest && e.target.closest(IGNORE)) return;
         if (!clearAt(e.clientX, e.clientY, 0)) return;
         const now = performance.now();
         if (!taps || now - firstAt > WINDOW) { taps = 0; firstAt = now; }
-        if (++taps < TAPS) return;
+        if (++taps < TAPS) { hint(e.clientX, e.clientY); return; }
         if (deliver()) taps = 0;            /* if the stage is busy or there is no quiet spot, the gesture stays armed (the next quiet tap tries again) and a bounded retry runs meanwhile */
         else { firstAt = now; queueRetry(); }
     }

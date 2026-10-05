@@ -149,7 +149,7 @@ MB.define('animals.vine-caterpillar', ['core.utils', 'core.state', 'plants.plant
                 if (cats.length) catRaf = requestAnimationFrame(catTick);
             }
             function spawnCat(){
-                if (document.hidden || cats.length >= CAT_MAX() || (WorldState.get().story || 0) > 0) return false;
+                if (document.hidden || innerWidth <= 700 || cats.length >= CAT_MAX() || (WorldState.get().story || 0) > 0) return false;
                 const opts = [];
                 ['left', 'right'].forEach(side => { const v = VINE[side]; if (!v) return;
                     const n = cats.filter(c => c.side === side).length, span = catSpan(v);

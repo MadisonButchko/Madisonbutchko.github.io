@@ -36,12 +36,12 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
     /* each snail has its own lines (by creation order) and says the next one every time it reaches the speech-bubble step, looping after the last */
     /* kind: shy (tucks into its shell) or rainbow (crawls, glowing trail, then speaks) · pal: PALETTES index · bubble: [background, border, text] pastel to match the shell */
     const SNAILS = [
-        { kind: 'shy', pal: 5, bubble: ['255,226,236', '#e6a0ba', '#6b3550'], lines: ['Please respect my shell.', 'I live here, you know.', 'This is my emotional support shell.', 'Occupied.'] },
-        { kind: 'rainbow', pal: 1, bubble: ['232,222,250', '#b6a0dc', '#4d3a78'], lines: ['Did you see my sparkles?', 'Everything is more fun with glitter.', 'I\u2019m basically a tiny rainbow.', 'Follow the shimmer!'] },
-        { kind: 'shy', pal: 2, bubble: ['214,243,229', '#8cc8a6', '#2f5e48'], lines: ['Um\u2026 can I help you?', 'I\u2019m not home.', 'Is it gone? Is it safe?', 'Maybe just a peek\u2026'] },
-        { kind: 'rainbow', pal: 3, bubble: ['255,243,198', '#e0bf58', '#69501a'], lines: ['Sunshine-powered slime!', 'Slow and glowy wins the race.', 'Ta-da! Fresh sparkles.', 'I left you a little gift.'] },
-        { kind: 'rainbow', pal: 0, bubble: ['255,229,218', '#eaa790', '#70402f'], lines: ['Ooh, a new view!', 'Pretty trail, right?', 'Shhh, I\u2019m on an adventure.', 'Colors follow me everywhere.'] },
-        { kind: 'shy', pal: 4, bubble: ['212,235,248', '#84bbd9', '#2f5870'], lines: ['Five more minutes\u2026', 'Shh, napping.', 'Come back after tea.', 'I was just thinking.'] }
+        { kind: 'shy', pal: 5, bubble: ['255,226,236', '#e6a0ba', '#6b3550'], lines: ['Please respect my shell.', 'I live here, you know.', 'This is my emotional support shell.', 'Occupied.', 'No solicitors, only compliments.', 'My shell, my rules.'] },
+        { kind: 'rainbow', pal: 1, bubble: ['232,222,250', '#b6a0dc', '#4d3a78'], lines: ['Did you see my sparkles?', 'Everything is more fun with glitter.', 'I\u2019m basically a tiny rainbow.', 'Follow the shimmer!', 'Warning: may cause sparkles.', 'Is it glitter or is it slime? Yes.'] },
+        { kind: 'shy', pal: 2, bubble: ['214,243,229', '#8cc8a6', '#2f5e48'], lines: ['Um\u2026 can I help you?', 'I\u2019m not home.', 'Is it gone? Is it safe?', 'Maybe just a peek\u2026', 'I\u2019m not hiding, I\u2019m thinking inside.', 'Please knock first.'] },
+        { kind: 'rainbow', pal: 3, bubble: ['255,243,198', '#e0bf58', '#69501a'], lines: ['Sunshine-powered slime!', 'Slow and glowy wins the race.', 'Ta-da! Fresh sparkles.', 'I left you a little gift.', 'Fast? I prefer \u201cscenic.\u201d', 'Be right back. Eventually.'] },
+        { kind: 'rainbow', pal: 0, bubble: ['255,229,218', '#eaa790', '#70402f'], lines: ['Ooh, a new view!', 'Pretty trail, right?', 'Shhh, I\u2019m on an adventure.', 'Colors follow me everywhere.', 'I\u2019m not slow, I\u2019m fabulous.', 'Leaving a trail of good vibes.'] },
+        { kind: 'shy', pal: 4, bubble: ['212,235,248', '#84bbd9', '#2f5870'], lines: ['Five more minutes\u2026', 'Shh, napping.', 'Come back after tea.', 'I was just thinking.', 'Dreaming about lettuce\u2026', 'Do not disturb: shell in session.'] }
     ];
     const IDLE_MS = 9000;   /* a snail left hiding or talking comes back out by itself */
 
@@ -221,7 +221,7 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
         b.classList.toggle('is-below', !ok(up) && ok(down));
     }
 
-    /* tap 1: tucks into its shell and waits · tap 2: says its next line · tap 3: peeks, comes out and crawls a little way off */
+    /* tap 1: tucks into its shell and waits · every tap says its next line · tap 3: peeks, comes out and crawls a little way off */
     function tap(sn) {
         const step = sn.step;
         stop(sn); commit(sn); hideBubble(sn);
@@ -230,11 +230,11 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
         sn.state = 'hid'; sn.el.style.setProperty('--sn-in', '0.22s'); setState(sn, 'hid');
         if (step < 2) {
             sn.step = step + 1;
-            if (step === 1) say(sn);
+            say(sn);   /* every tap gets a line */
             later(sn, () => { sn.step = 0; hideBubble(sn); emerge(sn); later(sn, () => { sn.state = 'idle'; }, p.emerge + 300); }, IDLE_MS);
             return;
         }
-        sn.step = 0;
+        sn.step = 0; say(sn);
         sn.el.style.setProperty('--sn-in', '0.6s'); setState(sn, 'peek');
         let at = p.peek;
         later(sn, () => emerge(sn), at); at += p.emerge + 300;
