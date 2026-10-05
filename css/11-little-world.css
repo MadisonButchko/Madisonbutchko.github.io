@@ -136,12 +136,14 @@
 .env-glow { position: absolute; left: 50%; top: -74px; width: 260px; height: 190px; border-radius: 50%; opacity: 0; pointer-events: none;
     background: radial-gradient(ellipse at 50% 66%, rgba(255, 250, 207, .98) 0%, rgba(255, 220, 151, .62) 28%, rgba(247, 194, 224, .25) 54%, rgba(205, 188, 241, 0) 78%);
     filter: blur(10px); transform: translateX(-50%); }
+.env-ring { position: absolute; left: 50%; top: -30px; width: 238px; height: 172px; box-sizing: border-box; border: 2px solid rgba(255, 237, 177, .75); border-radius: 50%; opacity: 0; pointer-events: none;
+    box-shadow: 0 0 14px rgba(255, 221, 145, .55), inset 0 0 18px rgba(242, 195, 224, .28); filter: blur(.4px); }
 .env-ray { --ray-angle: 0deg; position: absolute; left: 50%; top: -130px; width: 20px; height: 155px; opacity: 0; pointer-events: none; transform-origin: 50% 100%;
     background: linear-gradient(to top, rgba(255, 248, 208, .58), rgba(255, 226, 174, .2) 58%, transparent); filter: blur(5px); border-radius: 50% 50% 20% 20%; }
 .env-ray.r1 { --ray-angle: -48deg; } .env-ray.r2 { --ray-angle: -24deg; height: 170px; top: -145px; }
 .env-ray.r3 { --ray-angle: 25deg; height: 164px; top: -139px; } .env-ray.r4 { --ray-angle: 49deg; }
 .env-hearts { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.env-heart { position: absolute; left: 24px; top: 11px; width: 18px; height: 17px; opacity: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(163, 104, 137, .18)); }
+.env-heart { position: absolute; left: 22px; top: 9px; width: 22px; height: 21px; opacity: 0; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(163, 104, 137, .28)) drop-shadow(0 0 5px rgba(255, 237, 205, .42)); }
 .env-heart svg { display: block; width: 100%; height: 100%; }
 .env-spark { width: 10px; height: 10px; left: 27px; top: 13px; filter: drop-shadow(0 0 3px rgba(255, 226, 151, .45)); }
 
@@ -167,11 +169,13 @@
 .env-panel.tl { border-radius: 8px 0 0 0; } .env-panel.tr { border-radius: 0 9px 0 0; } .env-panel.bl { border-radius: 0 0 0 9px; } .env-panel.br { border-radius: 0 0 8px 0; }
 .env-panel .shade, .env-row > .shade { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: linear-gradient(160deg, rgba(120, 85, 125, 0.28), rgba(120, 85, 125, 0.06)); border-radius: inherit; }
 .env-row > .shade { left: 50%; width: 50%; border-radius: 0 9px 0 0; }   /* only over the folded stack, not the empty half the left panel left behind */
-.env-text { position: absolute; inset: 0; display: flex; overflow: auto; overscroll-behavior: contain; }
+.env-paper-shimmer { position: absolute; inset: 0; z-index: 1; border-radius: 9px; opacity: 0; pointer-events: none; background: linear-gradient(112deg, transparent 34%, rgba(255,255,255,.76) 45%, rgba(255,239,184,.42) 51%, rgba(225,207,250,.32) 57%, transparent 68%); background-size: 260% 100%; background-position: 135% 0; }
+.env-text { position: absolute; inset: 0; z-index: 2; display: flex; overflow: hidden; }
 .env-copy { margin: auto 0; width: 100%; padding: 10px 14px; box-sizing: border-box; }
 .env-copy span { display: block; }
-.env-copy span + span { margin-top: 3px; }
+.env-copy span + span { margin-top: 7px; }
 .env-copy .env-hello { white-space: nowrap; font-size: 1.3rem; font-weight: 600; color: #c2457e; }
+.env-copy-heart { display: inline-block; margin-left: 2px; color: #d96b93; font-size: 1.25em; line-height: .8; font-weight: 700; filter: drop-shadow(0 1px 2px rgba(194,69,126,.18)); }
 .env-close { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; padding: 0; border: 1.5px solid #e6c9d4; border-radius: 50%; background: #fff7fa; cursor: pointer; display: grid; place-items: center; box-shadow: 0 2px 5px rgba(90, 67, 102, 0.18);
     opacity: 0; visibility: hidden; transition: opacity 0.2s ease; touch-action: manipulation; }
 .env-close::after { content: ''; position: absolute; inset: -8px; }
@@ -186,7 +190,7 @@
     .w-envelope, .w-envelope.settling, .env-back { transition: none; }
     .env-letter { transition: opacity 0.3s ease; }
     .env-hearts { display: none; }
-    .env-magic .env-ray { display: none; }
+    .env-magic .env-ray, .env-magic .env-ring, .env-paper-shimmer { display: none; }
     .env-magic.is-still .env-glow { opacity: .24; transform: translate(-50%, -2px) scale(.95); }
 }
 @keyframes envFade { from { opacity: 0; } to { opacity: 1; } }

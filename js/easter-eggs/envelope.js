@@ -43,7 +43,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     ];
     const SPARKS = [
         ['star', '#f9dfa0', '#d6ab4f'], ['glint', '#d8c9f1', '#9d85c9'], ['dot', '#c9e4f6', '#82b5d5'],
-        ['star', '#f7bfd4', '#d985aa'], ['glint', '#f9dfa0', '#d6ab4f']
+        ['star', '#f7bfd4', '#d985aa'], ['glint', '#f9dfa0', '#d6ab4f'], ['dot', '#e0d4f5', '#a18acb'],
+        ['star', '#cbe8f6', '#82b5d5'], ['glint', '#f8c4d5', '#d985aa']
     ];
     const spark = (kind, fill, stroke) => kind === 'dot'
         ? '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.2" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".7"/></svg>'
@@ -51,7 +52,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             ? '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .7 L6.7 5.3 L11.3 6 L6.7 6.7 L6 11.3 L5.3 6.7 L.7 6 L5.3 5.3Z" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".55"/></svg>'
             : '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .9 L7.5 4.5 L11.1 6 L7.5 7.5 L6 11.1 L4.5 7.5 L.9 6 L4.5 4.5Z" fill="' + fill + '" stroke="' + stroke + '" stroke-width=".55" stroke-linejoin="round"/></svg>';
     const svg = (cls, inner, vb) => '<svg class="' + cls + '" viewBox="' + (vb || '0 -14 64 60') + '" aria-hidden="true">' + inner + '</svg>';
-    const COPY = '<span class="env-hello">hello, curious soul &nbsp;♡</span><span>the garden has secrets.</span><span>look closely, explore, and see what comes to life.</span>';
+    const COPY = '<span class="env-hello">hello, curious soul</span><span>the garden has secrets</span><span>come explore <b class="env-copy-heart" aria-label="heart">♡</b></span>';
     const LABEL = 'A tiny envelope with a heart seal. Press to open it; arrow keys move it';
     /* the letter is one sheet of four panels (folded in quarters), so the folds are real: the top row hinges up, then the left panels swing open */
     const SHEET = '<div class="env-sheet" aria-hidden="true">' +
@@ -60,10 +61,10 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     const MARKUP =
         svg('env-back', BODY) +
         '<svg class="env-flap-open" viewBox="0 -12 64 21" aria-hidden="true">' + FLAP_OPEN + '</svg>' +
-        '<div class="env-magic" aria-hidden="true"><span class="env-glow"></span><span class="env-ray r1"></span><span class="env-ray r2"></span><span class="env-ray r3"></span><span class="env-ray r4"></span></div>' +
+        '<div class="env-magic" aria-hidden="true"><span class="env-glow"></span><span class="env-ring"></span><span class="env-ray r1"></span><span class="env-ray r2"></span><span class="env-ray r3"></span><span class="env-ray r4"></span></div>' +
         '<div class="env-hearts" aria-hidden="true"></div>' +
         '<div class="env-letter-box"><div class="env-letter" role="region" aria-label="A handwritten note" aria-hidden="true">' + SHEET +
-            '<div class="env-text"><div class="env-copy">' + COPY + '</div></div>' +
+            '<div class="env-paper-shimmer" aria-hidden="true"></div><div class="env-text"><div class="env-copy">' + COPY + '</div></div>' +
             '<button type="button" class="env-close" aria-label="Close the note"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#8c5a73" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button>' +
         '</div></div>' +
         svg('env-front', PANELS) +
@@ -188,16 +189,31 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                 t = setTimeout(clean, 1300); hearts.add(clean);
                 return;
             }
-            const glow = q('.env-glow'), rays = Array.from(magic.querySelectorAll('.env-ray'));
+            const glow = q('.env-glow'), ring = q('.env-ring'), shimmer = q('.env-paper-shimmer');
+            const rays = Array.from(magic.querySelectorAll('.env-ray'));
             const animations = [glow.animate([
                 { opacity: 0, transform: 'translate(-50%, 10px) scale(.58)' },
-                { opacity: .72, transform: 'translate(-50%, 0) scale(1)', offset: .32 },
-                { opacity: .42, transform: 'translate(-50%, -7px) scale(1.14)', offset: .68 },
+                { opacity: .88, transform: 'translate(-50%, 0) scale(1)', offset: .32 },
+                { opacity: .54, transform: 'translate(-50%, -7px) scale(1.14)', offset: .68 },
                 { opacity: 0, transform: 'translate(-50%, -12px) scale(1.22)' }
-            ], { duration: 1450, delay: 90, easing: 'ease-out', fill: 'both' })];
+            ], { duration: 1550, delay: 70, easing: 'ease-out', fill: 'both' }), ring.animate([
+                { opacity: 0, transform: 'translate(-50%, -50%) scale(.46)' },
+                { opacity: .62, transform: 'translate(-50%, -50%) scale(.76)', offset: .28 },
+                { opacity: .28, transform: 'translate(-50%, -50%) scale(1)', offset: .66 },
+                { opacity: 0, transform: 'translate(-50%, -50%) scale(1.16)' }
+            ], { duration: 1550, delay: 130, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' }), shimmer.animate([
+                { opacity: 0, backgroundPosition: '135% 0' },
+                { opacity: .72, backgroundPosition: '80% 0', offset: .28 },
+                { opacity: .5, backgroundPosition: '15% 0', offset: .68 },
+                { opacity: 0, backgroundPosition: '-35% 0' }
+            ], { duration: 1050, delay: 760, easing: 'ease-in-out', fill: 'both' }), q('.env-front').animate([
+                { filter: 'drop-shadow(0 0 0 rgba(255,225,154,0))' },
+                { filter: 'drop-shadow(0 0 10px rgba(255,225,154,.82))', offset: .42 },
+                { filter: 'drop-shadow(0 0 0 rgba(255,225,154,0))' }
+            ], { duration: 1100, delay: 90, easing: 'ease-out', fill: 'both' })];
             rays.forEach((ray, i) => animations.push(ray.animate([
                 { opacity: 0, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(.3)' },
-                { opacity: .34, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(1)', offset: .38 },
+                { opacity: .48, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(1)', offset: .38 },
                 { opacity: 0, transform: 'translateX(-50%) rotate(var(--ray-angle)) scaleY(1.18)' }
             ], { duration: 1250 + i * 55, delay: 210 + i * 35, easing: 'ease-out', fill: 'both' })));
             let left = animations.length;
@@ -216,7 +232,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
             const scale = parseFloat(style.scale) || 1;
             const pieces = HEARTS.map((colors, i) => ({ heart: true, i, colors })).concat(SPARKS.map((spec, i) => ({ heart: false, i, spec })));
             for (let k = 0; k < pieces.length && FX.room(1); k++) {
-                const piece = pieces[k], h = document.createElement('span'), size = piece.heart ? rand(17, 23) : rand(7, 12);
+                const piece = pieces[k], h = document.createElement('span'), size = piece.heart ? rand(21, 30) : rand(8, 14);
                 h.className = piece.heart ? 'env-heart' : 'env-heart env-spark env-' + piece.spec[0];
                 h.style.width = size.toFixed(1) + 'px'; h.style.height = (size * (piece.heart ? .94 : 1)).toFixed(1) + 'px';
                 h.style.left = (32 - size / 2 + rand(-7, 7)).toFixed(1) + 'px'; h.style.top = (12 + rand(-3, 5)).toFixed(1) + 'px';
@@ -226,8 +242,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                 heartBox.appendChild(h);
                 const box = h.getBoundingClientRect(), cx = box.left + box.width / 2, cy = box.top + box.height / 2;
                 const side = piece.i % 2 ? 1 : -1, lane = piece.heart ? Math.floor(piece.i / 2) : piece.i % 3;
-                const dx = side * rand(104 + lane * 8, 122 + lane * 10), rise = rand(piece.heart ? 72 : 54, piece.heart ? 118 : 96);
-                const turn = rand(-24, 24), startTurn = rand(-18, 18);
+                const dx = side * rand(116 + lane * 8, 136 + lane * 10), rise = rand(piece.heart ? 82 : 62, piece.heart ? 134 : 110);
+                const turn = rand(-34, 34), startTurn = rand(-24, 24);
                 /* Sample the entire rise with overlapping padded footprints, including
                    the envelope's tilt/hover scale. Try a shorter path in tight spaces. */
                 const pathClear = factor => {
@@ -237,14 +253,14 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                     }
                     return true;
                 };
-                const factor = [1, 0.7, 0.45].find(pathClear);
+                const factor = [1, 0.82, 0.64, 0.5].find(pathClear);
                 if (!factor) { h.remove(); continue; }
                 const a = h.animate([
                     { transform: 'translate(0, 7px) rotate(' + startTurn.toFixed(1) + 'deg) scale(.3)', opacity: 0 },
-                    { transform: 'translate(' + (dx * factor * .58).toFixed(1) + 'px, ' + (3 - rise * factor * .58).toFixed(1) + 'px) rotate(' + (startTurn + turn * .55).toFixed(1) + 'deg) scale(1.06)', opacity: piece.heart ? .92 : .84, offset: .4 },
+                    { transform: 'translate(' + (dx * factor * .58).toFixed(1) + 'px, ' + (3 - rise * factor * .58).toFixed(1) + 'px) rotate(' + (startTurn + turn * .55).toFixed(1) + 'deg) scale(1.14)', opacity: piece.heart ? .98 : 1, offset: .4 },
                     { transform: 'translate(' + (dx * factor).toFixed(1) + 'px, ' + (-rise * factor).toFixed(1) + 'px) rotate(' + (startTurn + turn).toFixed(1) + 'deg) scale(.82)', opacity: 0 }
-                ], { duration: rand(1300, 1550), delay: 300 + k * 18, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'both' });
-                const release = FX.track(h, a, 2150);
+                ], { duration: rand(1400, 1750), delay: 270 + k * 16, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'both' });
+                const release = FX.track(h, a, 2250);
                 const clean = () => { release(); hearts.delete(clean); a.cancel(); };
                 hearts.add(clean);
                 a.addEventListener('finish', clean, { once: true });
