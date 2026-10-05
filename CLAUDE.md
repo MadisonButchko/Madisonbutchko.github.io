@@ -8,6 +8,11 @@ It must work from `file://` (double-click), a local server (`python3 -m http.ser
 - **`ARCHITECTURE.md`** before any structural or feature work. Its routing table says which files to read for a given request.
 - **`MIGRATION_PLAN.md`** is historical/reference only. Read it only for requests about unfinished migration work (code may still live in `js/legacy/*` / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
 
+## Background features
+Before adding or modifying background decorations, plants, creatures, ambient effects, or draggable objects, read `BACKGROUND_RULES.md` and the relevant ownership guidance in `ARCHITECTURE.md`.
+These are global rules. Apply them to every background feature unless I explicitly override them.
+Reuse existing modules and shared services. These rules do not authorize unrelated refactoring, consolidation of existing infrastructure, or changes to unrelated features. Scale verification to the requested change.
+
 ## Rules
 - Preserve existing design, content, animation, timing and behavior unless explicitly asked to change it. This is not a redesign.
 - Make the smallest relevant change. No unrelated refactors; note problems you notice elsewhere instead of fixing them.

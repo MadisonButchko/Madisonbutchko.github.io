@@ -72,6 +72,7 @@
     bouquet.create(); bouquet.markAll(); bouquet.draw();               /* the visitor's bouquet + "visited" marks */
     use('botanical.links').start();                                    /* ways in + a seed of curiosity */
     use('easter-eggs.easter-eggs').start();                            /* hidden moments, footer year */
+    use('easter-eggs.envelope').start();                               /* the secret envelope a bird brings after a few quiet taps */
     await boundary();
 
     use('world.world').init();                                         /* the little world: sunlight, birds, story, seeds, heartbeat */

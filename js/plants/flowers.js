@@ -1,11 +1,12 @@
 /* js/plants/flowers.js
    Purpose : everything the decorative flowers do. start(): turning flowers (Spin, hover speed-up), the touch responses (REACT / FINDS: spin, bloom, petals, ... ladybug, tiny butterfly, seed, bud), `interactive`/`turning` wiring and late-flower adoption. startAmbient(): Experience/Skills breathing, off-screen pause, pollen, the capture-phase ~230 ms click delay, wind (via breeze) and the rare butterfly visitor.
+   Wild    : adoptWild(el) gives each wild bloom built by plants/decor.js (hydrangea, daisy, cosmos, poppy, bellflower, forget-me-not) its personality reactions: hover sway, tap/click/keyboard reaction, and for about one flower in four a 4-stage progression (timestamps only: 12 s reset, 15 s special cooldown) ending in a personality effect. In-memory only.
    Owns    : Spin (module-level; was window.__spin), REACT/FINDS/react/interactive/turning/adoptLate (?v11debug window.__v11), touchTap, the seeded(7) generator the dandelions continue from, the capture-phase document click handler, the rare-visitor timer.
-   Uses    : core.utils ($, $$, reduce), core.scheduler (Life), core.particles (FX), core.state (GardenLog), environment.breeze (wind); core.world (sparkle, seedAt, hasSeed, clearAt, note) and animals.butterflies (the rare visitor) read at call time.
+   Uses    : core.utils ($, $$, reduce), core.scheduler (Life), core.particles (FX: wild bursts draw from the same budget), core.state (GardenLog), core.safe-zones (clearAt for wild effects), environment.breeze (wind); core.world (sparkle, seedAt, hasSeed, clearAt, note) and animals.butterflies (the rare visitor) read at call time.
    Used by : legacy/210-v11-polish.js calls start() at the spot the block ran and hands `seeded`/`REACT` to plants/dandelions.js; js/main.js (LAST script) calls startAmbient() where ecosystem.js used to run, so listener and init order are unchanged.
    Mobile / reduced motion: unchanged: hover speed-ups are mouse-only; wind only on fine pointers; reduced motion = no spin, no click delay, no pollen, no visitor; taps still react.
    Moved verbatim from legacy/210 (Migration Step 12a) and ecosystem.js (Step 11); behaviour, order and timing unchanged. */
-MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', 'core.state', 'environment.breeze', 'core.world'], function (utils, scheduler, particles, state, breeze, World) {
+MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', 'core.state', 'environment.breeze', 'core.world', 'core.safe-zones'], function (utils, scheduler, particles, state, breeze, World, safeZones) {
     'use strict';
     const { $, $$, reduce } = utils, { Life } = scheduler, FX = particles.FX, GardenLog = state.GardenLog;
     const rnd = (a, b) => a + Math.random() * (b - a);
@@ -51,6 +52,145 @@ MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', '
             raf = active.size ? requestAnimationFrame(tick) : 0;
         }
         return { set, spinning: el => { const s = st.get(el); return !!s && s.rate > 1.5; } };
+    })();
+
+    /* ------------------------------------------------------------------
+       Wild blooms (built and placed by plants/decor.js). Each has a fixed
+       personality; simple ones answer every hover/tap with one short
+       reaction, and about one in four ("special") climbs four stages:
+       1 wiggle/tilt/perk, 2 bloom or pose, 3 petals/colour change,
+       4 the personality's effect, then starts over. Progress resets after
+       12 s idle; the effect has a 15 s cooldown per flower. All checks are
+       timestamps taken at activation: no polling, no queued effects. At
+       most two effects and one message at a time; if there is no room or
+       budget the flower just blushes or changes pose locally.
+       ------------------------------------------------------------------ */
+    const Wild = (() => {
+        const RESET = 12000, COOLDOWN = 15000, MSG_MS = 1500, MAX_FX = 2;
+        const MSGS = ["stop, you're making me blush", 'hehe', 'again?', 'you found me'];
+        const SPRING_EASE = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+        let fxActive = 0, msgActive = 0;
+        const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+        const rgb = h => { h = h.replace('#', ''); if (h.length === 3) h = h.replace(/./g, c => c + c); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); };
+        const mixTo = (from, to, t) => { const a = rgb(from), b = rgb(to); return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')'; };
+
+        /* motion primitives: each returns how long it keeps the flower "busy"; none run under reduced motion */
+        const go = (node, frames, ms, opt) => { if (!reduce && node) return node.animate(frames, Object.assign({ duration: ms, easing: 'ease-in-out' }, opt)); };
+        const MOVE = {
+            sway:   p => { p.hover = go(p.svg, [{ rotate: '0deg' }, { rotate: '-5deg', offset: 0.35 }, { rotate: '3.5deg', offset: 0.7 }, { rotate: '0deg' }], 600); return 600; },
+            tilt:   (p, d) => { go(p.svg, [{ rotate: '0deg' }, { rotate: d + 'deg', offset: 0.4 }, { rotate: (d * 0.7) + 'deg', offset: 0.75 }, { rotate: '0deg' }], 650); return 650; },
+            perk:   p => { go(p.svg, [{ translate: '0 0' }, { translate: '0 -6px', offset: 0.4 }, { translate: '0 0' }], 520, { easing: SPRING_EASE }); go(p.head, [{ scale: 1 }, { scale: 1.12, offset: 0.4 }, { scale: 1 }], 520); return 520; },
+            wiggle: p => { go(p.svg, [{ rotate: '0deg' }, { rotate: '-12deg', offset: 0.2 }, { rotate: '10deg', offset: 0.45 }, { rotate: '-6deg', offset: 0.7 }, { rotate: '0deg' }], 680); return 680; },
+            open:   p => { go(p.head, [{ scale: 1 }, { scale: 1.14, offset: 0.45 }, { scale: 1.04, offset: 0.8 }, { scale: 1 }], 700); return 700; },
+            droop:  p => { go(p.svg, [{ rotate: '0deg', translate: '0 0' }, { rotate: '14deg', translate: '0 3px', offset: 0.55 }, { rotate: '0deg', translate: '0 0' }], 700); return 700; },
+            lift:   p => { go(p.svg, [{ translate: '0 0' }, { translate: '0 -8px', offset: 0.45 }, { translate: '0 0' }], 700); go(p.head, [{ scale: 1 }, { scale: 1.16, offset: 0.45 }, { scale: 1 }], 700); return 700; },
+            spin:   (p, turns) => { go(p.head, [{ rotate: '0deg' }, { rotate: (360 * turns) + 'deg' }], 650 * turns, { composite: 'add' }); return 650 * turns; }
+        };
+
+        /* colour and shape changes (also the reduced-motion reactions); one revert timer per flower, so nothing stacks */
+        const baseCol = st => st.cols[st.ci][0];
+        function tint(st, tone, amt, ms) {
+            clearTimeout(st.tt); st.head.style.color = mixTo(baseCol(st), tone, amt);
+            if (ms) st.tt = setTimeout(() => { st.head.style.color = baseCol(st); }, ms);
+        }
+        function variant(st) {
+            clearTimeout(st.tt); st.ci = (st.ci + 1) % st.cols.length; const c = st.cols[st.ci];
+            st.head.style.color = c[0]; if (c[1]) st.head.style.setProperty('--center', c[1]);
+        }
+        const turn = st => { st.rot += 24; st.head.style.rotate = st.rot + 'deg'; };      /* a new petal arrangement; the footprint does not change */
+
+        /* particles: 3-5 small elements from the shared FX budget, only above open space; false = could not */
+        const SMILE = c => '<svg viewBox="-12 -12 24 24"><use href="#fl-bloom" x="-12" y="-12" width="24" height="24" style="color:' + c + ';--center:#fff1cc"/><circle cx="-2.4" cy="-1" r="1" fill="#5a4366"/><circle cx="2.4" cy="-1" r="1" fill="#5a4366"/><path d="M-3.2 2 Q0 5.2 3.2 2" fill="none" stroke="#5a4366" stroke-width="1.1" stroke-linecap="round"/></svg>';
+        const HEART = c => '<svg viewBox="-10 -10 20 20"><path d="M0 7 C-9 0 -7 -8 0 -4 C7 -8 9 0 0 7Z" fill="' + c + '"/></svg>';
+        function burst(st, kind) {
+            const n = 3 + Math.floor(Math.random() * 3);
+            if (FX.room(n) < n) return false;
+            const r = st.head.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            if (!safeZones.clearAt(x, y - 48, 36)) return false;                 /* the area the bits travel through */
+            const cols = kind === 'heart' ? ['#f06c95', '#f4a7bf', '#e9789f'] : ['#fde1ea', '#fff1cc', '#f9c6d6', '#fbe7a1'];
+            for (let k = 0; k < n; k++) {
+                const b = document.createElement('i'); b.className = 'wl-fx w-ignore'; b.setAttribute('aria-hidden', 'true');
+                b.innerHTML = (kind === 'heart' ? HEART : SMILE)(cols[k % cols.length]); b.style.left = x + 'px'; b.style.top = y + 'px'; document.body.appendChild(b);
+                const dx = (k - (n - 1) / 2) * 16 + rnd(-6, 6), dy = -rnd(34, 64);
+                FX.track(b, b.animate([{ transform: 'translate(0,0) scale(.3)', opacity: 0 }, { transform: `translate(${dx * 0.5}px,${dy * 0.55}px) scale(1)`, opacity: 1, offset: 0.35 }, { transform: `translate(${dx}px,${dy}px) scale(.85)`, opacity: 0 }], { duration: rnd(1100, 1500), delay: k * 70, easing: 'ease-out', fill: 'backwards' }), 2200);
+            }
+            return true;
+        }
+        /* a short handwritten line above (or, failing that, below) the flower; false = no room or one is already showing */
+        function message(st, text) {
+            if (msgActive >= 1) return false;
+            const r = st.head.getBoundingClientRect(), w = 20 + text.length * 8, h = 28;
+            const x = clampN(r.left + r.width / 2 - w / 2, 8, innerWidth - w - 8);
+            const free = yy => [x + 8, x + w / 2, x + w - 8].every(px => safeZones.clearAt(px, yy + h / 2, 12));
+            let y = r.top - h - 6; if (!free(y)) { y = r.bottom + 6; if (!free(y)) return false; }
+            const m = document.createElement('span'); m.className = 'wl-msg w-ignore'; m.setAttribute('aria-hidden', 'true'); m.textContent = text;
+            m.style.left = x + 'px'; m.style.top = y + 'px'; document.body.appendChild(m); msgActive++;
+            if (!reduce) m.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none', offset: 0.15 }, { opacity: 1, transform: 'none', offset: 0.8 }, { opacity: 0 }], { duration: MSG_MS, easing: 'ease-out' });
+            setTimeout(() => { m.remove(); msgActive--; }, MSG_MS);
+            return true;
+        }
+
+        /* personalities: tone = what colour it blushes toward; move = simple reaction; grow = stage 2; shape = stage 3; fin = stage 4 (returns ms, or 0 if it could not be delivered) */
+        const PERS = {
+            shy:      { tone: '#f28bb0', move: p => MOVE.tilt(p, -10), grow: p => MOVE.tilt(p, -18), shape: st => tint(st, '#f28bb0', 0.75, 2400),
+                        fin: (st, p) => { tint(st, '#f28bb0', 0.9, 2400); return MOVE.tilt(p, -16) + 200; } },
+            happy:    { tone: '#ffd966', move: p => MOVE.perk(p), grow: p => MOVE.open(p), shape: turn,
+                        fin: (st, p) => { if (!reduce && !burst(st, 'smile')) return 0; tint(st, '#ffd966', 0.5, 1200); return MOVE.perk(p) + 200; } },
+            romantic: { tone: '#f06c95', move: p => MOVE.open(p), grow: p => MOVE.open(p), shape: turn,
+                        fin: (st, p) => { if (!reduce && !burst(st, 'heart')) return 0; tint(st, '#f06c95', 0.45, 1400); return MOVE.open(p) + 200; } },
+            dramatic: { tone: '#cdb8f2', move: p => MOVE.wiggle(p), grow: p => MOVE.wiggle(p), shape: turn,
+                        fin: (st, p) => { if (!message(st, MSGS[st.msg])) return 0; return MOVE.wiggle(p) + 200; } },
+            playful:  { tone: '#fbe7a1', move: p => MOVE.spin(p, 1), grow: p => MOVE.open(p), shape: variant,
+                        fin: (st, p) => { variant(st); return MOVE.spin(p, 2) + 200; } },
+            sleepy:   { tone: '#b9c7e6', move: p => MOVE.droop(p), grow: p => MOVE.lift(p), shape: turn,
+                        fin: (st, p) => { tint(st, '#ffe8a8', 0.55, 1600); return MOVE.lift(p) + 200; } }
+        };
+        function simple(st) {
+            const P = PERS[st.pers], ms = P.move(st.p);
+            if (reduce || st.pers === 'shy') tint(st, P.tone, 0.6, ms + 300);       /* reduced motion: a still colour change instead */
+            return Math.max(ms, 400);
+        }
+        function finale(st) {
+            const now = performance.now();
+            if (now < st.cd || fxActive >= MAX_FX || document.hidden) return 0;
+            const ms = PERS[st.pers].fin(st, st.p); if (!ms) return 0;
+            st.cd = now + COOLDOWN; fxActive++; setTimeout(() => { fxActive--; }, 1600);
+            return ms;
+        }
+        function advance(st, n) {
+            const P = PERS[st.pers]; let ms;
+            if (n === 0) ms = simple(st);
+            else if (n === 1) { ms = P.grow(st.p); if (reduce) tint(st, P.tone, 0.5, 900); }
+            else if (n === 2) { P.shape(st); ms = reduce ? 450 : MOVE.open(st.p); }
+            else ms = finale(st) || simple(st);                                       /* cooldown/budget/space: gentle, local, never queued */
+            return Math.max(ms, 400);
+        }
+        function activate(el) {
+            const st = el.__wl, now = performance.now();
+            if (now < st.busy) return;                                                /* rapid clicks never stack */
+            if (st.hover) { st.hover.cancel(); st.hover = null; }
+            let ms;
+            if (st.special) {
+                if (now - st.last > RESET) st.stage = 0;
+                ms = advance(st, st.stage); st.stage = (st.stage + 1) % 4;
+            } else ms = simple(st);
+            st.last = now; st.busy = now + ms;
+        }
+
+        function adopt(el) {
+            if (el.__wl) return;
+            const d = el.dataset; let cols; try { cols = JSON.parse(d.cols); } catch (e) { cols = [['#f4a7bf']]; }
+            const st = el.__wl = { pers: PERS[d.pers] ? d.pers : 'happy', special: d.special === '1', msg: (+d.msg || 0) % MSGS.length, cols, ci: +d.ci || 0, stage: 0, last: 0, cd: 0, busy: 0, rot: 0, tt: 0, hover: null,
+                head: el.querySelector('.wl-head'), svg: el.querySelector('.wl-svg') };
+            st.p = st;
+            el.addEventListener('click', e => { e.preventDefault(); activate(el); });             /* a tap is a click: one handler, so touch never double-fires */
+            el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(el); } });
+            el.addEventListener('pointerenter', e => {                                            /* mouse only; touch gets its movement from the tap itself */
+                if (e.pointerType !== 'mouse' || reduce || performance.now() < el.__wl.busy || el.__wl.hover) return;
+                MOVE.sway(st); const a = st.hover; if (a) a.onfinish = a.oncancel = () => { st.hover = null; };
+            });
+        }
+        return { adopt };
     })();
 
     function start() {
@@ -294,5 +434,5 @@ MB.define('plants.flowers', ['core.utils', 'core.scheduler', 'core.particles', '
         }, { passive: true });
     }
 
-    return { start, startAmbient, touchTap, Spin };
+    return { start, startAmbient, touchTap, Spin, adoptWild: Wild.adopt };
 });

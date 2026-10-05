@@ -34,7 +34,7 @@ separate, later phase (never mixed into structural moves).
 | Experience / Skills / bouquet | `botanical/*` + `css/botanical.css` |
 | gallery / lightbox | `gallery/*` + `css/gallery.css` |
 | nav, hero, scrolling effects | `navigation/`, `site/hero.js`, `effects/*` |
-| Easter egg | `easter-eggs/easter-eggs.js` |
+| Easter egg | `easter-eggs/easter-eggs.js` (secret bird-delivered envelope: `easter-eggs/envelope.js`) |
 | persistence, random timing, cursor tracking, "is this spot free?" | `core/state.js`, `core/scheduler.js`, `core/pointer.js`, `core/safe-zones.js` |
 | something is mobile- or reduced-motion-specific | §5 below, then the owning file |
 

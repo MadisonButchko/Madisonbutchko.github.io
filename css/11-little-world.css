@@ -95,3 +95,84 @@
 }
 .w-dandelion.small { width: 32px; height: 61px; }
 
+
+/* the secret envelope (js/easter-eggs/envelope.js): dropped by a bird, drifts down; the flap hinges open, a folded letter slides out and unfolds onto pink graph paper.
+   data-state = closed | opening | open | closing. Layers, back to front: body, open flap, hearts, letter, front panels, closed flap, seal, tap target.
+   The wrapper's left/top place it (dragging); its transform is only the resting tilt / the drop-in, so the opening timeline (on the layers) never fights it. */
+.env-carry { position: absolute; left: 27px; top: 13px; width: 22px; pointer-events: none; }
+.env-carry svg { display: block; width: 100%; height: auto; overflow: visible; }
+.w-envelope { position: absolute; z-index: 105; width: 64px; height: 60px; margin: -32px 0 0 -30px; transform: rotate(-3deg); pointer-events: none; transition: scale 0.25s ease; }
+.w-envelope.settling { transition: scale 0.25s ease, left 0.3s ease, top 0.3s ease; }
+.w-envelope[data-state="closed"]:hover { scale: 1.08; }
+.w-envelope.is-dragging { scale: 1.07; }
+.w-envelope > svg { position: absolute; display: block; overflow: visible; pointer-events: none; }
+.w-envelope .env-back { inset: 0; width: 100%; height: 100%; z-index: 0; filter: drop-shadow(0 3px 3px rgba(90, 67, 102, 0.2)); transition: filter 0.2s ease; }
+.w-envelope.is-dragging .env-back { filter: drop-shadow(0 9px 8px rgba(90, 67, 102, 0.3)); }
+.w-envelope .env-flap-open { left: 0; top: 2px; width: 64px; height: 21px; z-index: 1; opacity: 0; transform-origin: 50% 100%; }
+.w-envelope .env-front { inset: 0; width: 100%; height: 100%; z-index: 4; }
+.w-envelope .env-flap { left: 0; top: 23px; width: 64px; height: 24px; z-index: 5; transform-origin: 50% 0; }
+.w-envelope .env-seal { inset: 0; width: 100%; height: 100%; z-index: 6; transform-origin: 50% 62%; }
+.env-hit { position: absolute; z-index: 7; left: 0; right: 0; top: 20px; bottom: 0; padding: 0; border: 0; background: none; cursor: grab; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.env-hit::after { content: ''; position: absolute; inset: -12px; }   /* a forgiving grab / tap area while closed */
+.w-envelope.is-dragging .env-hit { cursor: grabbing; }
+.w-envelope:not([data-state="closed"]) .env-hit { cursor: pointer; touch-action: manipulation; }
+.w-envelope:not([data-state="closed"]) .env-hit::after { display: none; }
+.env-hit:focus-visible { outline: 2px dashed #c2457e; outline-offset: 6px; border-radius: 8px; }
+.w-envelope.drifting { animation: envDrift 3.4s cubic-bezier(0.45, 0.05, 0.5, 1) both; }
+.w-envelope.drifting .env-hit { pointer-events: none; }
+.w-envelope.fade-in { animation: envRise 1s ease both; }
+@keyframes envDrift {
+    0%   { transform: translate(var(--dx), var(--dy)) rotate(-18deg); }
+    28%  { transform: translate(calc(var(--dx) * 0.55 + 18px), calc(var(--dy) * 0.66)) rotate(13deg); }
+    56%  { transform: translate(calc(var(--dx) * 0.25 - 15px), calc(var(--dy) * 0.33)) rotate(-10deg); }
+    80%  { transform: translate(calc(var(--dx) * 0.06 + 7px), calc(var(--dy) * 0.07)) rotate(5deg); }
+    100% { transform: translate(0, 0) rotate(-3deg); }
+}
+@keyframes envRise { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+
+/* hearts: behind the letter, above the pocket; the timeline in JS moves and fades them */
+.env-hearts { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.env-heart { position: absolute; left: 26px; top: 12px; width: 12px; height: 11px; opacity: 0; pointer-events: none; }
+.env-heart svg { display: block; width: 100%; height: 100%; }
+
+/* the letter box clips only what would hang below the envelope; everything above and beside it is free */
+.env-letter-box { position: absolute; inset: 0; z-index: 3; pointer-events: none; clip-path: inset(-600px -240px 4px -240px); }
+/* the letter: one 190 x 152 sheet of four panels. Its resting look is the OPEN look; the opening timeline drives every fold */
+.env-letter { position: absolute; left: calc(50% + var(--nx, 0px) - 95px); bottom: 20px; width: 190px; height: 152px; max-width: calc(100vw - 16px); transform-origin: 50% 100%; translate: 0 -16px; rotate: -0.6deg; opacity: 0; pointer-events: none;
+    font-family: var(--font-hand); font-size: 1.1rem; line-height: 1.22; color: #5a4366; text-align: center; }
+.w-envelope[data-state="closed"] .env-letter { visibility: hidden; }
+.w-envelope[data-state="open"] .env-letter { opacity: 1; pointer-events: auto; }
+.env-sheet { position: absolute; inset: 0; transform-origin: 50% 100%; filter: drop-shadow(0 6px 8px rgba(90, 67, 102, 0.17)) drop-shadow(0 1px 1.5px rgba(90, 67, 102, 0.14)); }
+.env-row { position: absolute; left: 0; width: 100%; height: 50%; }
+.env-row.t { top: 0; transform-origin: 50% 100%; }
+.env-row.b { bottom: 0; }
+/* light blush graph paper: a faint pink + lavender square grid, 19px, drawn with gradients (95 x 76 panels hold 5 x 4 whole squares, so it runs across the folds) */
+.env-panel { position: absolute; top: 0; width: 50%; height: 100%; box-sizing: border-box; background-color: #fff0f5;
+    background-image: linear-gradient(rgba(236, 160, 196, 0.26) 1px, transparent 1px), linear-gradient(90deg, rgba(180, 160, 226, 0.28) 1px, transparent 1px); background-size: 19px 19px;
+    border: 1px solid rgba(214, 170, 196, 0.5); }
+.env-panel.tr, .env-panel.br { left: 50%; }
+.env-panel.tl, .env-panel.bl { left: 0; transform-origin: 100% 50%; }
+.env-panel.tl { border-radius: 8px 0 0 0; } .env-panel.tr { border-radius: 0 9px 0 0; } .env-panel.bl { border-radius: 0 0 0 9px; } .env-panel.br { border-radius: 0 0 8px 0; }
+.env-panel .shade, .env-row > .shade { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: linear-gradient(160deg, rgba(120, 85, 125, 0.28), rgba(120, 85, 125, 0.06)); border-radius: inherit; }
+.env-row > .shade { left: 50%; width: 50%; border-radius: 0 9px 0 0; }   /* only over the folded stack, not the empty half the left panel left behind */
+.env-text { position: absolute; inset: 0; display: flex; overflow: auto; overscroll-behavior: contain; }
+.env-copy { margin: auto 0; width: 100%; padding: 10px 14px; box-sizing: border-box; }
+.env-copy span { display: block; }
+.env-copy span + span { margin-top: 3px; }
+.env-copy .env-hello { white-space: nowrap; font-size: 1.3rem; font-weight: 600; color: #c2457e; }
+.env-close { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; padding: 0; border: 1.5px solid #e6c9d4; border-radius: 50%; background: #fff7fa; cursor: pointer; display: grid; place-items: center; box-shadow: 0 2px 5px rgba(90, 67, 102, 0.18);
+    opacity: 0; visibility: hidden; transition: opacity 0.2s ease; touch-action: manipulation; }
+.env-close::after { content: ''; position: absolute; inset: -8px; }
+.env-close svg { width: 11px; height: 11px; }
+.env-close:focus-visible { outline: 2px dashed #c2457e; outline-offset: 2px; }
+.w-envelope[data-state="open"] .env-close { opacity: 1; visibility: visible; }
+/* resting states (the timeline overrides these while it plays): closed = flap down, seal on; open = flap up, seal gone */
+.w-envelope[data-state="open"] .env-flap, .w-envelope[data-state="open"] .env-seal { opacity: 0; }
+.w-envelope[data-state="open"] .env-flap-open { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .w-envelope.drifting, .w-envelope.fade-in { animation: envFade 0.8s ease both; }
+    .w-envelope, .w-envelope.settling, .env-back { transition: none; }
+    .env-letter { transition: opacity 0.3s ease; }
+    .env-hearts { display: none; }
+}
+@keyframes envFade { from { opacity: 0; } to { opacity: 1; } }
