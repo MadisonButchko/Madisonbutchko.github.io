@@ -1,6 +1,6 @@
 /* js/animals/nest.js
-   Purpose : a small bird nest of overlapping twigs beside the DeviantArt button in Let's Connect, advanced by plain clicks (one discrete state each, nothing timed or random): 0 two adult birds sit on it · 1 they flutter and fly away, revealing three eggs · 2-7 each egg cracks, then hatches, one at a time · then every click brings a parent with a worm who feeds chick 1, 2 and 3 in turn (always, one at a time); after 3 feedings (the chicks grow bigger after each, and the second parent joins the 2nd) the chicks fly off one after another, the empty nest stays, the next click brings the adults back with new eggs and the cycle restarts. No text, counters or buttons.
-   Owns    : the .bn element (SVG art, placement beside the DeviantArt link and re-placement on resize/load), the click state `n` (0..9) and feed count, in memory only: every page load starts again at 0, the click/keyboard handler, the ?nestdebug hook.
+   Purpose : a small bird nest of overlapping twigs just below the bottom-right corner of the artwork gallery preview, advanced by plain clicks (one discrete state each, nothing timed or random): 0 two adult birds sit on it · 1 they flutter and fly away, revealing three eggs · 2-7 each egg cracks, then hatches, one at a time · then every click brings a parent with a worm who feeds chick 1, 2 and 3 in turn (always, one at a time); after 3 feedings (the chicks grow bigger after each, and the second parent joins the 2nd) the chicks fly off one after another, the empty nest stays, the next click brings the adults back with new eggs and the cycle restarts. No text, counters or buttons.
+   Owns    : the .bn element (SVG art, placement below the gallery preview's corner and re-placement on resize/load), the click state `n` (0..9) and feed count, in memory only: every page load starts again at 0, the click/keyboard handler, the ?nestdebug hook.
    Uses    : core.utils, core.scheduler (Life: parent visits take the stage by force), animals.animals (registry), animals.art (BIRD_SVG), animals.birds (seed.onDrop for the seed hook, sparkle).
    Used by : js/main.js (start(), last in the order). The older, CSS-hidden `.w-nest` at the contact photo (animals/birds.js) is untouched.
    Mobile / reduced motion: sits right of the button when it fits, else just below it; larger on phones. The whole nest is one control (tap, Enter or Space). Under prefers-reduced-motion nothing animates or flies; each click still advances the state. Contact section's .is-off pauses CSS motion off screen.
@@ -102,6 +102,12 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
         const g = cfg.geom(); if (!g.width) return;
         const w = el.offsetWidth, h = el.offsetHeight, vw = document.documentElement.clientWidth, left0 = links.getBoundingClientRect().left;
         let x = g.left + g.width + cfg.gap, y = g.top + g.height - h + 4;
+        if (cfg.corner) {   /* just below the anchor's bottom-right corner, right edges aligned */
+            x = Math.max(-left0 + 8, Math.min(g.left + g.width - w, vw - 14 - w - left0)); y = g.top + g.height + cfg.corner;
+            const key = f1(x) + ',' + f1(y);
+            if (key !== lastPlace) { lastPlace = key; el.style.left = f1(x) + 'px'; el.style.top = f1(y) + 'px'; }
+            return;
+        }
         if (left0 + x + w > vw - 14) { x = Math.min(g.left + g.width - w * 0.35, vw - 14 - w - left0); y = cfg.above ? g.top - h + 4 : g.top + g.height + 8; }
         const key = f1(x) + ',' + f1(y);
         if (key !== lastPlace) { lastPlace = key; el.style.left = f1(x) + 'px'; el.style.top = f1(y) + 'px'; }
@@ -288,9 +294,9 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
 
     function startAll() {
         const contact = create({
-            id: '', gap: 30, above: false,
-            host: () => $('.social-links'),
-            geom: () => { const l = $('.social-links a[href*="deviantart"]'); return l ? { left: l.offsetLeft, top: l.offsetTop, width: l.offsetWidth, height: l.offsetHeight } : { width: 0 }; }
+            id: '', gap: 30, above: false, corner: 12,
+            host: () => $('.gallery-container'),
+            geom: () => { const l = $('#galleryPreview'), h = $('.gallery-container'); if (!l || !h) return { width: 0 }; const r = l.getBoundingClientRect(), o = h.getBoundingClientRect(); return { left: r.left - o.left, top: r.top - o.top, width: r.width, height: r.height }; }
         });
         const about = create({
             id: 'About', gap: 24, above: true, cls: 'bn-about', babies: [['#f3877e', '#d8605a'], ['#f8df7e', '#e6c557'], ['#c8a6ea', '#a883d3']], tint: ['#d9c3f0', '#bfa3e3', '#ad8fd6'],
