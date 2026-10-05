@@ -53,7 +53,7 @@
     .critter.bird svg { width: 32px; height: 26px; } .critter.deer svg { width: 74px; height: 66px; }
     .critter:not(.flutter)::after { content: ''; position: absolute; inset: -12px; }
     .g-cloud { width: 78px; height: 44px; } .g-sun { width: 40px; height: 40px; right: 5%; top: 6px; }
-    .g-toast { top: 56px; max-width: calc(100% - 28px); white-space: normal; text-align: center; font-size: 1rem; padding: 0.3rem 0.85rem 0.35rem; }
+    .g-toast { top: 8px; left: 8px; max-width: calc(100% - 16px); white-space: normal; text-align: center; font-size: 1rem; padding: 0.3rem 0.85rem 0.35rem; }
     .shoo-pop { font-size: 1.05rem; }
     .garden-tip { gap: 0.55rem 0.6rem; padding: 0 0.9rem; font-size: 1.08rem; }
     .garden-tip .gt-text { flex-basis: 100%; text-align: center; line-height: 1.35; }
