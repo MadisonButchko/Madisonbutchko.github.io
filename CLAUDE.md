@@ -34,6 +34,28 @@ Mobile compatibility is a default requirement for every visual, interactive, ani
 - Interactions must work with touch as well as mouse/keyboard where applicable.
 - **Required verification:** before calling any visual or interactive change complete, check it at desktop and phone-sized viewports and confirm: (1) correct placement and scale; (2) no unintended overlap or obstruction; (3) no horizontal overflow; (4) correct stacking/`z-index`; (5) touch interactions work; (6) animations stay within their intended area.
 
+## Decorative / Background Elements & Mobile Safety
+Applies automatically to every decorative addition (animals, creatures, plants, vines, flowers, particles, clouds, background objects, Easter eggs, speech bubbles, badges and similar), even when the prompt doesn't mention it.
+
+### Safety
+- Decorative elements must never obstruct or interfere with functional content: keep them clear of text, buttons, links, navigation, photos, forms, game controls and other interactive elements.
+- Check the entire animation/movement path, not only the starting position.
+- Keep creatures/objects away from interactive vine-growing areas so they don't interfere with vine or flower generation.
+- Don't let decorative elements capture clicks/taps meant for functional elements unless they are intentionally interactive (default `pointer-events: none`).
+- Use appropriate `z-index`/stacking so they never accidentally cover important content.
+- Avoid horizontal overflow, clipping and elements extending outside the viewport.
+
+### Mobile
+Check and adapt every decorative feature separately for phone-sized layouts; never assume desktop positioning works. On mobile:
+- Reposition and/or shrink elements when necessary; adjust movement distances to the smaller viewport. A different position or scale than desktop is fine.
+- Keep them away from mobile-specific content positions, and from other animations/interactions.
+- Keep speech bubbles/tooltips fully on-screen.
+- Preserve enough visual spacing that the page doesn't feel crowded.
+- If there is no safe mobile placement, hide or simplify the element rather than let it obstruct functionality.
+
+### Required verification (part of "done", even if the prompt doesn't mention it)
+Check at minimum: (1) desktop viewport; (2) phone-sized viewport; (3) starting position; (4) full animation/movement path; (5) no overlap with functional content; (6) no interference with other animations/features; (7) correct stacking/`z-index`; (8) no horizontal overflow; (9) touch interaction works where applicable; (10) layout still works after resizing between desktop and mobile widths.
+
 ## Feature workflow
 Follow this automatically for every new feature, modification or bug fix.
 

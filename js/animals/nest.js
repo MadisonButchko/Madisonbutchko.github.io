@@ -102,6 +102,15 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
         const g = cfg.geom(); if (!g.width) return;
         const w = el.offsetWidth, h = el.offsetHeight, vw = document.documentElement.clientWidth, left0 = links.getBoundingClientRect().left;
         let x = g.left + g.width + cfg.gap, y = g.top + g.height - h + 4;
+        const an = vw <= 700 && cfg.phone && $(cfg.phone.sel);
+        if (an) {   /* phones: perch on the top-right corner of the photo (layout offsets, so sway/reveal transforms don't matter) */
+            const pg = e => { let ox = 0, oy = 0; for (; e; e = e.offsetParent) { ox += e.offsetLeft; oy += e.offsetTop; } return { x: ox, y: oy }; };
+            const a0 = pg(an), h0 = pg(links);
+            x = Math.max(8 - left0, Math.min(a0.x - h0.x + an.offsetWidth - w * cfg.phone.dx, vw - 8 - w - left0)); y = a0.y - h0.y - h * cfg.phone.dy;
+            const key = f1(x) + ',' + f1(y);
+            if (key !== lastPlace) { lastPlace = key; el.style.left = f1(x) + 'px'; el.style.top = f1(y) + 'px'; }
+            return;
+        }
         if (cfg.corner) {   /* just below the anchor's bottom-right corner, right edges aligned */
             x = Math.max(-left0 + 8, Math.min(g.left + g.width - w, vw - 14 - w - left0)); y = g.top + g.height + cfg.corner;
             const key = f1(x) + ',' + f1(y);
@@ -295,11 +304,12 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     function startAll() {
         const contact = create({
             id: '', gap: 30, above: false, corner: 12,
+            phone: { sel: '.contact-photo', dx: 0.55, dy: 0.7 },
             host: () => $('.gallery-container'),
             geom: () => { const l = $('#galleryPreview'), h = $('.gallery-container'); if (!l || !h) return { width: 0 }; const r = l.getBoundingClientRect(), o = h.getBoundingClientRect(); return { left: r.left - o.left, top: r.top - o.top, width: r.width, height: r.height }; }
         });
         const about = create({
-            id: 'About', gap: 24, above: true, cls: 'bn-about', babies: [['#f3877e', '#d8605a'], ['#f8df7e', '#e6c557'], ['#c8a6ea', '#a883d3']], tint: ['#d9c3f0', '#bfa3e3', '#ad8fd6'],
+            id: 'About', gap: 24, above: true, phone: { sel: '.about-photo', dx: 0.7, dy: 0.35 }, cls: 'bn-about', babies: [['#f3877e', '#d8605a'], ['#f8df7e', '#e6c557'], ['#c8a6ea', '#a883d3']], tint: ['#d9c3f0', '#bfa3e3', '#ad8fd6'],
             host: () => $('.about-hello'),
             geom: h => { const p = $('.about-hello'); return p ? { left: 0, top: 0, width: p.offsetWidth, height: p.offsetHeight } : { width: 0 }; }
         });

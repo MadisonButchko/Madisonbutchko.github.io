@@ -2,7 +2,7 @@
    Purpose : the secret envelope: after three taps within two seconds on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
    Owns    : the tap counter, the delivery (spot choice, bird, drift, one bounded retry timer when the stage is busy), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
    Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
-   Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); the letter has a close button and Escape closes it (focus returns to the envelope). Reduced motion: no bird, drift, folding, particles, rays or animated repositioning; the letter fades in with a brief static glow.
+   Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); tapping the open letter or envelope closes it, and Escape does too. Reduced motion: no bird, drift, folding, particles, rays or animated repositioning; the letter fades in with a brief static glow.
    Cleanup : the one tap listener is added once; the envelope stays after the note is closed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; decorative effects are removed immediately (and particle slots returned) when interrupted; the one resize listener lives with the envelope. */
 MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zones', 'core.particles', 'animals.birds'], function (utils, scheduler, zones, particles, birds) {
     'use strict';
@@ -65,7 +65,6 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         '<div class="env-hearts" aria-hidden="true"></div>' +
         '<div class="env-letter-box"><div class="env-letter" role="region" aria-label="A handwritten note" aria-hidden="true">' + SHEET +
             '<div class="env-paper-shimmer" aria-hidden="true"></div><div class="env-text"><div class="env-copy">' + COPY + '</div></div>' +
-            '<button type="button" class="env-close" aria-label="Close the note"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5 L9.5 9.5 M9.5 2.5 L2.5 9.5" stroke="#8c5a73" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button>' +
         '</div></div>' +
         svg('env-front', PANELS) +
         '<svg class="env-flap" viewBox="0 9 64 24" aria-hidden="true">' + FLAP + '</svg>' +
@@ -118,7 +117,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     /* ---- the envelope's own controller: states closed | opening | open | closing ---- */
     function envelope(el) {
         const q = s => el.querySelector(s);
-        const letter = q('.env-letter'), hit = q('.env-hit'), close = q('.env-close'), magic = q('.env-magic'), heartBox = q('.env-hearts');
+        const letter = q('.env-letter'), hit = q('.env-hit'), magic = q('.env-magic'), heartBox = q('.env-hearts');
         let st = 'closed', anims = [], hearts = new Set(), token = 0, timer = 0, settleT = 0, rzT = 0;
         let drag = null, handledAt = 0, lastW = innerWidth, home = null;     /* home = last valid position, in document coordinates (memory only) */
 
@@ -322,7 +321,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                 if (safe(x, y)) { moveTo(x, y); note(); return; }
             }
         });
-        close.addEventListener('click', () => shut(true));
+        letter.addEventListener('click', () => shut(true));
 
         /* layout changes: keep a closed envelope on a free spot; an open letter just re-fits */
         function recheck() {

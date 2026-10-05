@@ -1,26 +1,49 @@
 /* js/animals/snails.js
-   Purpose : a few small snails resting in open margins around the page. Tap one: it hides in its shell, tiny eyes peek out, it slowly comes back out. Tap again: after peeking it crawls to a nearby plant leaving a faint dew-and-sparkle trail (sometimes ending in a tiny flourish). Keep tapping and it gets shy.
+   Purpose : six small snails resting in open margins around the page, two kinds. SHY snails (3): tap one: it hides in its shell, tiny eyes peek out, it slowly comes back out. Tap again: after peeking it crawls to a nearby plant leaving a faint dew-and-sparkle trail (sometimes ending in a tiny flourish). Keep tapping and it gets shy. RAINBOW snails (3): tap one and it crawls a short way leaving a faint glowing rainbow trail, then says its next line in a pastel bubble matching its shell.
    Owns    : the .snail elements (placement, tap/keyboard handling, hide/peek/emerge, crawling, trail + flourish, petal and rare shell variation, five personalities and palettes) and its re-layout on load/resize.
    Uses    : core.utils, core.scheduler (Life: crawls take the stage; Beat.onBeat: ambient wandering, no new timer), core.safe-zones (contentRects), core.particles (FX budget for trail bits), animals.animals (registry), environment.weather (onRain: wet snails are livelier).
              Read-only geometry lookups of other features (never mutated): `.page-posy, .scatter` (plants a snail may crawl to) and `.vine` (fixed side vines a snail must not sit under).
    Used by : js/main.js (start(), last in the order, so nothing earlier changes).
-   Mobile / reduced motion: 5 snails on desktop, 3 under 1000 px, 2 under 700 px (smaller, tap area padded). Tap and Enter/Space work; no hover needed. Under prefers-reduced-motion they stay put: hide/peek/emerge only (no crawling, wandering or trail). Sections that scroll off screen pause CSS motion via .is-off. */
+   Placement: each snail has a slot (section + hand-picked anchor spots, tried in order, then a random open spot). Never within the side-vine band (vines and the flowers they grow sit at both screen edges), nor near text, buttons, photos, nests or birds.
+   Mobile / reduced motion: 6 snails on desktop and tablet, 4 under 700 px (smaller, tap area padded). Tap and Enter/Space work; no hover needed. Under prefers-reduced-motion they stay put: hide/peek/emerge only (no crawling, wandering or trail). Sections that scroll off screen pause CSS motion via .is-off. */
 MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 'core.particles', 'animals.animals', 'environment.weather'], function (utils, scheduler, zones, particles, animals, weather) {
     'use strict';
     const { $, $$, rand, pick, clamp, f1, reduce } = utils, { Life, Beat } = scheduler, { contentRects, inView } = zones, { FX } = particles;
 
-    const SECTIONS = ['#about', '#gallery', '#skills', '#contact', '#experience'];
+    /* slot i = snail i: its section and a few hand-picked safe anchor spots [fraction across the space between the vine bands, fraction down the section (the snail's feet)], tried in order */
+    const SLOTS = [
+        { sel: '#about', at: [[0.2, 0.97], [0.5, 0.985], [0.78, 0.97]] },
+        { sel: '#experience', at: [[0.12, 0.995], [0.22, 0.995], [0.5, 0.995]] },
+        { sel: '#skills', at: [[0.2, 0.985], [0.8, 0.985], [0.5, 0.995]] },
+        { sel: '#gallery', at: [[0.12, 0.98], [0.88, 0.98], [0.5, 0.995]] },
+        { sel: '#contact', at: [[0.25, 0.9], [0.75, 0.9], [0.5, 0.96]] },
+        { sel: '#experience', at: [[0.72, 0.93], [0.62, 0.95], [0.82, 0.95], [0.65, 0.995]] }
+    ];
+    /* the side vines (fixed, both screen edges) and the blooms they grow reach this far in from the edge: no creature sits or crawls there */
+    const vineBand = () => innerWidth >= 1240 ? 160 : innerWidth >= 700 ? 70 : 52;
     /* shell, shell line, body */
     const PALETTES = [['#f4b9a8', '#d98b7b', '#f0e0cc'], ['#c9b2ec', '#9b7fcf', '#ece4dc'], ['#a8d8be', '#6fb391', '#ece8d2'], ['#f6d36b', '#d9a63a', '#f1e6cc'], ['#a9d8ea', '#6fa9c9', '#ece6dc'], ['#f4a7bf', '#d9738f', '#f2e2d6']];
     const PETALS = ['#f6a9c4', '#d8c3f2', '#fbdc84', '#ffd1c4'];
     /* hide/peek/emerge: ms in the shell, ms peeking, ms to come back out · wander: chance per heartbeat while on screen · range: px · speed: px/s */
-    const PERSONAS = [
+    const PERSONAS = [   /* by slot */
         { hide: 900, peek: 800, emerge: 1900, wander: 0.10, range: 150, speed: 22 },   /* bold */
         { hide: 2000, peek: 1500, emerge: 2900, wander: 0.03, range: 90, speed: 14 },  /* shy */
         { hide: 1500, peek: 1100, emerge: 2600, wander: 0.02, range: 80, speed: 11 },  /* sleepy */
         { hide: 1000, peek: 700, emerge: 1700, wander: 0.14, range: 230, speed: 26 },  /* wanderer */
         { hide: 1200, peek: 900, emerge: 2100, wander: 0.07, range: 130, speed: 18 }   /* curious */
     ];
+
+    /* each snail has its own lines (by creation order) and says the next one every time it reaches the speech-bubble step, looping after the last */
+    /* kind: shy (tucks into its shell) or rainbow (crawls, glowing trail, then speaks) · pal: PALETTES index · bubble: [background, border, text] pastel to match the shell */
+    const SNAILS = [
+        { kind: 'shy', pal: 5, bubble: ['255,226,236', '#e6a0ba', '#6b3550'], lines: ['Please respect my shell.', 'I live here, you know.', 'This is my emotional support shell.', 'Occupied.'] },
+        { kind: 'rainbow', pal: 1, bubble: ['232,222,250', '#b6a0dc', '#4d3a78'], lines: ['Did you see my sparkles?', 'Everything is more fun with glitter.', 'I\u2019m basically a tiny rainbow.', 'Follow the shimmer!'] },
+        { kind: 'shy', pal: 2, bubble: ['214,243,229', '#8cc8a6', '#2f5e48'], lines: ['Um\u2026 can I help you?', 'I\u2019m not home.', 'Is it gone? Is it safe?', 'Maybe just a peek\u2026'] },
+        { kind: 'rainbow', pal: 3, bubble: ['255,243,198', '#e0bf58', '#69501a'], lines: ['Sunshine-powered slime!', 'Slow and glowy wins the race.', 'Ta-da! Fresh sparkles.', 'I left you a little gift.'] },
+        { kind: 'rainbow', pal: 0, bubble: ['255,229,218', '#eaa790', '#70402f'], lines: ['Ooh, a new view!', 'Pretty trail, right?', 'Shhh, I\u2019m on an adventure.', 'Colors follow me everywhere.'] },
+        { kind: 'shy', pal: 4, bubble: ['212,235,248', '#84bbd9', '#2f5870'], lines: ['Five more minutes\u2026', 'Shh, napping.', 'Come back after tea.', 'I was just thinking.'] }
+    ];
+    const IDLE_MS = 9000;   /* a snail left hiding or talking comes back out by itself */
 
     const ART = '<span class="sn-flip"><svg viewBox="0 0 44 32" aria-hidden="true">'
         + '<g class="sn-body"><path class="sn-foot" d="M2 28.6 Q2 25 7 25 H30 C33.5 25 35 22.5 35.3 19 C35.6 15.8 38.6 15.4 39.2 18 C39.8 21 39.4 24.6 38.4 26.6 Q36.8 28.8 32 28.8 H5 Q2 28.8 2 28.6Z"/>'
@@ -43,7 +66,7 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
     /* ------------------------------------------------------------------
        Geometry (all in section coordinates; a box is {l, t, r, b})
        ------------------------------------------------------------------ */
-    const size = () => innerWidth < 700 ? { w: 28, h: 21 } : { w: 34, h: 25 };
+    const size = () => innerWidth < 700 ? { w: 35, h: 26 } : { w: 42, h: 31 };   /* base size; each snail is a little bigger or smaller (sn.k) */
     const boxOf = (x, y, s) => ({ l: x, t: y, r: x + s.w, b: y + s.h });
     const hit = (b, rs, m) => rs.some(r => r.l < b.r + m && r.r > b.l - m && r.t < b.b + m && r.b > b.t - m);
     function obstacles(sn) {
@@ -51,6 +74,12 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
         const rel = r => ({ l: r.left - sr.left, r: r.right - sr.left, t: r.top - sr.top, b: r.bottom - sr.top, el: r.el });
         const out = contentRects(sn.sec).map(rel);
         $$('.vine').forEach(v => { const r = v.getBoundingClientRect(); if (r.width) out.push(rel(r)); });
+        /* nest birds (animals/nest.js) perch, flutter and land around their nest: keep a wide berth */
+        $$('.bn').forEach(v => { const r = v.getBoundingClientRect(); if (r.width) { const q = rel(r); out.push({ l: q.l - 90, r: q.r + 90, t: q.t - 50, b: q.b + 50 }); } });
+        /* side-vine band (fixed at both screen edges, in viewport coordinates) and the guide bird */
+        const vb = vineBand(), Wd = document.documentElement.clientWidth;
+        out.push({ l: -sr.left - 999, r: vb - sr.left, t: -99999, b: 99999 }, { l: Wd - vb - sr.left, r: Wd - sr.left + 999, t: -99999, b: 99999 });
+        $$('.guide-bird').forEach(v => { const r = v.getBoundingClientRect(); if (r.width) { const q = rel(r); out.push({ l: q.l - 40, r: q.r + 40, t: q.t - 30, b: q.b + 30 }); } });
         snails.forEach(o => { if (o !== sn && o.sec === sn.sec && !o.el.hidden) out.push({ l: o.x - 40, r: o.x + o.w + 40, t: o.y - 14, b: o.y + o.h + 14 }); });
         return out;
     }
@@ -67,7 +96,11 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
 
     /* an open spot near the bottom of the section (its margins and edges first) */
     function findSpot(sn) {
-        const sr = sn.sec.getBoundingClientRect(), W = document.documentElement.clientWidth, blocks = obstacles(sn);
+        const sr = sn.sec.getBoundingClientRect(), W = document.documentElement.clientWidth, blocks = obstacles(sn), vb = vineBand();
+        for (const [fx, fy] of SLOTS[sn.slot].at) {   /* the hand-picked spots first */
+            const b = boxOf(vb + fx * (W - 2 * vb) - sr.left - sn.w / 2, sr.height * fy - sn.h, sn);
+            if (inBounds(sn, b) && !hit(b, blocks, 14)) return { x: b.l, y: b.t };
+        }
         for (let k = 0; k < 60; k++) {
             const x = rand(6 - sr.left, W - 6 - sr.left - sn.w), by = sr.height * (k < 25 ? rand(0.9, 0.995) : rand(0.4, 0.995));
             const b = boxOf(x, by - sn.h, sn);
@@ -123,11 +156,11 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
 
     function drop(sn, cx, cy, ang, n) {   /* one bit of the glimmer trail: a soft dew streak, every third one with a sparkle */
         if (FX.room(1) < 1) return;
-        const d = document.createElement('i'), spark = n % 3 === 0;
-        d.className = spark ? 'sn-spark' : 'sn-trail'; d.setAttribute('aria-hidden', 'true');
-        if (spark) { d.style.left = f1(cx + rand(-4, 4)) + 'px'; d.style.top = f1(cy - rand(4, 9)) + 'px'; d.style.background = pick(['#fff6c8', '#ffffff', sn.pal[0]]); }
-        else { d.style.left = f1(cx - 5) + 'px'; d.style.top = f1(cy - 2) + 'px'; d.style.setProperty('--r', f1(ang) + 'deg'); }
-        sn.sec.appendChild(d); FX.track(d, null, spark ? 2600 : 3800);
+        const d = document.createElement('i'), spark = n % 3 === 0, rb = sn.kind === 'rainbow', hue = (n * 41) % 360;
+        d.className = spark ? 'sn-spark' : rb ? 'sn-trail sn-rain' : 'sn-trail'; d.setAttribute('aria-hidden', 'true');
+        if (spark) { d.style.left = f1(cx + rand(-4, 4)) + 'px'; d.style.top = f1(cy - rand(4, 9)) + 'px'; d.style.background = rb ? 'hsl(' + hue + ',90%,85%)' : pick(['#fff6c8', '#ffffff', sn.pal[0]]); }
+        else { d.style.left = f1(cx - 5) + 'px'; d.style.top = f1(cy - 2) + 'px'; d.style.setProperty('--r', f1(ang) + 'deg'); if (rb) d.style.setProperty('--hue', hue); }
+        sn.sec.appendChild(d); FX.track(d, null, rb ? (spark ? 3400 : 5200) : spark ? 2600 : 3800);
     }
     function flourish(sn, cx, cy) {
         if (FX.room(1) < 1) return;
@@ -156,6 +189,7 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
             sn.raf = 0; sn.x = dest.x; sn.y = dest.y; commit(sn); sn.el.classList.remove('is-crawl');
             if (opts.flourish) flourish(sn, sn.x + sn.w / 2 - dir * 20, sn.y + sn.h);
             sn.moving(); sn.moving = null;
+            if (opts.done) opts.done();
         })(t0);
         return true;
     }
@@ -164,8 +198,7 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
     function emerge(sn) {
         sn.el.style.setProperty('--sn-in', (sn.pers.emerge / 1000) + 's');
         setState(sn, 'out');
-        if (Math.random() < 0.08) {
-            palette(sn, pick(PALETTES.filter(p => p !== sn.pal)));
+        if (Math.random() < 0.08) {   /* (the shell colour stays: the speech bubble matches it) */
             sn.el.classList.toggle('is-deco', Math.random() < 0.6);
             sn.el.classList.add('is-new'); later(sn, () => sn.el.classList.remove('is-new'), 1400);
         }
@@ -173,29 +206,55 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
         if (petal ? Math.random() < 0.2 : Math.random() < 0.12) { sn.el.classList.toggle('has-petal', !petal); sn.el.style.setProperty('--pt', pick(PETALS)); }
     }
 
+    /* speech bubble: small, above the snail (below if that would cover content or leave the screen), kept inside the viewport */
+    function hideBubble(sn) { clearTimeout(sn.bt); if (sn.bubble) { sn.bubble.remove(); sn.bubble = null; } }
+    function say(sn) {
+        hideBubble(sn);
+        const b = document.createElement('span');
+        b.className = 'sn-say'; b.setAttribute('role', 'status'); b.textContent = sn.lines[sn.line++ % sn.lines.length];
+        sn.el.appendChild(b); sn.bubble = b; sn.bt = setTimeout(() => hideBubble(sn), 2000);   /* every bubble closes by itself after about 2 s */
+        const r = sn.el.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight, W = document.documentElement.clientWidth;
+        const x = clamp(r.left + r.width / 2 - bw / 2, 6, Math.max(6, W - 6 - bw)), blocks = contentRects(sn.sec);
+        const up = { l: x, r: x + bw, t: r.top - bh - 8, b: r.top - 4 }, down = { l: x, r: x + bw, t: r.bottom + 4, b: r.bottom + bh + 8 };
+        const ok = c => c.t >= 4 && !hit(c, blocks, 1);
+        b.style.setProperty('--dx', f1(x - (r.left + r.width / 2 - bw / 2)) + 'px');
+        b.classList.toggle('is-below', !ok(up) && ok(down));
+    }
+
+    /* tap 1: tucks into its shell and waits · tap 2: says its next line · tap 3: peeks, comes out and crawls a little way off */
     function tap(sn) {
-        const now = performance.now();
-        if (now - sn.lastTap > 20000) sn.taps = 0;
-        sn.lastTap = now; sn.taps++;
-        stop(sn); commit(sn);
+        const step = sn.step;
+        stop(sn); commit(sn); hideBubble(sn);
         sn.x = parseFloat(sn.el.style.left) || sn.x; sn.y = parseFloat(sn.el.style.top) || sn.y;
-        const n = sn.taps, p = sn.pers, shy = n >= 3, hideMs = clamp(hideTime(n, p), 300, 10000);
+        const p = sn.pers;
         sn.state = 'hid'; sn.el.style.setProperty('--sn-in', '0.22s'); setState(sn, 'hid');
-        let at = hideMs;
-        later(sn, () => { sn.el.style.setProperty('--sn-in', '0.6s'); setState(sn, 'peek'); }, at);
-        at += shy ? p.peek * 0.7 : p.peek;
-        if (shy) {   /* a shy snail ducks back in once before it trusts you */
-            later(sn, () => setState(sn, 'hid'), at); at += 900;
-            later(sn, () => { setState(sn, 'peek'); }, at); at += p.peek * 1.2;
+        if (step < 2) {
+            sn.step = step + 1;
+            if (step === 1) say(sn);
+            later(sn, () => { sn.step = 0; hideBubble(sn); emerge(sn); later(sn, () => { sn.state = 'idle'; }, p.emerge + 300); }, IDLE_MS);
+            return;
         }
+        sn.step = 0;
+        sn.el.style.setProperty('--sn-in', '0.6s'); setState(sn, 'peek');
+        let at = p.peek;
         later(sn, () => emerge(sn), at); at += p.emerge + 300;
         later(sn, () => {
             sn.state = 'idle';
-            if (n === 2 && !reduce) {
+            if (!reduce) {
                 const go = plan(sn, p.range * (wet() ? 1.7 : 1));
                 if (go) crawl(sn, go.to, { trail: true, flourish: Math.random() < 0.35, force: true });
             }
         }, at);
+    }
+
+    /* rainbow snail: crawls a short way leaving a glowing rainbow trail, then speaks (at once if it cannot, or under reduced motion) */
+    function rainbowTap(sn) {
+        const r = sn.el.getBoundingClientRect(), sr = sn.sec.getBoundingClientRect();
+        stop(sn); hideBubble(sn);
+        sn.x = r.left - sr.left; sn.y = r.top - sr.top; commit(sn); sn.state = 'idle';
+        const done = () => say(sn);
+        const go = reduce ? null : plan(sn, Math.min(sn.pers.range, 120));
+        if (!go || !crawl(sn, go.to, { trail: true, force: true, done })) done();
     }
 
     function wander(sn) {   /* ambient: a short, unhurried crawl while nobody is touching it */
@@ -205,36 +264,39 @@ MB.define('animals.snails', ['core.utils', 'core.scheduler', 'core.safe-zones', 
     }
 
     function make(sec, i) {
+        const conf = SNAILS[i];
         const el = document.createElement('div'), s = size();
         el.className = 'snail'; el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
-        el.setAttribute('aria-label', 'A small snail. Press to say hello'); el.innerHTML = ART;
-        const sn = { el, sec, pers: PERSONAS[i % PERSONAS.length], w: s.w, h: s.h, x: 0, y: 0, state: 'idle', taps: 0, lastTap: 0, t: [], raf: 0, moving: null, pal: null };
-        palette(sn, PALETTES[(i * 2 + Math.floor(Math.random() * 2)) % PALETTES.length]);
+        el.setAttribute('aria-label', conf.kind === 'rainbow' ? 'A small rainbow snail. Press to watch it crawl' : 'A small shy snail. Press to say hello'); el.innerHTML = ART;
+        const k = rand(0.9, 1.1), sn = { el, sec, slot: i, kind: conf.kind, pers: PERSONAS[i % PERSONAS.length], w: Math.round(s.w * k), h: Math.round(s.h * k), x: 0, y: 0, state: 'idle', step: 0, line: 0, lines: conf.lines, bubble: null, k, t: [], raf: 0, moving: null, pal: null };
+        palette(sn, PALETTES[conf.pal]);
+        el.style.setProperty('--bb', 'rgba(' + conf.bubble[0] + ',.9)'); el.style.setProperty('--bbd', conf.bubble[1]); el.style.setProperty('--bt', conf.bubble[2]);
         if (Math.random() < 0.3) { el.classList.add('has-petal'); el.style.setProperty('--pt', pick(PETALS)); }
         if (Math.random() < 0.3) el.classList.add('is-deco');
         el.classList.toggle('is-left', Math.random() < 0.5);
-        el.addEventListener('click', () => tap(sn));
-        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(sn); } });
+        const act = () => conf.kind === 'rainbow' ? rainbowTap(sn) : tap(sn);
+        el.addEventListener('click', act);
+        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
         sec.appendChild(el);
         return sn;
     }
 
+    const fit = (sn, s) => { sn.w = Math.round(s.w * sn.k); sn.h = Math.round(s.h * sn.k); sn.el.style.width = sn.w + 'px'; sn.el.style.height = sn.h + 'px'; };
+
     /* place new snails, and move any that no longer have a clear spot (load, resize, late layout) */
     function layout() {
-        const cap = innerWidth < 700 ? 2 : innerWidth < 1000 ? 3 : 5, s = size();
-        snails.forEach(sn => { if (sn.state === 'idle') { sn.w = s.w; sn.h = s.h; sn.el.style.width = s.w + 'px'; sn.el.style.height = s.h + 'px'; } });
-        SECTIONS.forEach((sel, i) => {
-            const sec = $(sel); if (!sec) return;
-            let sn = snails.find(o => o.sec === sec);
-            const active = snails.filter(o => !o.el.hidden).length;
-            if (!sn) { if (snails.length >= cap) return; sn = make(sec, snails.length); sn.el.style.width = s.w + 'px'; sn.el.style.height = s.h + 'px'; sn.el.hidden = true; snails.push(sn); }
+        const cap = innerWidth < 700 ? 4 : SLOTS.length, s = size();
+        snails.forEach(sn => { if (sn.state === 'idle') fit(sn, s); });
+        SLOTS.forEach((slot, i) => {
+            const sec = $(slot.sel); if (!sec) return;
+            let sn = snails.find(o => o.slot === i);
+            if (!sn) { if (i >= cap) return; sn = make(sec, i); fit(sn, s); sn.el.hidden = true; snails.push(sn); }
             if (sn.state !== 'idle') return;
+            if (i >= cap) { sn.el.hidden = true; return; }   /* narrower screen: fewer snails (the extra ones just rest unseen) */
             if (!sn.el.hidden && valid(sn)) return;
-            const spot = (sn.el.hidden && active >= cap) ? null : findSpot(sn);
+            const spot = findSpot(sn);
             if (spot) { put(sn, spot); sn.el.hidden = false; } else { sn.el.hidden = true; }
         });
-        /* narrower screen: fewer snails (the extra ones just rest unseen) */
-        snails.filter(o => !o.el.hidden && o.state === 'idle').slice(cap).forEach(o => { o.el.hidden = true; });
     }
 
     function start() {

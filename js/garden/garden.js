@@ -81,6 +81,7 @@ MB.define('garden.garden', ['core.utils', 'plants.plants', 'garden.species', 'ga
         const bedW = () => bed.clientWidth || 800;
         const gapOf = row => ROWS[row].gap * (bedW() < 600 ? 1.35 : 1);
         const rowCap = row => Math.max(4, Math.floor(bedW() * 0.94 / gapOf(row)));
+        const MAX_PLANTS = 200; /* hard ceiling on live plants, keeps the bed smooth */
         const CAP = () => rowCap('back') + rowCap('mid') + rowCap('front');
         const GOAL = Math.max(24, Math.min(60, Math.round(CAP() * 0.3)));
         /* 0 fresh soil, 1 first sprouts, 2 filling in, 3 lush, 4 full bloom, 5 overflowing */
@@ -141,6 +142,7 @@ MB.define('garden.garden', ['core.utils', 'plants.plants', 'garden.species', 'ga
                 const s = opts.preset; spot = { x: +s.x, row: ROWS[s.row] ? s.row : 'front' };
                 m = { isFlower: !!s.flower, h: +s.h, H: +s.H, inner: s.inner, color: s.color || '#f4a7bf' }; rare = !!s.rare;
             } else {
+                if (count() >= MAX_PLANTS) return null;
                 spot = findSpot(xPct, opts.row); if (!spot) return null;
                 type = type || pickType(spot.row);
                 rare = !opts.noRare && FLOWER_TYPES.includes(type) && Math.random() < 0.05;
