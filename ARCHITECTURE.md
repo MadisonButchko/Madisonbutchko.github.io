@@ -27,6 +27,7 @@ separate, later phase (never mixed into structural moves).
 | deer | `animals/deer.js` + garden host API in `garden/garden.js` |
 | page snails (tap, peek, crawl, trail) | `animals/snails.js` (+ `weather.onRain` hook) |
 | tapping a decorative leaf (ladybug, caterpillar, beetle come out and crawl away) | `animals/insects.js` (+ `.insect` rules in `css/11-little-world.css`) |
+| the five hidden fruit + animal moments (strawberry→frog, blueberry→hedgehog, raspberry→bunny, blackberry→bear, cherry→chipmunk: wiggle, emerge, eat, chat, leave) | `animals/berries.js` + `css/17-berries.css` (+ `core/safe-zones.js` contentRects) |
 | birds / nest / seed feeding | `animals/birds.js` (guide bird: `animals/guide-bird.js`) |
 | the bird family by the DeviantArt button (eggs, chicks) | `animals/nest.js` (uses `birds.visitingBird`, `birds.seed.onDrop`) |
 | weather, rain, sun, wind | `environment/weather.js` or `breeze.js` + `css/environment.css` |

@@ -91,4 +91,5 @@
     use('animals.insects').start();                                    /* tap a decorative leaf: a ladybug, beetle or caterpillar comes out */
     use('animals.nest').start();                                       /* the bird family beside the DeviantArt button */
     use('environment.pinwheels').start();                              /* three small pinwheels in open space: hover, tap, build momentum */
+    use('animals.berries').start();                                    /* five hidden fruit + animal moments: wiggle, emerge, eat, chat, leave */
 })();

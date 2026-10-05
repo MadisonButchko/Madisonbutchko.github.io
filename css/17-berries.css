@@ -1,0 +1,29 @@
+/* css/17-berries.css: the five hidden fruit + animal moments (js/animals/berries.js). Decorative: only the fruit and the (visible) animal take clicks. Sizes scale with --s (set by the script: 1 desktop, .72 under 700px). */
+.bf { position: absolute; z-index: 3; width: 140px; height: 50px; pointer-events: none; --s: 1; }
+.bf[hidden] { display: none; }
+.bf-tuft { position: absolute; bottom: 0; z-index: 3; width: calc(54px * var(--s)); height: calc(40.5px * var(--s)); pointer-events: none; }
+.bf-tuft svg, .bf-fb svg, .bf-body svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.bf-fruit { position: absolute; bottom: calc(2px * var(--s)); z-index: 2; width: calc(26px * var(--s)); height: calc(28px * var(--s)); pointer-events: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+.bf-fruit::after { content: ''; position: absolute; inset: -9px; }   /* a forgiving tap area */
+.bf-fruit:focus-visible { outline: 2.5px solid var(--focus); outline-offset: 3px; border-radius: 10px; }
+.bf-fb { display: block; width: 100%; height: 100%; transform-origin: 50% 100%; filter: drop-shadow(0 2px 1.5px rgba(110, 70, 60, .25)); }
+.bf-an { position: absolute; left: 0; bottom: calc(2px * var(--s)); z-index: 2; width: calc(42px * var(--s)); opacity: 0; pointer-events: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+.bf-an.is-live { pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+.bf-an.is-live::after { content: ''; position: absolute; inset: -6px; }
+.bf-flip, .bf-body { display: block; transform-origin: 50% 90%; }
+.bf-body { filter: drop-shadow(0 2px 1.5px rgba(80, 60, 50, .22)); }
+.bf-eye { transform-box: fill-box; transform-origin: center; }
+.bf-bit { position: absolute; z-index: 4; width: 8px; height: 8px; pointer-events: none; opacity: 0; background: var(--bc, #fff6c8); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 2px rgba(255, 255, 255, .9)); }
+.bf-say { position: absolute; z-index: 6; width: max-content; max-width: min(190px, calc(100vw - 24px)); box-sizing: border-box; padding: .3rem .7rem .38rem; border-radius: 14px; background: #fffaf0; color: #5a4366; border: 1.5px solid rgba(138, 92, 120, .35); box-shadow: 0 3px 10px rgba(110, 70, 90, .16); font-family: var(--font-hand); font-weight: 600; font-size: 1.2rem; line-height: 1.12; text-align: center; pointer-events: none; animation: bfSay .24s ease-out; transition: opacity .25s ease; }
+.bf-say.is-out { opacity: 0; }
+.bf-say::after { content: ''; position: absolute; width: 9px; height: 9px; background: #fffaf0; transform: rotate(45deg); }
+.bf-say.is-t::after { bottom: -5.5px; left: var(--tx); margin-left: -4.5px; border-right: 1.5px solid rgba(138, 92, 120, .35); border-bottom: 1.5px solid rgba(138, 92, 120, .35); }
+.bf-say.is-b::after { top: -5.5px; left: var(--tx); margin-left: -4.5px; border-left: 1.5px solid rgba(138, 92, 120, .35); border-top: 1.5px solid rgba(138, 92, 120, .35); }
+.bf-say.is-r::after { left: -5.5px; top: var(--tx); margin-top: -4.5px; border-left: 1.5px solid rgba(138, 92, 120, .35); border-bottom: 1.5px solid rgba(138, 92, 120, .35); }
+.bf-say.is-l::after { right: -5.5px; top: var(--tx); margin-top: -4.5px; border-right: 1.5px solid rgba(138, 92, 120, .35); border-top: 1.5px solid rgba(138, 92, 120, .35); }
+@keyframes bfSay { from { opacity: 0; scale: .88; } to { opacity: 1; scale: 1; } }
+@media (hover: hover) { .bf-fruit:hover .bf-fb { filter: brightness(1.07) drop-shadow(0 2px 1.5px rgba(110, 70, 60, .25)); } }
+@media (max-width: 699px) {
+    .bf-say { font-size: 1.1rem; max-width: min(170px, calc(100vw - 24px)); }
+}
+@media (prefers-reduced-motion: reduce) { .bf-say { animation: none; } .bf-bit { display: none; } }
