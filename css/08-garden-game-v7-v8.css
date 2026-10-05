@@ -12,7 +12,7 @@
 /* click the side vines: flowers grow on evenly spaced spots, then fade */
 .vine-hit { position: fixed; top: 0; width: 84px; height: 100vh; z-index: 4; display: block; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .vine-hit.left { left: 8px; } .vine-hit.right { right: 8px; }
-@media (max-width: 1239px) { .vine-hit { width: 20px; } .vine-hit.left { left: 0; } .vine-hit.right { right: 0; } }
+@media (max-width: 1239px) { .vine-hit { width: 38px; } .vine-hit.left { left: 0; } .vine-hit.right { right: 0; } }
 .vine-tip { position: fixed; left: 0; top: 0; z-index: 130; box-sizing: border-box; max-width: calc(100vw - 16px); overflow-wrap: anywhere; pointer-events: none; font-family: var(--font-hand); font-size: 1.1rem; color: var(--green); background: rgba(255, 255, 255, 0.9); padding: 0.1rem 0.75rem 0.2rem; border-radius: 20px; box-shadow: 0 4px 14px rgba(120, 72, 96, 0.12); opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
 .vine-tip.show { opacity: 1; }
 .vine-sprout { transition: opacity 1.4s ease; }
@@ -242,7 +242,7 @@
 .g-badge .tiny-fl { width: 1.25em; height: 1.25em; animation: spinSlow 4s linear infinite; }
 .g-reset { font-family: var(--font-body); font-size: 0.72rem; color: var(--text-dim); background: none; border: 1px dashed rgba(140, 127, 146, 0.4); border-radius: 20px; padding: 0.15rem 0.7rem; cursor: pointer; transition: color 0.3s, border-color 0.3s; }
 .g-reset:hover { color: var(--cyan); border-color: var(--cyan); }
-.g-reset.armed { color: #fff; background: var(--cyan); border-color: var(--cyan); border-style: solid; }
+.g-reset.armed, .g-reset.armed:hover, .g-reset.armed:focus, .g-reset.armed:active { color: #fff; background: var(--cyan); border-color: var(--cyan); border-style: solid; }
 .g-badges { display: inline-flex; align-items: center; gap: 3px; }
 .g-bdg { display: inline-block; width: 17px; height: 17px; color: #cfc6d4; opacity: 0.5; filter: grayscale(1); cursor: help; transition: opacity 0.4s, filter 0.4s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .g-bdg svg { display: block; width: 100%; height: 100%; overflow: visible; --center: #fff; }

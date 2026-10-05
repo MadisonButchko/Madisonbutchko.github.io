@@ -2,6 +2,7 @@
    Purpose : the page's small rain cloud: rarely appears over a row of flowers; tap it for a gentle local shower (flowers bow and lift, sometimes a faint rainbow).
    Owns    : rainCloud() and its 5-minute cooldown; createGarden(ga): the garden bed's sun/rain cycle (spawnCloud, setSunny, weatherTick, CLOUD_SVG). (the cloud art is shared with the garden cloud through animals/art.js.)
    Uses    : plants.plants (FLI, tween: garden weather), core.utils ($, $$, rand, clamp, f1, reduce), core.scheduler (Life), core.safe-zones (inView, navBottom)
+   Also    : onRain(fn): hook called when a shower starts (animals/snails.js).
    Used by : legacy/200-little-world.js (heartbeat's rare roll, ?worlddebug hook).
    Mobile / reduced motion: nothing under prefers-reduced-motion (no cloud at all); the cloud is a click/Enter button, so touch works.
    Moved verbatim from legacy/200 (Migration Step 10c); behaviour, order and timing unchanged. */
@@ -16,6 +17,10 @@ MB.define('environment.weather', ['core.utils', 'core.scheduler', 'core.safe-zon
        local shower, the flowers bow and lift; sometimes a faint rainbow.
        ------------------------------------------------------------------ */
     let lastCloud = -1e9;
+    /* creatures that like rain (snails) register here; called when a shower starts (page cloud or garden cloud) */
+    const rainHooks = [];
+    const onRain = fn => rainHooks.push(fn);
+    const fireRain = () => rainHooks.forEach(fn => { try { fn(); } catch (e) { } });
     function rainCloud() {
         if (reduce || !CLOUD_SVG || performance.now() - lastCloud < 300000) return false;
         const row = [$('.g-row'), $('.h-row')].find(r => r && inView(r) && r.getBoundingClientRect().top > navBottom() + 60 && !r.classList.contains('compact'));
@@ -33,7 +38,7 @@ MB.define('environment.weather', ['core.utils', 'core.scheduler', 'core.safe-zon
         const leave = () => { cloud.classList.remove('on'); cloud.classList.add('away'); setTimeout(() => { cloud.remove(); Life.release('cloud'); }, 1600); };
         const idle = setTimeout(() => { if (!raining) leave(); }, 30000);
         const rain = () => {
-            if (raining) return; raining = true; clearTimeout(idle);
+            if (raining) return; raining = true; clearTimeout(idle); fireRain();
             const cr = cloud.getBoundingClientRect(), fall = Math.max(80, rr.bottom - cr.bottom - 30);
             const sheet = document.createElement('div'); sheet.className = 'w-rain'; sheet.style.height = f1(fall) + 'px';
             sheet.innerHTML = Array.from({ length: 14 }, (_, k) => '<i style="left:' + f1(8 + k * 6.2) + '%;--d:' + f1(rand(0, 0.9)) + 's;--s:' + f1(rand(0.7, 1)) + 's"></i>').join('');
@@ -143,7 +148,7 @@ MB.define('environment.weather', ['core.utils', 'core.scheduler', 'core.safe-zon
                 const x0s = c.x, y0 = c.y, DUR = 5800; let perked = 0, started = false;
                 const shower = tween(DUR, t => {
                     const now = performance.now();
-                    if (!started && t > 0.1){ started = true; c.shower = true; c.raining = true; el.classList.add('raining'); }
+                    if (!started && t > 0.1){ started = true; fireRain(); c.shower = true; c.raining = true; el.classList.add('raining'); }
                     if (perked === 0 && t > 0.3){ perked = 1; refreshArea(); }
                     if (perked === 1 && t > 0.6){ perked = 2; refreshArea(); }
                     if (t >= 0.9 && c.raining){ c.raining = false; c.shower = false; el.classList.remove('raining'); }
@@ -170,5 +175,5 @@ MB.define('environment.weather', ['core.utils', 'core.scheduler', 'core.safe-zon
         Object.assign(ga, { setSunny, spawnCloud, weatherTick });
     }
 
-    return { rainCloud, createGarden };
+    return { rainCloud, createGarden, onRain };
 });

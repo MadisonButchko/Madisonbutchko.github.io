@@ -67,6 +67,10 @@
 .g-cat.is-bloom .g-art, .h-spec.is-bloom .h-art { --hv: 2; transform: translateY(-8px) rotate(calc(var(--sun, 0deg) - 1deg)) scale(1.06); transition: max-width 0.5s var(--glide), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease, --hv 0.28s ease-out, --wd 1.8s ease-out; }
 
 .pt { --k2: calc(var(--k, 1) * var(--a, 1)); transform-box: view-box; transform-origin: var(--ox, 50%) var(--oy, 50%); animation-duration: var(--t, 6s); animation-delay: var(--d, 0s); animation-iteration-count: infinite; animation-timing-function: ease-in-out; animation-play-state: var(--ps, running); }
+/* The hidden SVG sprite's <symbol> originals are never drawn (only their <use> copies are), yet their parts kept ticking these
+   infinite animations forever (~120 of them), costing continuous style recalculation. Stopping the originals leaves the copies
+   (which render in their own shadow trees and are not matched here) animating exactly as before. */
+symbol, symbol * { animation: none !important; }
 /* small flowers bob and tip (Research, Exploration, bud heads) */
 .hd.bob { animation-name: hdBob; scale: calc(1 + var(--hv) * 0.05); }
 @keyframes hdBob {

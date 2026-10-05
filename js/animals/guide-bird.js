@@ -43,7 +43,7 @@ MB.define('animals.guide-bird', ['core.scheduler'], function (scheduler) {
             for (const px of xs) for (const py of ys){
                 const hits = document.elementsFromPoint(Math.max(0, Math.min(innerWidth - 1, px)), Math.max(0, Math.min(innerHeight - 1, py)));
                 const top = hits.find(h => !el.contains(h));
-                if (top && top.closest(BLOCK)) n++;
+                if (top && top.closest(BLOCK)) return 1;   /* callers only ask "any block?" (n > 0, or n * 1000 where one block already rules a spot out), so stop at the first hit instead of hit-testing all 9 points */
             }
             return n;
         }
