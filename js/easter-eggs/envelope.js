@@ -1,6 +1,6 @@
 /* js/easter-eggs/envelope.js
    Purpose : the secret envelope: after three taps within two seconds on quiet background a small bird flies in and drops an envelope; tap it and the flap hinges open, a folded letter slides out and unfolds onto light pink graph paper while a few hearts drift up. Closed, it can be dragged (or moved with the arrow keys) to another quiet spot.
-   Owns    : the tap counter, the delivery (spot choice, bird, drift), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
+   Owns    : the tap counter, the delivery (spot choice, bird, drift, one bounded retry timer when the stage is busy), the envelope + letter markup, the closed/opening/open/closing state machine, the hearts and sparkles, dragging and keyboard repositioning (element-scoped pointer handlers only), one resize recheck. Nothing is saved: nothing opens on its own, and the gesture works on every page load (the envelope stays once it has arrived).
    Uses    : core.utils (rand, reduce), core.scheduler (Life), core.safe-zones (BLOCK, clearAt, navBottom), core.particles (FX: heart budget), animals.birds (visitingBird: the flight + carried item).   Used by: main.js (start()).
    Mobile / reduced motion: taps work on touch; the envelope is a focusable button (Enter/Space opens, arrow keys move it when closed); the letter has a close button and Escape closes it (focus returns to the envelope). Reduced motion: no bird, drift, folding, hearts or animated repositioning; the letter just fades in/out.
    Cleanup : the one tap listener is added once; the envelope stays after the note is closed; the Escape listener exists only while the letter is open; opening/closing are Web Animations that are reversed (never stacked) and rebuilt on each fresh opening; hearts are finished (and their FX slots returned) when interrupted; the one resize listener lives with the envelope. */
@@ -42,6 +42,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         '<button type="button" class="env-hit" aria-expanded="false" aria-label="' + LABEL + '"></button>';
 
     /* ---- opening / closing: one timeline of D ms; closing plays it backwards, faster, so the stages undo in reverse order ---- */
+    /* how far the opened sheet reaches above the envelope's pocket, and how far fit() may push it down; delivery uses the same numbers to keep the note on screen */
+    const LETTER_UP = 152, MAX_PUSH = 44;
     const D = 1300, CLOSE_RATE = 1.8, P = 'perspective(700px) ', PF = 'perspective(260px) ';
     const OUT = 'cubic-bezier(0.25, 0.8, 0.3, 1)', IO = 'cubic-bezier(0.4, 0, 0.2, 1)';
     const K = (ms, props, easing) => Object.assign({ offset: ms / D }, props, easing ? { easing } : {});
@@ -143,7 +145,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
         function fit() {
             const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, half = Math.min(190, innerWidth - 16) / 2 + 8;
             el.style.setProperty('--nx', (Math.max(half, Math.min(innerWidth - half, cx)) - cx).toFixed(1) + 'px');
-            return Math.max(0, Math.min(44, navBottom() + 8 - (r.top + 24 - 152)));
+            return Math.max(0, Math.min(MAX_PUSH, navBottom() + 8 - (r.top + 24 - LETTER_UP)));
         }
 
         /* three small hearts and three faint sparkles rise from the pocket, drift apart and fade; they live behind the letter and never take input.
@@ -238,17 +240,44 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
 
     /* ---- delivery ---- */
     let taps = 0, firstAt = 0, busy = false, placed = false, started = false;
+    /* a gesture that could not be served at once (another creature has the stage, or no quiet spot this second) is retried for a short while, from one timer */
+    const RETRY_MS = 2000, RETRY_SPAN = 24000;
+    let retryT = 0, retryUntil = 0;
+    const cancelRetry = () => { clearTimeout(retryT); retryT = 0; };
+    function retry() {
+        retryT = 0;
+        if (placed || busy || deliver()) return;
+        if (performance.now() < retryUntil) retryT = setTimeout(retry, RETRY_MS);
+    }
+    function queueRetry() { retryUntil = performance.now() + RETRY_SPAN; if (!retryT) retryT = setTimeout(retry, RETRY_MS); }
 
-    /* somewhere quiet: room for the opened letter above the envelope (strict), and a clear path for it to drift down.
-       Phones are too full for that much room, so there only the envelope itself needs a clear spot (and its fall may cross a little text) */
-    const pickAny = () => pickSpot(true) || (innerWidth < 700 ? pickSpot(false) : null);
-    function pickSpot(strict) {
-        for (let k = 0; k < 80; k++) {
-            const m = innerWidth < 700 ? 44 : 120, x = rand(m, innerWidth - m), y = rand(navBottom() + 110, innerHeight - 60), top = Math.max(navBottom() + 30, y - (innerWidth < 700 ? 100 : 190));
-            if (y - top < 80) continue;
-            if (clearAt(x, y, 34) && (!strict || clearAt(x, y - 80, 110)) && (innerWidth < 700 || clearAt(x, (top + y) / 2, 20))) return { x, y, top, docY: y + scrollY };
-        }
-        return null;
+    /* somewhere quiet, in two separate parts.
+       The closed envelope needs a clear spot of its own (hard rule: never over text or controls) and must sit low enough for the opened letter to stay on screen (hard rule: fit() can only push it so far).
+       Clear space for the letter and for the fall is only a preference, so a crowded page still gets an envelope: the best-ranked spot wins (3 = both clear, 2 = fall clear, 1 = envelope clear only) */
+    const letterMinY = () => navBottom() + LETTER_UP - 24 + 8 - MAX_PUSH + 30;
+    function rankSpot(x, y, top, fit) {
+        if (!clearAt(x, y, fit)) return 0;
+        return 1 + (innerWidth < 700 || clearAt(x, (top + y) / 2, 20) ? 1 : 0) + (clearAt(x, y - 80, 110) ? 1 : 0);
+    }
+    /* phones are packed edge to edge: if no spot has the envelope's full footprint clear, accept one a few pixels tighter (never over a text line's own box) */
+    const pickSpot = () => search(34) || (innerWidth < 700 ? search(28) : null);
+    function search(fit) {
+        const m = innerWidth < 700 ? 44 : 60, minY = letterMinY(), maxY = innerHeight - 60, up = innerWidth < 700 ? 100 : 190;
+        if (maxY <= minY) return null;
+        let best = null, bestRank = 0;
+        const consider = (x, y) => {
+            const top = Math.max(navBottom() + 30, y - up), r = y - top < 80 ? 0 : rankSpot(x, y, top, fit);
+            if (r > bestRank) { bestRank = r; best = { x, y, top, docY: y + scrollY }; }
+            return r === 3;
+        };
+        for (let k = 0; k < 60; k++) if (consider(rand(m, innerWidth - m), rand(minY, maxY))) return best;
+        if (best) return best;
+        /* nothing by luck: look everywhere once, in random order and within a small time budget */
+        const grid = [], t0 = performance.now();
+        for (let y = minY; y <= maxY; y += 36) for (let x = m; x <= innerWidth - m; x += 36) grid.push([x, y]);
+        grid.sort(() => Math.random() - 0.5);
+        for (const p of grid) { if (performance.now() - t0 > 80) break; if (consider(p[0], p[1])) break; }
+        return best;
     }
 
     /* the envelope itself, standing at `spot` (viewport spot, document-anchored); `from` = where it was dropped (viewport), or null to rise in gently */
@@ -269,8 +298,8 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
 
     function deliver() {
         if (placed || busy || document.hidden || !Life.claim('envelope', 14000)) return false;
-        const spot = pickAny(); if (!spot) { Life.release('envelope'); return false; }
-        busy = true;
+        const spot = pickSpot(); if (!spot) { Life.release('envelope'); return false; }
+        busy = true; cancelRetry();
         /* the flight is the only thing that can hang (rAF stalls in a hidden tab): never leave the feature stuck "busy" */
         const guard = setTimeout(() => finish(), 15000);
         const finish = () => { clearTimeout(guard); busy = false; Life.release('envelope'); };
@@ -284,7 +313,7 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
                 /* the page may have scrolled during the flight: if the landing is no longer in view, choose again (or land where it was dropped) */
                 const y = spot.docY - scrollY;
                 let land = spot;
-                if (y < navBottom() + 60 || y > innerHeight - 20) land = pickAny() || { x: drop.x, y: drop.y, top: drop.y, docY: drop.y + scrollY };
+                if (y < letterMinY() || y > innerHeight - 20) land = pickSpot() || { x: drop.x, y: drop.y, top: drop.y, docY: drop.y + scrollY };
                 place(land, drop);
             },
             done: finish
@@ -294,13 +323,13 @@ MB.define('easter-eggs.envelope', ['core.utils', 'core.scheduler', 'core.safe-zo
     }
 
     function onTap(e) {
-        if (placed || busy) { taps = 0; return; }                     /* already here (or on its way): never a duplicate */
+        if (placed || busy) { taps = 0; cancelRetry(); return; }                     /* already here (or on its way): never a duplicate */
         if (e.target.closest && e.target.closest(IGNORE)) return;
         const now = performance.now();
         if (!taps || now - firstAt > WINDOW) { taps = 0; firstAt = now; }
         if (++taps < TAPS) return;
-        if (deliver()) taps = 0;            /* if the stage is busy or there is no quiet spot, the gesture stays armed: the next quiet tap tries again */
-        else firstAt = now;
+        if (deliver()) taps = 0;            /* if the stage is busy or there is no quiet spot, the gesture stays armed (the next quiet tap tries again) and a bounded retry runs meanwhile */
+        else { firstAt = now; queueRetry(); }
     }
 
     function start() { if (started) return; started = true; document.addEventListener('click', onTap, true); }
