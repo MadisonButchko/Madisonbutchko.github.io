@@ -26,7 +26,7 @@ separate, later phase (never mixed into structural moves).
 | a creature (new or existing) | `animals/animals.js` + that creature's file + `core/scheduler.js` + `css/animals.css` |
 | deer | `animals/deer.js` + garden host API in `garden/garden.js` |
 | page snails (tap, peek, crawl, trail) | `animals/snails.js` (+ `weather.onRain` hook) |
-| tapping a decorative leaf (ladybug, caterpillar, bee, beetle come out and move on) | `animals/insects.js` (+ `.insect` rules in `css/11-little-world.css`) |
+| tapping a decorative leaf (ladybug, caterpillar, beetle come out and crawl away) | `animals/insects.js` (+ `.insect` rules in `css/11-little-world.css`) |
 | birds / nest / seed feeding | `animals/birds.js` (guide bird: `animals/guide-bird.js`) |
 | the bird family by the DeviantArt button (eggs, chicks) | `animals/nest.js` (uses `birds.visitingBird`, `birds.seed.onDrop`) |
 | weather, rain, sun, wind | `environment/weather.js` or `breeze.js` + `css/environment.css` |
@@ -36,6 +36,7 @@ separate, later phase (never mixed into structural moves).
 | footer garden game | `garden/*` + `css/garden.css` |
 | Experience / Skills / bouquet | `botanical/*` + `css/botanical.css` |
 | gallery / lightbox | `gallery/*` + `css/gallery.css` |
+| opening intro animation (transparent canvas over the live page: golden ignition → screen-wide burst → pastel sparkle + petal rainfall, every page load) | `site/intro.js` + `css/15-intro.css` + the gate script in `index.html` `<head>` |
 | nav, hero, scrolling effects | `navigation/`, `site/hero.js`, `effects/*` |
 | Easter egg | `easter-eggs/easter-eggs.js` (secret bird-delivered envelope: `easter-eggs/envelope.js`) |
 | persistence, random timing, cursor tracking, "is this spot free?" | `core/state.js`, `core/scheduler.js`, `core/pointer.js`, `core/safe-zones.js` |
@@ -242,7 +243,7 @@ bouquet and ribbon, ways-in links, "seed of curiosity". Not: the footer garden, 
 - `guide-bird.js`: the red banner bird (own spot-finding, scroll re-check, bubble). Independent logic, own file.
 - `vine-caterpillar.js`: crawls along vine paths (own physics/rAF/eating). `caterpillar.js`: the story twig caterpillar → chrysalis → butterfly life cycle.
 - `snails.js`: a few tappable snails resting in open margins (hide/peek/emerge, crawl to a nearby plant with a fading dew trail); reacts to rain through `weather.onRain`.
-- `insects.js`: tap a decorative leaf (`.sc-leaf`) and a ladybug (most often), caterpillar, bee or beetle comes out, crawls round the leaf and moves to another decorative leaf/bloom/posy; tap it to hop again. One module for every leaf; reads decor/creature geometry, never mutates it.
+- `insects.js`: tap a standalone decorative leaf (`.sc-leaf` plus the two hero leaves `.hero-flowers .bloom.f5/.f8`) and a ladybug, caterpillar or beetle (in rotation) comes out from under it and crawls away along its own randomized, curved route until it is off screen, then is removed (routes avoid content, flower clusters, vines and other critters; blocked = fade out). One module for every leaf; reads decor/creature geometry, never mutates it.
 - `butterflies.js`: drifting butterfly, vine butterflies, visitor butterfly/bee, tiny touch-butterfly. `deer.js`: the garden deer.
 
 **environment/** `weather.js`: rain clouds (garden and page), sun toggle, rainbow after rain. `breeze.js`: cursor-driven forces on plants

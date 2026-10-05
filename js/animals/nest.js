@@ -137,14 +137,14 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
     function feed() {
         locked = true;
         let counted = false;   /* the safety timer and the animation end can both report; a feeding counts once */
-        const pair = feeds === 1;
+        const pair = feeds === 1, food = ['worm', 'berry', 'seed'][feeds] || 'worm';   /* feeding 1 a worm, 2 a berry, 3 a seed */
         let mate = null;
         const done = () => { if (counted) return; counted = true; if (mate) mate.remove(); feeds++; el.dataset.grow = feeds; locked = false; if (feeds >= FEEDS) growUp(); };
         if (reduce) { gapeAll(true); later(() => { gapeAll(false); done(); }, 500); return; }
         Life.claim('nest-bird', 9000, true);
         const hover = i => nestPt(FX[i], -0.02), tgt = hover(0), fromLeft = tgt.x < innerWidth / 2 ? true : false;
         const bird = newBird(fromLeft), sx = fromLeft ? -60 : innerWidth + 60, sy = Math.max(-20, tgt.y - 160);
-        const worm = document.createElement('i'); worm.className = 'bn-worm'; $('.c-body', bird).appendChild(worm);
+        const worm = document.createElement('i'); worm.className = 'bn-worm'; worm.dataset.food = food; $('.c-body', bird).appendChild(worm);
         if (pair) mate = newBird(fromLeft);
         let pos = tgt;   /* where the feeding parent hovers now */
         const guard = later(() => { bird.remove(); Life.release('nest-bird'); gapeAll(false); done(); }, 9000);   /* safety: a click can never stay blocked */
@@ -169,9 +169,19 @@ MB.define('animals.nest', ['core.utils', 'core.scheduler', 'animals.animals', 'a
             const hp = hover(i), b = $('.bn-baby', slots[i]);
             bird.classList.remove('flying'); bird.classList.add('eating'); b.classList.add('gape');
             later(() => {
-                const w = document.createElement('i'); w.className = 'bn-worm fly'; document.body.appendChild(w);
-                const p0 = { x: hp.x + (fromLeft ? 8 : -8), y: hp.y + 4 }, p1 = nestPt(FX[i], 0.42);
-                fly(w, [{ transform: 'translate(' + f1(p0.x) + 'px,' + f1(p0.y) + 'px)', opacity: 1 }, { transform: 'translate(' + f1(p1.x) + 'px,' + f1(p1.y) + 'px) scale(.4)', opacity: 0 }], 450, 'ease-in', () => w.remove());
+                const w = document.createElement('i'); w.className = 'bn-worm fly'; w.dataset.food = food; document.body.appendChild(w);
+                const p0 = { x: hp.x + (fromLeft ? 8 : -8), y: hp.y + 4 }, p1 = nestPt(FX[i], 0.3);   /* stop at the open beak, above the chick and the nest rim, so the food never passes into them */
+                if (food === 'worm') {   /* travel to the chick's live mouth (top edge: the mouth scales from there), park the worm's bottom edge on it, then shrink/fade in place: no movement after contact */
+                    const mr = $('.bn-mouth', slots[i]).getBoundingClientRect(), pe = mr.width ? { x: mr.left + mr.width / 2, y: mr.top - 6 } : { x: p1.x, y: p1.y - 6 };
+                    const wt = (p, sc) => 'translate(' + f1(p.x - 10) + 'px,' + f1(p.y - 6) + 'px) scale(' + sc + ')';
+                    fly(w, [{ transform: wt(p0, 1), opacity: 1 }, { transform: wt(pe, 0.8), opacity: 1, offset: 0.7 }, { transform: wt(pe, 0.5), opacity: 0 }], 450, 'ease-in', () => w.remove());
+                }
+                else {   /* berry / seed: leave the beak, then drop straight down over the chick's mouth (centred on the item, not its corner) */
+                    const hw = food === 'berry' ? 5 : 5.5, hh = food === 'berry' ? 5 : 3.5, spin = food === 'seed' ? 200 : 0;
+                    const tr = (p, r, sc) => 'translate(' + f1(p.x - hw) + 'px,' + f1(p.y - hh) + 'px) rotate(' + r + 'deg) scale(' + sc + ')';
+                    fly(w, [{ transform: tr(p0, 0, 1), opacity: 1, easing: 'ease-out' }, { transform: tr({ x: p1.x, y: p0.y - 3 }, spin * 0.2, 1), opacity: 1, offset: 0.2, easing: 'ease-in' },
+                        { transform: tr(p1, spin, 0.8), opacity: 1, offset: 0.75 }, { transform: tr(p1, spin, 0.5), opacity: 0 }], 450, 'linear', () => w.remove());
+                }
                 later(() => { b.classList.remove('gape'); b.classList.add('hop'); later(() => b.classList.remove('hop'), 950); }, 450);
             }, 300);
             later(() => {

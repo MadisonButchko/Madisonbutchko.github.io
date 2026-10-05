@@ -15,6 +15,7 @@
     const nav = use('navigation.navigation'), hero = use('site.hero'), vines = use('plants.vines'), flowers = use('plants.flowers');
     const birds = use('animals.birds'), bouquet = use('botanical.bouquet');
 
+    use('site.intro').start();                                         /* opening animation overlay (plays on every page load; see site/intro.js) */
     nav.mobileMenu();                                                  /* mobile header + dropdown (links cloned from .nav, before scroll-spy collects them) */
     scroll.reveal(); nav.scrollSpy();                                  /* reveal-on-scroll, scroll-spy */
     await boundary();
@@ -87,6 +88,6 @@
 
     flowers.startAmbient();                                            /* breathing, pollen, click delay, wind, rare visitor (was ecosystem.js) */
     use('animals.snails').start();                                     /* a few snails resting in the margins: tap, peek, crawl */
-    use('animals.insects').start();                                    /* tap a decorative leaf: a ladybug, bee, beetle or caterpillar comes out */
+    use('animals.insects').start();                                    /* tap a decorative leaf: a ladybug, beetle or caterpillar comes out */
     use('animals.nest').start();                                       /* the bird family beside the DeviantArt button */
 })();

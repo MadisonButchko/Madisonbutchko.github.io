@@ -8,6 +8,16 @@ It must work from `file://` (double-click), a local server (`python3 -m http.ser
 - **`ARCHITECTURE.md`** before any structural or feature work. Its routing table says which files to read for a given request.
 - **`MIGRATION_PLAN.md`** is historical/reference only. Read it only for requests about unfinished migration work (code may still live in `js/legacy/*` / `ecosystem.js` / `style.css`; ARCHITECTURE §0 maps where). Do not mix feature work into a migration step.
 
+## Testing / Verification
+For normal website edits:
+
+- Do not run the full test suite, browser automation, headless browsers, or extensive verification unless I explicitly request it.
+- Do not set up Playwright, Puppeteer, Selenium, or any new testing harness just to verify a change.
+- After an edit, perform only a quick syntax/basic sanity check if needed.
+- Do not let testing or verification block completion of the requested edit.
+- If an existing test or command hangs, stop it and continue rather than troubleshooting the test environment.
+- Only perform extensive testing when I explicitly ask for it.
+
 ## Background features
 Before adding or modifying background decorations, plants, creatures, ambient effects, or draggable objects, read `BACKGROUND_RULES.md` and the relevant ownership guidance in `ARCHITECTURE.md`.
 These are global rules. Apply them to every background feature unless I explicitly override them.

@@ -469,7 +469,7 @@ main > section, footer { overflow: visible; }
     .to-top { width: 38px !important; height: 63px !important; right: calc(2px + var(--safe-r)) !important; bottom: calc(6px + var(--safe-b)) !important; }
     .to-top::after { content: ''; position: absolute; inset: -6px -2px -6px -8px; }
     footer { padding-bottom: calc(100px + var(--safe-b)) !important; }
-    .bloom.f1, .bloom.f5 { display: none; }
+    .bloom.f1, .bloom.f5, .bloom.f9 { display: none; }
 }
 
 /* ---------------------------------------------------------------------

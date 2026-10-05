@@ -32,8 +32,9 @@ html body .rb-host:hover .rb-vis .rb-ch, html body .rb-host:focus-visible .rb-vi
 .fl-spin { animation: flSpin var(--spd, 40s) linear var(--sdl, 0s) infinite, flFloat var(--fl, 6s) ease-in-out var(--fdl, 0s) infinite; }
 .fl-spin.fl-rev { animation-name: flSpinRev, flFloat; }
 .hero-flowers .bloom.fl-spin { animation: bloomIn 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) var(--bdl, 0.4s) forwards, flSpin var(--spd, 40s) linear var(--sdl, 0s) infinite, flFloat var(--fl, 6s) ease-in-out var(--fdl, 0s) infinite; }
-.hero-flowers .bloom.f5, .hero-flowers .bloom.f8 { animation: bloomIn 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s forwards, leafSway 5s ease-in-out infinite; }
+.hero-flowers .bloom.f5, .hero-flowers .bloom.f8, .hero-flowers .bloom.f9 { animation: bloomIn 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s forwards, leafSway 5s ease-in-out infinite; }
 .hero-flowers .bloom.f8 { animation-delay: 1.2s, -2s; animation-duration: 1.4s, 6s; }
+.hero-flowers .bloom.f9 { animation-delay: 1.5s, -1s; animation-duration: 1.4s, 5.5s; }
 .title-bloom.fl-spin { animation: flSpin var(--spd, 24s) linear var(--sdl, 0s) infinite; }
 .section-head:hover .title-bloom.fl-spin { animation-duration: var(--spd, 24s); }
 .reveal.visible .hello-flower.fl-spin { animation: popBloom 0.8s var(--spring) 1.8s forwards, flSpin var(--spd, 12s) linear 2.6s infinite !important; }

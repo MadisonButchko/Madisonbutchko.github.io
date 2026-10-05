@@ -9,8 +9,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,50;1,9..144,300..600,100&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,50;1,9..144,300..600,100&display=swap" rel="stylesheet">
+    <script>
+    /* Intro gate (see js/site/intro.js). Plays on every page load; no persistent flag. Dev: ?nointro skips. */
+    (function () { try {
+        if (/[?&]nointro\b/.test(location.search)) return;
+        document.documentElement.classList.add("intro-on");
+        setTimeout(function () { document.documentElement.classList.remove("intro-on"); }, 6000);   /* failsafe: never leave the cover up */
+    } catch (e) {} })();
+    </script>
     <link rel="stylesheet" href="css/01-base.css?v=7">
-    <link rel="stylesheet" href="css/02-spring-theme.css?v=2">
+    <link rel="stylesheet" href="css/02-spring-theme.css?v=4">
     <link rel="stylesheet" href="css/03-flower-fx.css?v=2">
     <link rel="stylesheet" href="css/04-hero.css?v=2">
     <link rel="stylesheet" href="css/05-fx-titles-gallery-cursor.css?v=2">
@@ -18,11 +26,12 @@
     <link rel="stylesheet" href="css/07-living-background-v4-v6.css?v=2">
     <link rel="stylesheet" href="css/08-garden-game-v7-v8.css?v=9">
     <link rel="stylesheet" href="css/09-v9-refinements.css?v=3">
-    <link rel="stylesheet" href="css/10-botanical.css?v=3">
-    <link rel="stylesheet" href="css/11-little-world.css?v=30">
-    <link rel="stylesheet" href="css/12-polish-pass.css?v=2">
+    <link rel="stylesheet" href="css/10-botanical.css?v=4">
+    <link rel="stylesheet" href="css/11-little-world.css?v=31">
+    <link rel="stylesheet" href="css/12-polish-pass.css?v=3">
     <link rel="stylesheet" href="css/13-ecosystem.css?v=2">
     <link rel="stylesheet" href="css/14-side-vines-plants.css?v=4">
+    <link rel="stylesheet" href="css/15-intro.css?v=16">
 </head>
 <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -79,6 +88,7 @@
                 <svg class="bloom f6" style="color:var(--yellow);--center:#d99a12"><use href="#fl-forsythia"/></svg>
                 <svg class="bloom f7" style="color:var(--pink-soft);--center:var(--pink)"><use href="#fl-bloom"/></svg>
                 <svg class="bloom f8" style="color:var(--green)"><use href="#fl-leaf"/></svg>
+                <svg class="bloom f9" style="color:var(--green)"><use href="#fl-leaf"/></svg>
             </div>
             <div class="hero-glow" aria-hidden="true"></div>
             <div class="hero-inner">
@@ -764,8 +774,9 @@
     <script src="js/plants/flowers.js?v=4" defer></script>
     <script src="js/world/world.js?v=1" defer></script>
     <script src="js/animals/snails.js?v=6" defer></script>
-    <script src="js/animals/insects.js?v=2" defer></script>
+    <script src="js/animals/insects.js?v=11" defer></script>
     <script src="js/animals/nest.js?v=16" defer></script>
-    <script src="js/main.js?v=8" defer></script>
+    <script src="js/site/intro.js?v=21" defer></script>
+    <script src="js/main.js?v=9" defer></script>
 </body>
 </html>
